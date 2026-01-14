@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 using R2API;
 using RoR2;
 using RoR2.UI;
+using SamplePlugin;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,6 +31,8 @@ namespace RiskOfRoutes
         private GameObject portalPrefab;
         private InteractableSpawnCard portalSpawnCard;
 
+        public static GameObject chefPrefab;
+
         public const int RouteCount = 3;
 
         public void Awake()
@@ -37,22 +40,25 @@ namespace RiskOfRoutes
 
             Log.Init(Logger);
 
+            chefPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/MealPrep/MealPrepPickerPanel.prefab").WaitForCompletion(), "mealPrep");
             //statue
             CreateInteractable();
 
             TeleporterInteraction.onTeleporterChargedGlobal += teleporterSpawnHologram;
-            On.RoR2.BossGroup.DropRewards += BossGroup_DropRewards;
-            gameObject.AddComponent<RoutePortalManager>();
-
+            gameObject.AddComponent<StageModifierManager>();
+            RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
+            
         }
 
-        //для модификатора
-        private void BossGroup_DropRewards(On.RoR2.BossGroup.orig_DropRewards orig, BossGroup self)
+        private void Stage_onServerStageBegin(Stage obj)
         {
-            self.bossDropChance = 100.0f;
-            orig(self);
-
+            Log.Info($"Stage {SceneCatalog.mostRecentSceneDef.cachedName} started");
+            return;
         }
+
+
+
+        
 
         private void CreateInteractable()
         {
@@ -72,9 +78,10 @@ namespace RiskOfRoutes
             interaction.contextToken = "Enter the portal";
             interaction.NetworkdisplayNameToken = "Route Portal to a next stage";
 
+
             mgr.purchaseInteraction = interaction;
             mgr.sceneExitController = sceneExitController;
-            mgr.modifierCredits  = 1;
+            mgr.modifierCredits = 1;
 
             routePortal.GetComponent<Highlight>().targetRenderer = routePortal.GetComponentInChildren<SkinnedMeshRenderer>();
             GameObject trigger = Instantiate(new GameObject("Trigger"), routePortal.transform);
@@ -96,6 +103,18 @@ namespace RiskOfRoutes
         private void spawnHologram(Vector3 position)
         {
             List<SceneDef> scenes = GetNextStagesScenesList();
+            List<StageModifier> modifiers = new List<StageModifier>();
+            //modifiers.Add(new ArtifactModifier());
+            //modifiers.Add(new BossItemModifier());
+            //modifiers.Add(new PrinterItemModifier());
+            modifiers.Add(new WanderingChefModifier());
+            modifiers.Add(new WanderingChefModifier());
+
+            modifiers.Add(new WanderingChefModifier());
+
+            modifiers.Add(new WanderingChefModifier());
+
+
 
             if (scenes.Count == 0)
             {
@@ -104,16 +123,25 @@ namespace RiskOfRoutes
             }
 
             Util.ShuffleList(scenes);
+            Util.ShuffleList(modifiers);
+
 
             int lim = RouteCount > scenes.Count ? scenes.Count : RouteCount;
             
             for (int i = 0; i < lim;i++)
             {
                 int index = scenes.Count - 1;
+                int jndex = modifiers.Count - 1;
                 SceneDef destination = scenes[index];
+                StageModifier mod = modifiers[jndex];
                 scenes.RemoveAt(index);
+                modifiers.RemoveAt(jndex);
+                if(mod==null)
+                {
+                    Log.Error("Fix needed");
+                }
 
-                SpawnCard routePortal = CreateRoutePortalSpawnCard(destination);
+                SpawnCard routePortal = CreateRoutePortalSpawnCard(destination,mod);
 
                 if(routePortal==null)
                 {
@@ -135,6 +163,12 @@ namespace RiskOfRoutes
 
                 if(portalObject)
                 {
+                    var m = portalObject.GetComponent<RoutePortalManager>();
+                    if (m != null) { 
+                        m.stageModifier = mod;
+                        m.modifierTextSynced = mod.text;
+                    }
+
                     Log.Info($"{i+1}th portal placed successfully");
                 }
                 Vector3 facingVector = position - portalObject.transform.position;
@@ -151,7 +185,7 @@ namespace RiskOfRoutes
 
         }
 
-        private InteractableSpawnCard CreateRoutePortalSpawnCard(SceneDef destination)
+        private InteractableSpawnCard CreateRoutePortalSpawnCard(SceneDef destination,StageModifier mod)
         {
             var m = portalPrefab.GetComponent<RoutePortalManager>();
             m.destinationScene = destination;
@@ -215,6 +249,63 @@ namespace RiskOfRoutes
 
         }
 
+        [ConCommand(commandName = "activeModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get currently active modifiers")]
+        private static void GetActiveModifiersCommand(ConCommandArgs args)
+        {
+            if (StageModifierManager.Instance != null)
+            {
+                var mods = StageModifierManager.Instance.activeModifiers;
+                if (mods != null)
+                {
+                    if (mods.Count > 0)
+                    {
+                        foreach (var modifier in mods)
+                        {
+                            Log.Info(modifier.text);
+                        }
+                    }
+                    else
+                    {
+                        Log.Info("There are no modifiers");
+                    }
+                }
+                else
+                {
+                    Log.Error("Modifiers list is null");
+                }
+            }
+
+        }
+
+        [ConCommand(commandName = "reservedModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get modifiers that would be active on next stage")]
+        private static void GetReservedModifiersCommand(ConCommandArgs args)
+        {
+            if (StageModifierManager.Instance != null)
+            {
+                var mods = StageModifierManager.Instance.reservedModifiers;
+                if (mods != null)
+                {
+                    if(mods.Count > 0)
+                    {
+                        foreach (var modifier in mods)
+                        {
+                            Log.Info(modifier.text);
+                        }
+                    }
+                    else
+                    {
+                        Log.Info("There are no modifiers");
+                    }
+
+                }
+                else
+                {
+                    Log.Error("Modifiers list is null");
+                }
+            }
+
+        }
+
 
 
         static bool IsValidNextStage(SceneDef sceneDef)
@@ -234,32 +325,34 @@ namespace RiskOfRoutes
 
         //телпорт сразу
         [ConCommand(commandName = "charge", flags = ConVarFlags.ExecuteOnServer, helpText = "Charges TP and kills boss")]
-        private static void ChargeTeleporter(ConCommandArgs args)
-        {
-            if (!TeleporterInteraction.instance) return;
-
-            var tp = TeleporterInteraction.instance;
-
-            tp.holdoutZoneController.charge = 0.99f;
-
-            if (tp.bossGroup && tp.bossGroup.combatSquad)
+        static void ChargeTeleporter(ConCommandArgs args)
             {
+                if (!TeleporterInteraction.instance) return;
 
-                List<CharacterMaster> bossMasters = new List<CharacterMaster>(tp.bossGroup.combatSquad.readOnlyMembersList);
+                var tp = TeleporterInteraction.instance;
 
-                foreach (CharacterMaster master in bossMasters)
+                tp.holdoutZoneController.charge = 0.99f;
+
+                if (tp.bossGroup && tp.bossGroup.combatSquad)
                 {
-                    CharacterBody body = master.GetBody();
 
-                    if (body && body.healthComponent && body.healthComponent.alive)
+                    List<CharacterMaster> bossMasters = new List<CharacterMaster>(tp.bossGroup.combatSquad.readOnlyMembersList);
+
+                    foreach (CharacterMaster master in bossMasters)
                     {
-                        body.healthComponent.Suicide(null, null, DamageType.Generic);
+                        CharacterBody body = master.GetBody();
+
+                        if (body && body.healthComponent && body.healthComponent.alive)
+                        {
+                            body.healthComponent.Suicide(null, null, DamageType.Generic);
+                        }
                     }
                 }
-            }
 
-            Log.Info("Teleporter charged and bosses eliminated.");
-        }
+                Log.Info("Teleporter charged and bosses eliminated.");
+            }
+        
+        
         private void Update()
         {
             // This if statement checks if the player has currently pressed F2.
@@ -273,6 +366,13 @@ namespace RiskOfRoutes
                 Log.Info($"Player pressed F2. Spawning our custom item at coordinates {transform.position}");
                 spawnHologram(transform.position);
             }
+
+            if (Input.GetKeyDown(KeyCode.F3))
+            {
+                var transform = PlayerCharacterMasterController.instances[0].master.GetBodyObject().transform;
+
+                Log.Info($"{transform.position}");
+            }
             var localUser = LocalUserManager.GetFirstLocalUser();
             if (localUser != null && localUser.cachedBody != null)
             {
@@ -285,6 +385,7 @@ namespace RiskOfRoutes
                         {
                             Log.Info("Looking at route portal");
                             Log.Info(dr.currentInteractable.GetComponent<RoutePortalManager>().destinationScene.cachedName);
+                            Log.Info(dr.currentInteractable.GetComponent<RoutePortalManager>().modifierTextSynced);
                             //ShowInterfaceElement();
                         }
                     }

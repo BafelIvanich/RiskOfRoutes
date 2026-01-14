@@ -1,6 +1,9 @@
 ﻿using RoR2;
+using SamplePlugin;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
+
 
 namespace RiskOfRoutes
 {
@@ -13,6 +16,10 @@ namespace RiskOfRoutes
 
         public SceneDef destinationScene;
 
+        public StageModifier stageModifier;
+
+        [SyncVar]
+        public string modifierTextSynced;
 
 
 
@@ -21,7 +28,19 @@ namespace RiskOfRoutes
             if (NetworkServer.active && Run.instance)
             {
                 purchaseInteraction.SetAvailable(true);
+
+                if (stageModifier != null)
+                {
+                    modifierTextSynced = stageModifier.text;
+                }
+                else
+                {
+                    modifierTextSynced = "No Modifier";
+                }
+
             }
+
+            //stageModifiers = CreateModifiers(modifierCredits);
 
             purchaseInteraction.onPurchase.AddListener(OnPurchase);
 
@@ -37,6 +56,9 @@ namespace RiskOfRoutes
                 Debug.LogWarning("[Server] function 'RoutePortalManager::OnPurchase(RoR2.Interactor)' called on client");
                 return;
             }
+
+            StageModifierManager.Instance.reservedModifiers.Add(stageModifier);
+            Log.Info($"Trying {StageModifierManager.Instance.activeModifiers.Count}");
 
             purchaseInteraction.SetAvailable(false);
             Run.instance.nextStageScene = destinationScene;
