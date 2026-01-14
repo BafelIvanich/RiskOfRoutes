@@ -8,6 +8,16 @@ using SamplePlugin.StageModifiers.CombatModifiers;
 using SamplePlugin.StageModifiers.OtherModifiers;
 using SamplePlugin.StageModifiers.SceneModifiers;
 
+//Rare: random tier 3 positive, more credits on negative?
+//Chef: guaranteed chef, food printers more likely?
+//DroneFocused: DroneBossReward, more drones
+//Mountain effect only if 2 or more portals
+//printer limit 3
+//yellow/red printer only as additional
+//the better printer items the more neg credits
+//ban list
+//texture fix
+
 namespace RiskOfRoutes.StageModifiers
 {
     public static class StageModifierCatalog

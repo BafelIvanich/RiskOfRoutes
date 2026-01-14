@@ -924,21 +924,6 @@ namespace RiskOfRoutes
             spawnRoutePortals(interaction.transform.position);
         }
 
-        private void spawnTestPortal(Vector3 position)
-        {
-            SpawnCard routePortal = CreateRoutePortalSpawnCard(SceneCatalog.GetSceneDefFromSceneName("computationalexchange"));
-            DirectorSpawnRequest request = new DirectorSpawnRequest(routePortal, new DirectorPlacementRule
-            {
-                minDistance = 10f,
-                maxDistance = 40f,
-                placementMode = DirectorPlacementRule.PlacementMode.Approximate,
-                position = position
-            }, Run.instance.stageRng);
-
-
-
-            GameObject portalObject = DirectorCore.instance.TrySpawnObject(request);
-        }
 
 
         private void spawnRoutePortals(Vector3 position)
@@ -954,18 +939,20 @@ namespace RiskOfRoutes
             Util.ShuffleList(scenes, Run.instance.stageRng);
 
             var count = routeCount.Value;
-            int lim = count > scenes.Count ? scenes.Count : count;
-            if (uniqueDestinations.Value)
-            {
-                lim = count > scenes.Count ? scenes.Count : count;
-            }
-            else
-            {
-                lim = count;
-            }
+            //int lim = count > scenes.Count ? scenes.Count : count;
+            //if (uniqueDestinations.Value)
+            //{
+            //    lim = count > scenes.Count ? scenes.Count : count;
+            //}
+            //else
+            //{
+            //    lim = count;
+            //}
+            var nodes = StageModifierDirector.instance.GetAvailableNodes();
 
-            for (int i = 0; i < lim; i++)
+            for (int i = 0;i < nodes.Count; i++)
             {
+                var node = nodes[i];
                 SceneDef destination = new SceneDef();
                 if (uniqueDestinations.Value)
                 {
@@ -1013,8 +1000,9 @@ namespace RiskOfRoutes
                     var m = portalObject.GetComponent<RoutePortalManager>();
 
 
-
+                    m.routeNode = node;
                     m.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(portalObject);
+
                     Vector3 facingVector = position - portalObject.transform.position;
                     facingVector.y = 0;
                     if (facingVector != Vector3.zero)

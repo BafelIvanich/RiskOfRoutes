@@ -21,6 +21,7 @@ namespace RiskOfRoutes
         public bool isSeerStation;
 
         public SceneDef destinationScene;
+        public RouteMap.RouteNode routeNode;
 
         public List<StageModifier> stageModifiers = new List<StageModifier>();
 
@@ -73,7 +74,7 @@ namespace RiskOfRoutes
             Log.Info("Called method UpdateText");
             if (NetworkServer.active && Run.instance)
             {
-                string positiveText = "Positive:\n";
+                string positiveText = $"Positive:\n";
                 string negativeText = "Negative:\n";
 
                 if (stageModifiers != null && stageModifiers.Count > 0)
@@ -98,7 +99,7 @@ namespace RiskOfRoutes
                 }
 
 
-                modifierTextSynced = $"{positiveText}\n{negativeText}";
+                modifierTextSynced = $"{routeNode.portalType}:\n{positiveText}\n{negativeText}";
                 Log.Info(positiveText + negativeText);
             }
             UpdateBubbles();
@@ -238,7 +239,7 @@ namespace RiskOfRoutes
                 Log.Info($"inside RPM: {destinationScene.cachedName}");
                 //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("ai_test");
                 sceneExitController.Begin();
-
+                StageModifierDirector.instance.current = routeNode;
             }
         }
 
@@ -265,7 +266,7 @@ namespace RiskOfRoutes
     }
 }
 
-enum RoutePortalType
+public enum RoutePortalType
 {
-    Rare, ItemType, DroneType, ChefType
+    Rare, ItemType, DroneType, ChefType, None
 }

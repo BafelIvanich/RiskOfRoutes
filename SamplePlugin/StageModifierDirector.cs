@@ -3,6 +3,7 @@ using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin.StageModifiers;
 using SamplePlugin.StageModifiers.SceneModifiers;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -22,6 +23,9 @@ namespace SamplePlugin
         public int startingCredits = 200;
         public int routeCredits = 60;
         public int negativeCredits = 30;
+
+        public RouteMap routeMap;
+        public RouteMap.RouteNode current;
 
         private List<ItemInfo> itemsInfo =
         [
@@ -74,6 +78,7 @@ namespace SamplePlugin
 
             RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
             RoR2.Stage.onServerStageComplete += Stage_onServerStageComplete;
+
         }
 
         public void OnDestroy()
@@ -115,7 +120,7 @@ namespace SamplePlugin
             if (RiskOfRoutes.RiskOfRoutes.allowEvolutionArtifact.Value) allModifiers.Add(new ModifierDef("MonsterTeamGainsItems", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("MonsterTeamGainsItems"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowFrailtyArtifact.Value) allModifiers.Add(new ModifierDef("WeakAssKnees", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("WeakAssKnees"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowGlassArtifact.Value) allModifiers.Add(new ModifierDef("Glass", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Glass"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowHonorArtifact.Value) allModifiers.Add(new ModifierDef("EliteOnly", ModifierTier.Tier3, 0.5f, () => CheckArtifactAvailable("EliteOnly"), false));
+            if (RiskOfRoutes.RiskOfRoutes.allowHonorArtifact.Value) allModifiers.Add(new ModifierDef("EliteOnly", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("EliteOnly"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowKinArtifact.Value) allModifiers.Add(new ModifierDef("SingleMonsterType", ModifierTier.Tier2, 1f, () => CheckArtifactAvailable("SingleMonsterType"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowMetamorphosisArtifact.Value) allModifiers.Add(new ModifierDef("RandomSurvivorOnRespawn", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("RandomSurvivorOnRespawn"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowRebirthArtifact.Value) allModifiers.Add(new ModifierDef("Rebirth", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("Rebirth"), true));
@@ -151,6 +156,11 @@ namespace SamplePlugin
             activeModifiers.Clear();
             reservedModifiers.Clear();
             runArtifactsApplied = GetArtifactsAppliedThisRun();
+            Log.Info("Creating route map");
+            routeMap = new RouteMap(obj.runRNG);
+            //todo placeholder
+            current = routeMap.GetStartingNode();
+            Log.Info($"Current:{current.x},{current.y} that has {current.GetPaths().Count} paths");
         }
         private void Run_onRunDestroyGlobal(Run obj)
         {
@@ -430,7 +440,10 @@ namespace SamplePlugin
             return foodItems;
         }
 
-
+        public List<RouteMap.RouteNode> GetAvailableNodes()
+        {
+            return current.GetPaths();
+        }
     }
 
     public struct ItemInfo
