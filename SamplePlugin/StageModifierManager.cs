@@ -74,7 +74,7 @@ namespace SamplePlugin
             {
                 availableModifiers.Add(new YellowPrinterModifier());
             }
-
+            Log.Info(reservedModifiers.Count);
             activeModifiers = new List<StageModifier>(reservedModifiers);
             reservedModifiers.Clear();
 

@@ -1,11 +1,15 @@
-﻿using RiskOfRoutes;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Networking;
-using RoR2;
-using UnityEngine.AddressableAssets;
+﻿using R2API;
 using R2API.Utils;
+using Rewired.Utils.Interfaces;
+using RiskOfRoutes;
+using RoR2;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.Networking;
 
 //whites: crowbar, bears, bleed, bombs, watches, gasoline, focus crystal, syringe, key
 //greens: reload one, ukulele, active charge, wisps, band 1, band 2, injection, pinwheel, fin, star, rockets, energy shield, gasoline, wire
@@ -46,7 +50,7 @@ namespace SamplePlugin
         };
 
 
-        //TODO: сделать Struct артефактов может быть
+        //TODO: сделать Struct артефактов может быть со стоимостью
         private static readonly Dictionary<string,string> ArtifactDesc = new Dictionary<string, string>()
         {
             { "ARTIFACT_MIXENEMY_DESCRIPTION","<style=cWorldEvent>Monsters can appear outside their usual environments.</style>" },
@@ -143,7 +147,7 @@ namespace SamplePlugin
             Log.Info("Active");
             var bossDropTable = ScriptableObject.CreateInstance<RoR2.BasicPickupDropTable>();
             self.bossDropChance = 1.0f;
-            bossDropTable.tier1Weight = -0f;  
+            bossDropTable.tier1Weight = 0f;  
             bossDropTable.tier2Weight = 0f; 
             bossDropTable.tier3Weight = 0f; 
             bossDropTable.bossWeight = 1f;  
@@ -165,13 +169,67 @@ namespace SamplePlugin
 
     }
 
+    //возможно весь модифаер будет опциональным в конфиге
     public class PrinterItemModifier : StageModifier
     {
+        private List<string> WhiteNames = new List<string>()
+        {
+                "SecondarySkillMagazine", 
+                "Crowbar",
+                "FocusConvergence",
+                "Syringe",
+                "IgniteOnKill",           
+                "Bear",                  
+                "BleedOnHit",             
+                "FragileDamageBonus",     
+        };
+
+        private List<string> GreenNames = new List<string>()
+        {
+                "FireRing",               
+                "IceRing",               
+                "Missile",                
+                "ExecuteLowHealthElite",  
+                "Thorns",                 
+                "ChainLightning",         
+                "ExplodeOnDeath",         
+                "StrengthenBurn"          
+        };
+
+        ItemDef selectedItem;
+        public static InteractableSpawnCard printerSpawnCard;
+
         public PrinterItemModifier()
         {
-            this.activeText = "PrinterItemModifier";
             negative = false;
+            if (NetworkServer.active)
+            {
+                List<string> mergedNames = new List<string>(WhiteNames.Concat(GreenNames)); 
+                Util.ShuffleList(mergedNames);
+                var selectedItemName = mergedNames[0];
+                selectedItem = stringToItemDef(selectedItemName);
+                Log.Info($"Selected item:{selectedItem.name}, {mergedNames.Count}");
+                this.reservedText = $"Printer with {selectedItem.name} will appear on the next stage";
+                this.activeText = $"Printer with {selectedItem.name} has appeared somewhere on the stage.";
+
+            }
+            CreatePrinterSpawnCard();
         }
+
+        private ItemDef stringToItemDef(string selectedItemName)
+        {
+            ItemIndex index = ItemCatalog.FindItemIndex(selectedItemName);
+            if(index != ItemIndex.None)
+            {
+                return ItemCatalog.GetItemDef(index);
+            }
+            else
+            {
+                Log.Error("Error finding item");
+                return null;
+            }
+        }
+
         public override void OnEnd()
         {
             Log.Info("PrinterItemModifier end");
@@ -180,6 +238,69 @@ namespace SamplePlugin
         public override void OnStart()
         {
             Log.Info("PrinterItemModifier start");
+            SpawnPrinter();
+        }
+
+        private void SpawnPrinter()
+        {
+            Log.Info("Trying to place Printer");
+
+            if (!NetworkServer.active)
+            {
+                Log.Error("SERVER IS NOT ACTIVE");
+                return;
+            }
+
+            if (printerSpawnCard == null)
+            {
+                Log.Error("Something wrong with card");
+                return;
+            }
+
+            RoR2.DirectorPlacementRule placementRule = new RoR2.DirectorPlacementRule
+            {
+                placementMode = RoR2.DirectorPlacementRule.PlacementMode.Random
+            };
+
+            RoR2.DirectorSpawnRequest spawnRequest = new RoR2.DirectorSpawnRequest(
+                printerSpawnCard,
+                placementRule,
+                RoR2.Run.instance.stageRng
+            );
+
+            GameObject printer = RoR2.DirectorCore.instance.TrySpawnObject(spawnRequest);
+            if (printer)
+            {
+                Log.Info($"printer appeared at {printer.transform.position} on stage");
+
+                ShopTerminalBehavior shop = printer.GetComponent<ShopTerminalBehavior>();
+                shop.dropTable = null;
+                shop.selfGeneratePickup = false;
+                PickupIndex currentPickupIndex = PickupCatalog.FindPickupIndex(selectedItem.itemIndex);
+
+                shop.pickupIndex = currentPickupIndex;
+                shop.SetPickupIndex(currentPickupIndex,false);
+
+            }
+            else
+            {
+                Log.Error($"Couldn't place yellow printer on scene");
+            }
+        }
+
+        private void CreatePrinterSpawnCard()
+        {
+            InteractableSpawnCard card = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/Duplicator/iscDuplicator.asset").WaitForCompletion();
+
+            if (card != null)
+            {
+                Log.Info("printer spawncard created succesfully");
+                printerSpawnCard = card;
+            }
+            else
+            {
+                Log.Info("Asset path is invalid");
+            }
         }
     }
 
@@ -194,59 +315,90 @@ namespace SamplePlugin
         public override void OnEnd()
         {
             Log.Info("MoreDronesModifier end");
+            RoR2.SceneDirector.onPrePopulateSceneServer -= (SceneDirector) =>
+            {
+                IncreaseDronePlacementWeight();
+            };
+            DecreaseDronePlacementWeight();
         }
 
         public override void OnStart()
         {
             Log.Info("MoreDronesModifier start");
-            On.RoR2.SceneDirector.Start += SceneDirector_Start;
+            RoR2.SceneDirector.onPrePopulateSceneServer += (SceneDirector) =>
+            {
+                IncreaseDronePlacementWeight();
+            };
         }
 
-        private void SceneDirector_Start(On.RoR2.SceneDirector.orig_Start orig, SceneDirector self)
+        private void DecreaseDronePlacementWeight()
+        {
+            var stageInfo = ClassicStageInfo.instance;
+            var categories = stageInfo.interactableCategories.categories;
+            float temp = 0;
+            for (int i = 0; i < categories.Length; i++)
+            {
+                var category = stageInfo.interactableCategories.categories[i];
+                Log.Info($"{category.name}:{category.selectionWeight}");
+                temp = category.selectionWeight;
+                if (categories[i].name == "Drones")
+                {
+                    Log.Info("Drones category available");
+                    categories[i].selectionWeight /= 3;
+                    Log.Info($"Done decreasing drone weight:{temp} -> {category.selectionWeight}");
+                    return;
+                }
+            }
+
+        }
+
+        private void IncreaseDronePlacementWeight()
         {
             //отсюда все возможные для спавна интерктаблы
             var stageInfo = ClassicStageInfo.instance;
-
             var categories = stageInfo.interactableCategories.categories;
-
-            for (int i = 0;i < categories.Length;i++)
+            float temp = 0;
+            for (int i = 0; i < categories.Length; i++)
             {
                 //TODO stageInfo.interactableDccsPool. --- interactableCategories помечен как deprecated стоит посмотреть что за DCCS
                 //еще есть             stageInfo.GetInteractableDccsPool
                 var category = stageInfo.interactableCategories.categories[i];
                 Log.Info($"{category.name}:{category.selectionWeight}");
+                temp = category.selectionWeight;
                 if (categories[i].name == "Drones")
                 {
                     Log.Info("Drones category available");
-                    categories[i].selectionWeight = 1000f;
-                    foreach(var card in category.cards)
-                    {
-                        string initialCost = card.spawnCard.directorCreditCost.ToString();
-                        string initialWeight = card.selectionWeight.ToString();
+                    categories[i].selectionWeight *= 30;
+                    Log.Info($"Done increasing drone weight:{temp} -> {category.selectionWeight}");
+                    return;
+                    //Удешевляет каждого отдельного дрона, не факт что нужно, сверху просто повышается приоритет покупки дронов
+                    //foreach (var card in category.cards)
+                    //{
+                    //    string initialCost = card.spawnCard.directorCreditCost.ToString();
+                    //    string initialWeight = card.selectionWeight.ToString();
 
-                        card.spawnCard.directorCreditCost = 0;
-                        card.selectionWeight = 1000;
-                        var isc = card.spawnCard as InteractableSpawnCard;
-                        if (isc)
-                        {
-                            isc.maxSpawnsPerStage = -1;
-                            isc.occupyPosition = false;
-                        }
-                        else
-                        {
-                            Log.Error("GO");
-                        }
-                            Log.Info($"Succesfully set price of {card.spawnCard.name} from {initialCost} to {0}");
-                            Log.Info($"Succesfully set weight of {card.spawnCard.name} from {initialWeight} to {1000}");
-                    }
+                    //    card.spawnCard.directorCreditCost = 0;
+                    //    card.selectionWeight = 1000;
+                    //    var isc = card.spawnCard as InteractableSpawnCard;
+                    //    if (isc)
+                    //    {
+                    //        isc.maxSpawnsPerStage = -1;
+                    //        isc.occupyPosition = false;
+                    //    }
+                    //    else
+                    //    {
+                    //        Log.Error("GO");
+                    //    }
+                    //    Log.Info($"Succesfully set price of {card.spawnCard.name} from {initialCost} to {0}");
+                    //    Log.Info($"Succesfully set weight of {card.spawnCard.name} from {initialWeight} to {1000}");
+                    //}
                 }
             }
+        }
 
-            //TODO проверить возвращаются ли цены по умолчанию или стоит это делать вручную
-
-            Log.Info("Done modifying drone cost");
-
-            orig(self);
+        private void SceneDirector_Start(On.RoR2.SceneDirector.orig_Start orig, SceneDirector self)
+        {
+            
         }
     }
 

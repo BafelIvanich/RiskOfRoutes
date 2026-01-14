@@ -39,11 +39,11 @@ namespace RiskOfRoutes
                     {
                         if (stageModifier.negative)
                         {
-                            negativeText += stageModifier.reservedText;
+                            negativeText += stageModifier.reservedText+'\n';
                         }
                         else
                         {
-                            positiveText += stageModifier.reservedText;
+                            positiveText += stageModifier.reservedText + '\n';
                         }
                     }
                 }
@@ -72,7 +72,7 @@ namespace RiskOfRoutes
                 return;
             }
 
-            if(stageModifiers!=null)
+            if(stageModifiers!=null && stageModifiers.Count>0)
             {
                 StageModifierManager.Instance.reservedModifiers = stageModifiers;
             }

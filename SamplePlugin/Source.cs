@@ -28,7 +28,7 @@ using static Rewired.UI.ControlMapper.ControlMapper;
 //Шеф должен появлять со столом
 //(Возможно) фиксированные места поялвения шефа
 //Добавить конфиг
-//Поменять логику гаранта жёлтых предметов
+// ?Поменять логику гаранта жёлтых предметов
 //Чек на наличие у игроков жёлтых/красных предметов для принтеров
 //Артефакт инфляции
 //Пулл предметов для гарантированных серых/зеленых принтеров
@@ -223,7 +223,7 @@ namespace RiskOfRoutes
             List<SceneDef> scenes = GetNextStagesScenesList();
             List<StageModifier> modifiers = new List<StageModifier>();
 
-            modifiers.Add(new WanderingChefModifier());
+            modifiers.Add(new PrinterItemModifier());
             modifiers.Add(new ArtifactModifier());
             modifiers.Add(new BossItemModifier());
 
@@ -245,7 +245,7 @@ namespace RiskOfRoutes
                 int jndex = modifiers.Count - 1;
                 SceneDef destination = scenes[index];
                 //на время
-                StageModifier mod = new MoreDronesModifier();
+                StageModifier mod = modifiers[jndex];
                 scenes.RemoveAt(index);
                 modifiers.RemoveAt(jndex);
                 if(mod==null)
@@ -278,7 +278,7 @@ namespace RiskOfRoutes
                 if (portalObject)
                 {
                     var m = portalObject.GetComponent<RoutePortalManager>();
-                    m.stageModifiers = new List<StageModifier>() { mod};
+                    m.stageModifiers = new List<StageModifier>() { new BossItemModifier(), new MoreDronesModifier(), };
 
                     Log.Info($"Success? {m.stageModifiers.Count()}");
                     Log.Info($"{i+1}th portal placed successfully");
@@ -481,8 +481,33 @@ namespace RiskOfRoutes
 
                 Log.Info("Teleporter charged and bosses eliminated.");
             }
-        
-        
+
+        [ConCommand(commandName = "tp", flags = ConVarFlags.ExecuteOnServer, helpText = "tp <x> <y> <z> - teleport local player to coordinates.")]
+        private static void CC_Teleport(ConCommandArgs args)
+        {
+            if (!NetworkServer.active) return;
+
+            if (args.Count != 3)
+            {
+                Debug.Log("Usage: tp <x> <y> <z>");
+                return;
+            }
+
+            float x = (float)args.TryGetArgFloat(0);
+            float y = (float)args.TryGetArgFloat(1);
+            float z = (float)args.TryGetArgFloat(2);
+
+            var body = args.GetSenderBody();   // player who issued the command
+            if (!body) return;
+
+            var newPos = new Vector3(x, y, z);
+
+            // safest way to move a body in RoR2
+            body.characterMotor?.Motor.SetPositionAndRotation(newPos, body.transform.rotation);
+            body.transform.position = newPos;
+        }
+
+
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.F2))
