@@ -1,4 +1,5 @@
 ﻿using BepInEx;
+using HarmonyLib;
 using JetBrains.Annotations;
 using R2API;
 using RoR2;
@@ -21,6 +22,8 @@ using static Rewired.UI.ControlMapper.ControlMapper;
 //Разный цвет у порталов
 //Кредиты
 //Нажатие на портал закрывает другие
+//Вынести метод спавна объекта рандомно на сцене (для шефа, принтеров и другого)
+//Директор модификатор
 
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
@@ -57,20 +60,8 @@ namespace RiskOfRoutes
             Log.Init(Logger);
 
             chefPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/MealPrep/MealPrep.prefab").WaitForCompletion(), "mealPrep");
-            if (!chefPrefab.GetComponent<NetworkIdentity>())
-            {
-                chefPrefab.AddComponent<NetworkIdentity>();
-            }
-            var netId = chefPrefab.GetComponent <NetworkIdentity>();
-            if (netId)
-            {
-                Log.Info("Chef already has network identity");
-            }
-            else
-            {
-                Log.Info("Chef doesn't have network identity");
-            }
-                ui = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/UI/Tooltip.prefab").WaitForCompletion(), "tooltipUI");
+
+            ui = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/UI/Tooltip.prefab").WaitForCompletion(), "tooltipUI");
             
             
             
@@ -81,7 +72,7 @@ namespace RiskOfRoutes
             gameObject.AddComponent<StageModifierManager>();
             RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
             On.RoR2.UI.HUD.Awake += HUD_Awake;
-            
+            On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
         }
 
 
@@ -99,7 +90,6 @@ namespace RiskOfRoutes
             rectTransform.sizeDelta = Vector2.zero;
             rectTransform.anchoredPosition = Vector2.zero;
 
-            var tc = newUi.GetComponent<TooltipController>();
 
             var images = newUi.GetComponentsInChildren<Image>();
             foreach(var img in images)
@@ -110,15 +100,22 @@ namespace RiskOfRoutes
                 }
             }
 
+            tooltipSetText(newUi,"Unknown");
+
+            newUi.SetActive(false);
+
+            ui = newUi;
+        }
+
+        private void tooltipSetText(GameObject tooltip,string text)
+        {
+            var tc = tooltip.GetComponent<TooltipController>();
 
             var label = tc.titleLabel;
             var body = tc.bodyLabel;
 
             label.text = "Route Portal";
-            body.text = "<style=cIsHealing>Positive:</style>\r\nNext stage is guaranteed to have <style=cHumanObjective>Wandering CHEF</style> on it.\r\n\r\n<style=cDeath>Negative:</style>\r\n<style=cWorldEvent>Wisps emerge from defeated monsters.</style>\r\n\r\n";
-            newUi.SetActive(false);
-
-            ui = newUi;
+            body.text = text;
         }
 
         private void HUD_shouldHudDisplay(HUD hud, ref bool shouldDisplay)
@@ -176,18 +173,17 @@ namespace RiskOfRoutes
 
         private void teleporterSpawnHologram(TeleporterInteraction interaction)
         {
-            spawnHologram(interaction.transform.position);
+            spawnRoutePortals(interaction.transform.position);
         }
 
 
-        private void spawnHologram(Vector3 position)
+        private void spawnRoutePortals(Vector3 position)
         {
             List<SceneDef> scenes = GetNextStagesScenesList();
             List<StageModifier> modifiers = new List<StageModifier>();
             modifiers.Add(new ArtifactModifier());
             modifiers.Add(new BossItemModifier());
-            //modifiers.Add(new PrinterItemModifier());
-            modifiers.Add(new WanderingChefModifier());
+            modifiers.Add(new PrinterItemModifier());
 
 
 
@@ -198,8 +194,8 @@ namespace RiskOfRoutes
                 return;
             }
 
-            Util.ShuffleList(scenes);
-            Util.ShuffleList(modifiers);
+            Util.ShuffleList(scenes,Run.instance.stageRng);
+            Util.ShuffleList(modifiers, Run.instance.stageRng);
 
 
             int lim = RouteCount > scenes.Count ? scenes.Count : RouteCount;
@@ -228,7 +224,7 @@ namespace RiskOfRoutes
                 DirectorSpawnRequest request = new DirectorSpawnRequest(routePortal, new DirectorPlacementRule
                 {
                     minDistance = 10f,
-                    maxDistance = 20f,
+                    maxDistance = 40f,
                     placementMode = DirectorPlacementRule.PlacementMode.Approximate,
                     position = position
                 }, Run.instance.stageRng);
@@ -237,14 +233,17 @@ namespace RiskOfRoutes
 
                 GameObject portalObject = DirectorCore.instance.TrySpawnObject(request);
 
-                if(portalObject)
+                Log.Info($"Got modifier {mod.reservedText}");
+
+                if (portalObject)
                 {
                     var m = portalObject.GetComponent<RoutePortalManager>();
-                    if (m != null) { 
-                        m.stageModifier = mod;
-                        m.modifierTextSynced = mod.activeText;
+                    if (m != null) {
+                        Log.Info($"Trying to add modifier to portal");
+                        m.AddStageModifier(mod);
                     }
 
+                    Log.Info($"Success? {m.stageModifiers.Count()}");
                     Log.Info($"{i+1}th portal placed successfully");
                 }
                 Vector3 facingVector = position - portalObject.transform.position;
@@ -254,6 +253,8 @@ namespace RiskOfRoutes
                     portalObject.transform.rotation = Quaternion.LookRotation(facingVector);
                 }
                 Vector3 rdir = portalObject.transform.right;
+                
+                var renderers = portalObject.GetComponentsInChildren<ParticleSystem>();
 
                 Material mat = SceneInfo.instance.sceneDef.portalMaterial;
 
@@ -283,6 +284,11 @@ namespace RiskOfRoutes
             portalSpawnCard = interactableSpawnCard;
 
             return interactableSpawnCard;
+        }
+
+        private void ClosePortals(GameObject obj)
+        {
+            GameObject.Destroy(obj);
         }
 
         private static List<SceneDef> GetNextStagesScenesList()
@@ -431,7 +437,6 @@ namespace RiskOfRoutes
         
         private void Update()
         {
-            // This if statement checks if the player has currently pressed F2.
             if (Input.GetKeyDown(KeyCode.F2))
             {
                 // Get the player body to use a position:
@@ -440,7 +445,7 @@ namespace RiskOfRoutes
                 // And then drop our defined item in front of the player.
 
                 Log.Info($"Player pressed F2. Spawning our custom item at coordinates {transform.position}");
-                spawnHologram(transform.position);
+                spawnRoutePortals(transform.position);
             }
 
             if (Input.GetKeyDown(KeyCode.F3))
@@ -450,6 +455,7 @@ namespace RiskOfRoutes
                 Log.Info($"{transform.position}");
             }
             var localUser = LocalUserManager.GetFirstLocalUser();
+            //TODO: Сделать смену при смене интерактбла, не чекать каждый кадр
             if (localUser != null && localUser.cachedBody != null)
             {
                 var dr = localUser.cachedBody.GetComponent<InteractionDriver>();
@@ -459,11 +465,20 @@ namespace RiskOfRoutes
                     {
                         if (dr.currentInteractable.name.Contains("RoutePortal"))
                         {
+                            var manager = dr.currentInteractable.GetComponent<RoutePortalManager>();
                             Log.Info("Looking at route portal");
-                            Log.Info(dr.currentInteractable.GetComponent<RoutePortalManager>().destinationScene.cachedName);
-                            Log.Info(dr.currentInteractable.GetComponent<RoutePortalManager>().modifierTextSynced);
+                            Log.Info(manager.destinationScene.cachedName);
+                            //TODO: вроде можно переделать через TooltipProvider
+                            if(manager.modifierTextSynced != null)
+                            {
+                            tooltipSetText(ui,manager.modifierTextSynced);
+                            }
+                            else
+                            {
+                                Log.Info("hiii");
+                            }
                             ui.SetActive(true);
-                            //ShowInterfaceElement();
+
                         }
                         
                     }

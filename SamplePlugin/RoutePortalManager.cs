@@ -1,6 +1,7 @@
 ﻿using RoR2;
 using SamplePlugin;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -16,7 +17,7 @@ namespace RiskOfRoutes
 
         public SceneDef destinationScene;
 
-        public StageModifier stageModifier;
+        public List<StageModifier> stageModifiers = new List<StageModifier>();
 
         [SyncVar]
         public string modifierTextSynced;
@@ -29,18 +30,32 @@ namespace RiskOfRoutes
             {
                 purchaseInteraction.SetAvailable(true);
 
-                if (stageModifier != null)
+                string positiveText = "Positive:\n";
+                string negativeText = "Negative:\n";
+
+                if(stageModifiers!=null)
                 {
-                    modifierTextSynced = stageModifier.activeText;
+                    foreach (var stageModifier in stageModifiers)
+                    {
+                        if (stageModifier.negative)
+                        {
+                            negativeText += stageModifier.reservedText;
+                        }
+                        else
+                        {
+                            positiveText += stageModifier.reservedText;
+                        }
+                    }
                 }
                 else
                 {
-                    modifierTextSynced = "No Modifier";
+                    Log.Error("NoModifiers");
                 }
 
-            }
 
-            //stageModifiers = CreateModifiers(modifierCredits);
+                    modifierTextSynced = $"{positiveText}\n{negativeText}";
+                Log.Info(positiveText + negativeText);
+            }
 
             purchaseInteraction.onPurchase.AddListener(OnPurchase);
 
@@ -57,12 +72,24 @@ namespace RiskOfRoutes
                 return;
             }
 
-            StageModifierManager.Instance.reservedModifiers.Add(stageModifier);
+            if(stageModifiers!=null)
+            {
+                foreach(StageModifier stageModifier in stageModifiers)
+                {
+                    StageModifierManager.Instance.reservedModifiers.Add(stageModifier);
+                }
+            }
+            
             Log.Info($"Trying {StageModifierManager.Instance.activeModifiers.Count}");
 
             purchaseInteraction.SetAvailable(false);
             Run.instance.nextStageScene = destinationScene;
             sceneExitController.Begin();
+        }
+
+        public void AddStageModifier(StageModifier mod)
+        {
+           stageModifiers.Add(mod);
         }
 
     }
