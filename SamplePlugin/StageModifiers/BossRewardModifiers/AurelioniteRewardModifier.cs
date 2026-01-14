@@ -11,7 +11,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 {
     public class AurelioniteRewardModifier : StageModifier
     {
-        public bool hasDroneRewardModifier = false;
 
         public AurelioniteRewardModifier()
         {
@@ -64,7 +63,8 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                 c.EmitDelegate<Action<UniquePickup, Vector3, Vector3>>((origPickup, position, vector) =>
                 {
                     RoR2.GenericPickupController.CreatePickupInfo pickup;
-                    if (hasDroneRewardModifier)
+                    var droneMod = StageModifierDirector.instance.activeModifiers.OfType<DroneBossRewardModifier>().FirstOrDefault();
+                    if (droneMod != null)
                     {
                         List<UniquePickup> pickups = new List<UniquePickup>();
 

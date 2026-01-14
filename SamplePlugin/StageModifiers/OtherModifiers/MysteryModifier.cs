@@ -6,11 +6,11 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
     //test one
     public class MysteryModifier : StageModifier
     {
-        public MysteryModifier(int cost)
+        public MysteryModifier()
         {
             name = "Mystery";
-            reservedText = "Cannot see items";
-            activeText = "Cannot see items";
+            reservedText = "You cannot see items";
+            activeText = "You cannot see items";
             negative = true;
             stackable = false;
             var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("mystery");
@@ -22,7 +22,6 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
             {
                 Log.Error("failed to load aurelionite modifier");
             }
-            this.cost = cost;
         }
 
         public override void OnEnd()

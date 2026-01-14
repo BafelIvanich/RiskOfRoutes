@@ -2,9 +2,9 @@
 {
     public class NoOneShotProtectionModifier : StageModifier
     {
-        public NoOneShotProtectionModifier(int cost)
+        public NoOneShotProtectionModifier()
         {
-            name = "Fragility";
+            name = "No one shot protection";
             reservedText = "<style=cDeath>One shot protection</style> will be disabled on the next stage.";
             activeText = "<style=cDeath>One shot protection</style> will be disabled on this stage.";
             stackable = false;

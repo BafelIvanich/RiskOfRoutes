@@ -13,7 +13,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     {
         public Dictionary<CombatDirector.EliteTierDef, float> tierAndInitialPrice = new Dictionary<CombatDirector.EliteTierDef, float>();
 
-        public MoreElitesModifier(int cost)
+        public MoreElitesModifier()
         {
             name = "More elites";
             activeText = "More <style=cDeath>elite</style> enemies will appear.";
@@ -24,7 +24,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                 Log.Info("GFGG");
             }
             negative = true;
-            this.cost = cost;
         }
         public override void OnEnd()
         {

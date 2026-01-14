@@ -3,6 +3,7 @@ using MonoMod.Cil;
 using RiskOfRoutes;
 using RoR2;
 using System;
+using System.Linq;
 using UnityEngine;
 
 //whites: crowbar, bears, bleed, bombs, watches, gasoline, focus crystal, syringe, key
@@ -17,6 +18,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
         public bool isAurelioniteActive = false;
 
         //todo может и зеленых
+        //todo кроме equipment Дрона
         public DroneBossRewardModifier(int cost, bool dropLegendary = false)
         {
             if (dropLegendary)
@@ -50,7 +52,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                 }
             }
             this.dropLegendary = dropLegendary;
-            this.cost = cost;
             tooltipColor = new Color(246f / 255f, 90f / 255f, 58f / 255f);
             stackable = false;
 
@@ -73,7 +74,8 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
         private void BossGroup_DropRewards(ILContext il)
         {
-            if (isAurelioniteActive) return;
+            var aurelioniteMod = StageModifierDirector.instance.activeModifiers.OfType<AurelioniteRewardModifier>().FirstOrDefault();
+            if (aurelioniteMod!=null) return;
             ILCursor c = new ILCursor(il);
             bool noBossTables = true;
 

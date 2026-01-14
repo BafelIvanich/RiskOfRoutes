@@ -2,6 +2,7 @@
 using SamplePlugin;
 using SamplePlugin.StageModifiers;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Networking;
 
 
@@ -14,6 +15,7 @@ namespace RiskOfRoutes
         //для seer'a
         public PurchaseInteraction purchaseInteraction;
         public bool isVanillaPortal = false;
+        public bool isOval = false;
 
         public int modifierCredits;
         public bool isSeerStation;
@@ -51,6 +53,7 @@ namespace RiskOfRoutes
                 else
                 {
                     Log.Error("Error with seer purchase interaction");
+                    
                 }
             }
             genericInteraction.onActivation.AddListener(OnPortalActivation);
@@ -59,9 +62,12 @@ namespace RiskOfRoutes
             {
                 sceneExitController.useRunNextStageScene = true;
             }
+            Log.Info("Attaching");
+            AttachBubblesToPortal();
 
         }
 
+        //todo почему то создаются дважды
         public void UpdateText()
         {
             Log.Info("Called method UpdateText");
@@ -93,7 +99,119 @@ namespace RiskOfRoutes
                 modifierTextSynced = $"{positiveText}\n{negativeText}";
                 Log.Info(positiveText + negativeText);
             }
+            UpdateBubbles();
         }
+
+        public void UpdateBubbles()
+        {
+            var portalCenter = transform.Find("PortalCenter");
+            for (int i = portalCenter.childCount-1; i >=0 ; i--)
+            { 
+                var child = portalCenter.GetChild(i);
+                if(child.name.Contains("Bubble"))
+                {
+                    Destroy(child.gameObject);
+                }
+            }
+            AttachBubblesToPortal();
+        }
+
+
+        private void AttachBubblesToPortal()
+        {
+            if (isSeerStation) return;
+            Log.Info("Really attaching");
+            float portalScaleX = 1f;
+            float portalScaleY = 1f;
+            if (isOval)
+            {
+                portalScaleX = 0.7f;
+                portalScaleY = 1.26f;
+            }
+            float arcAngle = 60f;
+            float startAngle = 90f;
+            float offsetAngle = 0;
+            float radius = 5f;
+
+            for (int i = 0; i < stageModifiers.Count; i++)
+            {
+                Log.Info("act");
+                if(RiskOfRoutes.iconBubblePrefab==null)
+                {
+                    RiskOfRoutes.iconBubblePrefab = RiskOfRoutes.CreateIconBubblePrefab();
+                }
+                var bubble = Object.Instantiate(RiskOfRoutes.iconBubblePrefab);
+                bubble.SetActive(true);
+
+                bubble.transform.SetParent(transform.Find("PortalCenter").transform, false);
+                bubble.transform.localScale = new Vector3(1f / portalScaleX, 1f / portalScaleY, 1f / portalScaleX);
+                bubble.transform.localRotation = Quaternion.identity;
+
+                //float stepAngle = arcAngle / modifiers.Count;
+                float stepAngle = 20;
+                offsetAngle = (180 - arcAngle) / 2;
+                startAngle = 90 - offsetAngle;
+
+                float stepAngleRad = (stepAngle * i) * Mathf.Deg2Rad;
+
+                float x = -(Mathf.Cos(stepAngleRad) * radius/(1f));
+                float y = (Mathf.Sin(stepAngleRad)* radius/(1f));
+                bubble.transform.localPosition = new Vector3(x, y, 0);
+
+                var portalActiveDisplay = bubble.transform.Find("PortalActiveDisplay");
+                var portal = portalActiveDisplay.Find("Portal");
+                if (portal != null)
+                {
+                    var rend = portal.GetComponent<Renderer>();
+                    var mat = rend.material;
+
+                    mat.SetTexture("_Cloud1Tex", null);
+                    mat.SetTexture("_Cloud2Tex", null);
+
+                    mat.SetFloat("_Boost", 1.0f);
+                    mat.SetFloat("_AlphaBoost", 1.0f);
+                    mat.SetFloat("_DistortionStrength", 0f);
+
+                    mat.SetTextureScale("_MainTex", new Vector2(2.0f, 2.0f));
+                    mat.SetTextureOffset("_MainTex", new Vector2(-0.5f, -0.5f));
+
+                    Texture2D tex = null;
+                    if (stageModifiers[i].icon != null)
+                    {
+                        tex = SpriteToTexture(stageModifiers[i].icon);
+                    }
+                    else
+                    {
+                        tex = RiskOfRoutes.placeholderIcon.texture;
+                    }
+
+
+                    mat.SetTexture("_MainTex", tex);
+                    rend.materials = new Material[] { mat, mat };
+
+                }
+            }
+        }
+
+        private Texture2D SpriteToTexture(Sprite sprite)
+        {
+            int offsetPix = 3;
+
+            int newWidth = (int)sprite.rect.width + 2 * offsetPix;
+            int newHeight = (int)sprite.rect.width + 2 * offsetPix;
+
+            Color[] spritePixels = sprite.texture.GetPixels((int)sprite.rect.x, (int)sprite.rect.y, (int)sprite.rect.width, (int)sprite.rect.height);
+
+
+            Texture2D newTexture = new Texture2D(newWidth,newHeight);
+            Color[] pixels = new Color[newWidth*newHeight];
+
+            newTexture.SetPixels(offsetPix,offsetPix,(int)sprite.rect.width,(int)sprite.rect.height,spritePixels);
+
+            return newTexture;
+
+        }
+
 
         [Server]
         public void OnPortalActivation(Interactor interactor)
@@ -116,7 +234,7 @@ namespace RiskOfRoutes
                 genericInteraction.enabled = false;
                 Run.instance.nextStageScene = destinationScene;
                 Log.Info($"inside RPM: {destinationScene.cachedName}");
-                //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("computationalexchange");
+                //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("ai_test");
                 sceneExitController.Begin();
 
             }

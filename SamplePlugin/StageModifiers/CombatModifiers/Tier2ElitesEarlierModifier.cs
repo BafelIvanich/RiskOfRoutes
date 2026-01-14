@@ -12,7 +12,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         public Func<SpawnCard.EliteRules, bool> modifiedAvailability;
         public float modifiedCostMultiplier;
 
-        public Tier2ElitesEarlierModifier(int cost)
+        public Tier2ElitesEarlierModifier()
         {
             activeText = "More powerful elites might appear earlier";
             reservedText = "More powerful elites might appear earlier";
@@ -27,7 +27,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                 Log.Error("failed to load tier 2 elites modifier");
             }
             stackable = false;
-            this.cost = cost;
         }
 
         public override void OnEnd()

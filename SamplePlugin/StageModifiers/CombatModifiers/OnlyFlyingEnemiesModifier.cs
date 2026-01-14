@@ -6,13 +6,12 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 {
     public class OnlyFlyingEnemiesModifier : StageModifier
     {
-        public OnlyFlyingEnemiesModifier(int cost)
+        public OnlyFlyingEnemiesModifier()
         {
             name = "Flying enemies";
             reservedText = "Only flying enemies will appear on the next stage";
             stackable = false;
             negative = true;
-            this.cost = cost;
         }
 
         public override void OnEnd()
@@ -25,6 +24,11 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             Log.Info("On flyingEnemies start");
             // RoR2.ClassicStageInfo.instance.monsterSelection;
             var categories = ClassicStageInfo.instance.monsterCategories.categories;
+            if(categories==null)
+            {
+                Log.Error("Could not access categories");
+                return;
+            }
             var dccs = ClassicStageInfo.instance.monsterCategories;
 
             ClassicStageInfo.instance.monsterSelection.Clear();

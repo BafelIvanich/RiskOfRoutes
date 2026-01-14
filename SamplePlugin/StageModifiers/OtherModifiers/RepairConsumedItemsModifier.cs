@@ -8,12 +8,11 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
     {
 
 
-        public RepairConsumedItemsModifier(int cost)
+        public RepairConsumedItemsModifier()
         {
-            reservedText = "All consumed items will be restored.";
+            reservedText = "Repairs all of your consumed items, available once per loop.";
             activeText = "Consumed items restored.";
             stackable = false;
-            this.cost = cost;
         }
 
         public override void OnEnd()

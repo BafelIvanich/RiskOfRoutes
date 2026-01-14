@@ -10,14 +10,13 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
     public class MoreDronesModifier : StageModifier
     {
 
-        public MoreDronesModifier(int cost)
+        public MoreDronesModifier()
         {
             name = "More drones";
             activeText = "More <style=cIsUtility>drones</style> will appear on this stage.";
-            reservedText = "More <style=cIsUtility>drones</style> will appear on next stage.";
+            reservedText = "More <style=cIsUtility>drones</style> will appear on the next stage.";
             icon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texDroneIconOutlined.png").WaitForCompletion();
             negative = false;
-            this.cost = cost;
         }
 
         public override void OnEnd()

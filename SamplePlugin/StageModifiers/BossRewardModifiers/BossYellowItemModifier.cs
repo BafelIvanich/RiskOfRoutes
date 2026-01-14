@@ -14,7 +14,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
     public class BossYellowItemModifier : StageModifier
     {
 
-        public BossYellowItemModifier(int cost)
+        public BossYellowItemModifier()
         {
             name = "Boss item modifier";
             activeText = "Boss will drop <style=cShrine>yellow item</style> on this stage.";
@@ -30,7 +30,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
             {
                 Log.Error("failed to load yyellowBossItem modifier");
             }
-            this.cost = cost;
 
         }
         public override void OnEnd()

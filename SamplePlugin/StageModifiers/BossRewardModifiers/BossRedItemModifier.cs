@@ -8,7 +8,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 {
     public class BossRedItemModifier : StageModifier
     {
-        public BossRedItemModifier(int cost)
+        public BossRedItemModifier()
         {
             reservedText = "Get <style=cDeath>red item</style> as a teleporter event reward.";
             activeText = "Get <style=cDeath>red item</style> as a teleporter event reward.";
@@ -25,7 +25,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
             {
                 Log.Error("failed to load redBossItem modifier");
             }
-            this.cost = cost;
         }
 
         public override void OnEnd()

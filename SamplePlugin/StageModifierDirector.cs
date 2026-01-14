@@ -1,4 +1,5 @@
 ﻿using RiskOfRoutes;
+using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin.StageModifiers;
 using SamplePlugin.StageModifiers.BossRewardModifiers;
@@ -21,7 +22,10 @@ namespace SamplePlugin
         public int startingCredits = 60;
         public int routeCredits = 60;
         public int negativeCredits = 30;
-        //red printer, yellow, drone interatables discounts
+        //red printer, yellow, drone interactables discounts
+        //TODO бан лист
+
+        public List<ModifierDef> allModifiers = new List<ModifierDef>();
 
         public List<StageModifier> reservedModifiers;
         public void Awake()
@@ -39,6 +43,12 @@ namespace SamplePlugin
             RoR2.Stage.onServerStageComplete += Stage_onServerStageComplete;
         }
 
+        public void RegisterModDefs()
+        {
+            allModifiers.Add(new ModifierDef("RedPrinter",30,1f,CheckPlayersRedItem));
+            allModifiers.Add(new ModifierDef("YellowPrinter", 30, 1f, CheckPlayersYellowItem));
+            allModifiers.Add(new ModifierDef("MoreDrones", 30, 1f));
+        }
 
         protected virtual void FixedUpdate()
         {
@@ -140,7 +150,6 @@ namespace SamplePlugin
 
         public List<StageModifier> GetNextStageModifiers(GameObject portal)
         {
-            Log.Info($"StageModifierdirectos has {routeCredits} credits");
             WeightedSelection<StageModifier> weightedSelection = CreateAvailableModifierSelection(portal);
             var res = new List<StageModifier>();
             var mg = portal.GetComponent<RoutePortalManager>();
@@ -211,23 +220,7 @@ namespace SamplePlugin
                 if (!isDuplicate)
                 {
                     routePortalCredits -= currentModifier.cost;
-                    if (currentModifier is OnlyFlyingEnemiesModifier)
-                    {
-                        res.Insert(0, currentModifier);
-                    }
-                    else if (currentModifier is DroneBossRewardModifier && aurelioniteRewardModifier != null)
-                    {
-                        aurelioniteRewardModifier.hasDroneRewardModifier = true;
-                        var droneMod = (DroneBossRewardModifier)currentModifier;
-                        droneMod.isAurelioniteActive = true;
-                        Log.Info("Modified aurelionite modifier");
-                        res.Add(currentModifier);
-                    }
-                    else
-                    {
-                        res.Add(currentModifier);
-
-                    }
+                    res.Add(currentModifier);
                     Log.Info($"Added mod {currentModifier.name} to res");
 
                 }
@@ -261,65 +254,22 @@ namespace SamplePlugin
             return filtered.Evaluate(RoR2.Run.instance.runRNG.nextNormalizedFloat);
         }
 
-        [System.Obsolete]
-        private WeightedSelection<StageModifier> CreateAvailableModifierSelection(GameObject portal)
+        private WeightedSelection<ModifierDef> CreateAvailableModifierSelection(GameObject portal)
         {
-            WeightedSelection<StageModifier> res = new WeightedSelection<StageModifier>();
+            WeightedSelection<ModifierDef> res = new WeightedSelection<ModifierDef>();
             
-            var printerItemMod = new PrinterItemModifier();
-            res.AddChoice(new PrinterItemModifier(), printerItemMod.itemInfo.weight);
-            Log.Info("Hello "+printerItemMod.itemInfo.internalName+" "+ printerItemMod.itemInfo.cost);
-
-            res.AddChoice(new MoreDronesModifier(60), 1f);
-            res.AddChoice(new BossYellowItemModifier(60), 0.75f);
-            res.AddChoice(new BossRedItemModifier(200), 0.5f);
-            res.AddChoice(new DroneBossRewardModifier(60), 1f);
-            res.AddChoice(new LunarEnemiesModifier(100), 1f);
-            res.AddChoice(new MoreElitesModifier(60), 1f);
-            res.AddChoice(new OnlyFlyingEnemiesModifier(100), 0.75f);
-            res.AddChoice(new Tier2ElitesEarlierModifier(100), 1f);
-            res.AddChoice(new VoidEnemiesModifier(100), 1f);
-            res.AddChoice(new MysteryModifier(100), 0.5f);
-            res.AddChoice(new WanderingChefModifier(200), 0.50f);
-
-            WeightedSelection<ArtifactModifier> arts = CreateArtifactAvailableSelection();
-            Log.Info(arts.choices.Length);
-            for (int i = 0; i < arts.Count; i++)
+            foreach(var modDef in allModifiers)
             {
-                var art = arts.GetChoice(i);
-                res.AddChoice(art.value, art.weight);
+                if (modDef.isAvailable())
+                {
+                    res.AddChoice(modDef,modDef.selectionWeight);
+                }
             }
 
-            if (portal)
-            {
-                if (CheckPlayersRedItem())
-                {
-                    res.AddChoice(new RedPrinterModifier(60), 1.0f);
-                }
-                if (CheckPlayersYellowItem())
-                {
-                    res.AddChoice(new YellowPrinterModifier(60), 1.0f);
-                }
-                if (CheckPlayersHaveConsumedItems())
-                {
-                    res.AddChoice(new RepairConsumedItemsModifier(150), 1.0f);
-                }
-                var mg = portal.GetComponent<RoutePortalManager>();
-
-                if (mg.destinationScene.baseSceneName == "dampcavesimple")
-                {
-                    //TODO Позже будет уникальный
-                    Log.Info("UNIQUE MODIFIER FOR IMP CAVE");
-                }
-                if (mg.destinationScene.baseSceneName == "lemuriantemple")
-                {
-                    Log.Info("UNIQUE MODIFIER FOR LEMURIAN TEMPLE");
-                }
-
-            }
             return res;
 
         }
+
 
         [Server]
         private bool CheckPlayersRedItem()
@@ -347,7 +297,6 @@ namespace SamplePlugin
         }
 
         [Server]
-        [System.Obsolete]
         private bool CheckPlayersYellowItem()
         {
             int yellowItemCount = 0;

@@ -11,7 +11,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     public class VoidEnemiesModifier : StageModifier
     {
         public List<DirectorCard> voidEnemies;
-        public VoidEnemiesModifier(int cost)
+        public VoidEnemiesModifier()
         {
             name = "Void invasion";
             reservedText = "<style=cIsVoid>Enemies from the void</style> might appear on the next stage.";
@@ -26,7 +26,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                 this.icon = icon;
             }
             negative = true;
-            this.cost = cost;
         }
 
         public override void OnEnd()

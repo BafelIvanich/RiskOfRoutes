@@ -24,7 +24,6 @@ using UnityHotReloadNS;
 //TODO
 //Core:
 //Особые модификаторы для стейджей
-//Добавить конфиг
 //(Подкорректировать)Добавить больше предметов в пулл зеленых и белых, добавить возможность для такого же с предметами любого тира через конфиг
 //Сделать, чтобы всё работало в мультиплеере
 //Артефакт инфляции
@@ -32,20 +31,17 @@ using UnityHotReloadNS;
 //(Подкорректировать)Назначение exitController и purchase в RoutePortalManager нужно делать вручную, стоит сделать awake()
 //(Возможно) Шанс на модификаторы повышается с получением подходящих предметов
 //Конфликт с артефакт модификат
+//анти прок?
+//реген меньше
+//артефакт лимит модификаторов
+//атрефакт стейджи в разном порядке
+//(Возможно) более ровный спавн порталов
 
 
 //Визуал:
 //Текстура локи в портале
-//(Сложно) UI карты на манер шпиля
 
 
-//(Возможно) Можно ли сделать так, чтобы любые мобы могли воровать предметы?
-//(Возможно) Бродячий дрифтер или можно рюкзак
-//(Возможно) рюзкак дрифтера позволяет поделиться предметами
-//(Возможно) Void Stage
-//(Возможно) Святилище, что рероллит все предметы, лежащие на земле
-//(Возможно)стейдж где алтари удачи заменяют сундуки но другой дроп голды
-//(Возможно)Модификаторы длящиеся несколько стейджей
 //Модификатор ограничивающий макс хп
 //(Возможно) Скрытые модификаторы и предметы их раскрывающие
 //(Возможно) Модификатор исключающий категорию предметов из пулла
@@ -57,8 +53,20 @@ using UnityHotReloadNS;
 //Утилити урон хил
 //Награда зел дрон
 //Категории порталов
-//Двойник
+//Двойник каждыенесколько минут
 //Эклипсовые
+//модификатор позволяющий унести с собой испытание горы
+
+//Пост релиз
+//(Сложно) UI карты на манер шпиля
+//(Возможно) Можно ли сделать так, чтобы любые мобы могли воровать предметы?
+//(Возможно) Бродячий дрифтер или можно рюкзак
+//(Возможно) рюзкак дрифтера позволяет поделиться предметами
+//(Возможно) Void Stage
+//(Возможно) Святилище, что рероллит все предметы, лежащие на земле
+//(Возможно)стейдж где алтари удачи заменяют сундуки но другой дроп голды
+//(Возможно)Модификаторы длящиеся несколько стейджей
+//
 
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
@@ -108,7 +116,8 @@ namespace RiskOfRoutes
         public static ConfigEntry<int> droneStackPercent;
 
 
-        private GameObject portalPrefab;
+        public static GameObject routePortalPrefab;
+        public static GameObject iconBubblePrefab;
         public static GameObject routePortalPanel;
         public static GameObject chefPrefab;
 
@@ -126,16 +135,17 @@ namespace RiskOfRoutes
         {
             BindConfig();
             Log.Init(Logger);
+            placeholderIcon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texMysteryIcon.png").WaitForCompletion();
+            bomb = Addressables.LoadAssetAsync<TMP_FontAsset>("RoR2/Base/Common/Fonts/Bombardier/tmpBombDropShadow.asset").WaitForCompletion();
             //префабы
-            CreateRoutePortalPrefab();
             chefPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/MealPrep/MealPrep.prefab").WaitForCompletion(), "mealPrep");
+            iconBubblePrefab = CreateIconBubblePrefab();
+            routePortalPrefab = CreateRoutePortalPrefab();
             //ui = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/UI/Tooltip.prefab").WaitForCompletion(), "tooltipUI");
             //для своих префабов
             string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "riskofroutes");
             bundle = AssetBundle.LoadFromFile(path);
             //для панели , шрифт для стаков
-            bomb = Addressables.LoadAssetAsync<TMP_FontAsset>("RoR2/Base/Common/Fonts/Bombardier/tmpBombDropShadow.asset").WaitForCompletion();
-            placeholderIcon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texMysteryIcon.png").WaitForCompletion();
             //директор
             gameObject.AddComponent<StageModifierDirector>();
 
@@ -163,6 +173,8 @@ namespace RiskOfRoutes
                 Log.Error("Could not load default elite tiers");
                 defaultEliteTiers = new CombatDirector.EliteTierDef[] { };
             }
+
+
 
 
         }
@@ -358,6 +370,7 @@ namespace RiskOfRoutes
                     var mg = shopPortal.AddComponent<RoutePortalManager>();
                     mg.destinationScene = Run.instance.nextStageScene;
                     mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopPortal);
+                    mg.isOval = true;
                     Log.Info("Succesfully attached");
                 }
 
@@ -393,10 +406,35 @@ namespace RiskOfRoutes
                         Log.Info($"Mgr:{mgr.name}");
                         mgr.destinationScene = GetGreenPortalScene();
                         mgr.isVanillaPortal = true;
+                        mgr.isOval = true;
                         Log.Info(mgr.destinationScene);
 
                         mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
                         Log.Info($"Wjat: {mgr.stageModifiers.Count}");
+
+                        foreach(var t in obj.GetComponentsInChildren<MeshFilter>())
+                        {
+                            if(t.name == "Donut")
+                            {
+                                var mf = t.GetComponent<MeshFilter>();
+                                if(mf!=null)
+                                {
+                                    if (tempBundle == null)
+                                    {
+                                        string pathT = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "majime");
+                                        tempBundle = AssetBundle.LoadFromFile(pathT);
+                                    }
+                                    GameObject g = tempBundle.LoadAsset<GameObject>("majime");
+                                    Log.Info(mf.sharedMesh.name);
+                                    var maj = g.GetComponentInChildren<MeshFilter>();
+                                    if (maj != null)
+                                    {
+                                        Log.Info("Succs");
+                                    }
+                                    mf.mesh = maj.sharedMesh;
+                                }
+                            }
+                        }
                     }
                     else if (directorSpawnRequest.spawnCard.name == "iscGoldshoresPortal")
                     {
@@ -413,6 +451,7 @@ namespace RiskOfRoutes
                             Log.Info($"Mgr:{mgr.name}");
                             mgr.destinationScene = Run.instance.nextStageScene;
                             mgr.isVanillaPortal = true;
+                            mgr.isOval = true;
                             Log.Info(mgr.destinationScene);
 
                             mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
@@ -444,6 +483,7 @@ namespace RiskOfRoutes
                         Log.Info($"Mgr:{mgr.name}");
                         mgr.destinationScene = GetGreenPortalScene();
                         mgr.isVanillaPortal = true;
+                        mgr.isOval =true;
                         Log.Info(mgr.destinationScene);
 
                         mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
@@ -467,6 +507,7 @@ namespace RiskOfRoutes
                             if (scene == null) scene = Run.instance.nextStageScene;
                             mgr.destinationScene = scene;
                             mgr.isVanillaPortal = true;
+                            mgr.isOval=false;
                             Log.Info(mgr.destinationScene);
 
                             mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
@@ -646,13 +687,16 @@ namespace RiskOfRoutes
                 return;
             }
 
-            //routeUI.SetActive(true);
+            routePortalPanel.SetActive(false);
         }
 
         private void SetupRoutePortalPanel()
         {
             GameObject prefab = bundle.LoadAsset<GameObject>("RoutePortalPortraitPanel");
-
+            if(prefab==null)
+            {
+                Log.Error("What?");
+            }
             //блюр
             TranslucentImage blur = prefab.AddComponent<TranslucentImage>();
             Shader blurShader = Shader.Find("UI/TranslucentImage");
@@ -660,6 +704,10 @@ namespace RiskOfRoutes
             blur.color = new Color(0, 0, 0, 0.7f);
             //текст //плейсхолдер
             var text = prefab.GetComponentInChildren<TextMeshProUGUI>();
+            if(text==null)
+            {
+                Log.Error("No text meshprougui");
+            }
             if (text == null) Log.Error("Not found");
             text.text = "Placeholder";
             text.font = bomb;
@@ -757,34 +805,52 @@ namespace RiskOfRoutes
 
 
 
-        private void CreateRoutePortalPrefab()
+        private GameObject CreateRoutePortalPrefab()
         {
             GameObject routePortal = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/PortalShop/PortalShop.prefab").WaitForCompletion(), "RoutePortal");
-            //GameObject routePortal = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/bazaar/SeerStation.prefab").WaitForCompletion(), "BeebleMemorialStatue");
             Log.Info("Invoked");
 
             Destroy(routePortal.GetComponent<GenericInteraction>());
             Destroy(routePortal.GetComponent<SceneExitController>());
-            //Destroy(routePortal.GetComponent<PurchaseAvailabilityIndicator>());
-            //Destroy(routePortal.GetComponent<PurchaseInteraction>());
-            //Destroy(routePortal.GetComponent<SeerStationController>());
 
-            //var renderers = routePortal.GetComponentsInChildren<MeshRenderer>();
+            var scaleCurve = routePortal.GetComponentInChildren<ObjectScaleCurve>();
+            if(routePortal.transform.Find("PortalCenter") != null)
+            {
+                Log.Info("ScaleCurveFound");
+            }
 
-            ////Material mat = SceneInfo.instance.sceneDef.portalMaterial;
-            //foreach (var renderer in renderers)
-            //{
-            //    Log.Info($"Renderer:{renderer}");
-            //    if (renderer.name == "Mesh")
-            //    {
-            //        UnityEngine.Object.Destroy(renderer.gameObject);
-            //    }
-            //}
-
-
-
+            //у ваниллы 0.7 1.26
+            float portalScaleX = 1f;
+            float portalScaleY = 1f;
             routePortal.name = "RoutePortal";
-            routePortal.transform.localScale = new Vector3(0.7f, 1.26f, 0.7f);
+            routePortal.transform.localScale = new Vector3(portalScaleX, portalScaleY, portalScaleX);
+
+            var portalCenter = routePortal.transform.Find("PortalCenter");
+            if(portalCenter != null)
+            {
+                var pointLight = portalCenter.Find("Point Light");
+                if (pointLight != null)
+                {
+                    var light = pointLight.GetComponent<Light>();
+                    if(light!=null)
+                    {
+            light.intensity = 2;
+
+                    }
+                    else
+                    {
+                        Log.Error("Not ifound lighthh");
+                    }
+                }
+                else
+                {
+                    Log.Info("Not found poitn lignt");
+                }
+            }
+            else
+            {
+                Log.Info("Not found center");
+            }
 
             //создаем интеракцию
             RoutePortalManager mgr = routePortal.AddComponent<RoutePortalManager>();
@@ -805,16 +871,81 @@ namespace RiskOfRoutes
             //trigger.AddComponent<BoxCollider>().isTrigger = true;
             //trigger.AddComponent<EntityLocator>().entity = routePortal;
 
-            portalPrefab = routePortal;
+            return routePortal;
 
 
 
 
         }
 
+        //todo объект спавнится в 0 0 0
+        //todo убрать clamp текстуры
+        public static GameObject CreateIconBubblePrefab()
+        {
+            var seerPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/bazaar/SeerStation.prefab").WaitForCompletion(), "seer");
+
+            Transform displayPivot = seerPrefab.transform.Find("Model").Find("DisplayPivot");
+            Transform portalDisplay = displayPivot.Find("PortalActiveDisplay");
+
+            if (portalDisplay)
+            {
+                GameObject parent = new GameObject("IconBubblePrefab");
+
+                DontDestroyOnLoad(parent);
+                parent.SetActive(false);
+                portalDisplay.SetParent(parent.transform);
+                portalDisplay.transform.localPosition = new Vector3(0, 0f, 0);
+                portalDisplay.transform.localRotation = Quaternion.Euler(0f,180f,0);
+                portalDisplay.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
+                var pointLight = portalDisplay.transform.Find("Point Light");
+                var light = pointLight.GetComponent<Light>();
+                light.intensity = 1;
+                var mr = portalDisplay.GetComponentsInChildren<Renderer>();
+                foreach (var rend in mr)
+                {
+                    if (rend.name == "Portal")
+                    {
+                        var mat = rend.materials[0];
+
+                        mat.SetTexture("_Cloud1Tex", null);
+                        mat.SetTexture("_Cloud2Tex", null);
+
+                        mat.SetFloat("_Boost", 1.0f);
+                        mat.SetFloat("_AlphaBoost", 1.0f);
+                        mat.SetFloat("_DistortionStrength", 0f);
+
+                        mat.SetTextureScale("_MainTex", new Vector2(1.75f, 1.75f));
+                        mat.SetTextureOffset("_MainTex", new Vector2(-0.4f, -0.4f));
+                        rend.materials = new Material[] { mat,mat };
+                    }
+                }
+
+                GameObject.Destroy(seerPrefab);
+                return parent;
+
+            }
+            return seerPrefab;
+        }
+
         private void TeleporterEventSpawnRoutePortals(TeleporterInteraction interaction)
         {
             spawnRoutePortals(interaction.transform.position);
+        }
+
+        private void spawnTestPortal(Vector3 position)
+        {
+            SpawnCard routePortal = CreateRoutePortalSpawnCard(SceneCatalog.GetSceneDefFromSceneName("computationalexchange"));
+            DirectorSpawnRequest request = new DirectorSpawnRequest(routePortal, new DirectorPlacementRule
+            {
+                minDistance = 10f,
+                maxDistance = 40f,
+                placementMode = DirectorPlacementRule.PlacementMode.Approximate,
+                position = position
+            }, Run.instance.stageRng);
+
+
+
+            GameObject portalObject = DirectorCore.instance.TrySpawnObject(request);
         }
 
 
@@ -877,7 +1008,20 @@ namespace RiskOfRoutes
 
                 if (portalObject)
                 {
+                    //TODO ОТДЕЛЬНЫЙ МЕТОД И ОПТИМИЗАЦИЯ
+                    foreach(Transform child in portalObject.GetComponentsInChildren<Transform>())
+                    {
+                        if (child.name.Contains("bubble"))
+                        {
+                            Log.Info("1");
+                        }
+                    }
+
+
                     var m = portalObject.GetComponent<RoutePortalManager>();
+
+                    
+
                     m.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(portalObject);
                     Vector3 facingVector = position - portalObject.transform.position;
                     facingVector.y = 0;
@@ -904,7 +1048,6 @@ namespace RiskOfRoutes
                             else
                             {
                                 renderer.material.SetTexture("_RemapTex", center);
-
                             }
                         }
                     }
@@ -917,13 +1060,13 @@ namespace RiskOfRoutes
 
         private InteractableSpawnCard CreateRoutePortalSpawnCard(SceneDef destination)
         {
-            var m = portalPrefab.GetComponent<RoutePortalManager>();
+            var m = routePortalPrefab.GetComponent<RoutePortalManager>();
             m.destinationScene = destination;
 
             InteractableSpawnCard interactableSpawnCard = ScriptableObject.CreateInstance<InteractableSpawnCard>();
-
             interactableSpawnCard.name = "iscRoutePortal";
-            interactableSpawnCard.prefab = portalPrefab;
+            //interactableSpawnCard.prefab = routePortalPrefab;
+            interactableSpawnCard.prefab = routePortalPrefab;
             interactableSpawnCard.sendOverNetwork = true;
             interactableSpawnCard.hullSize = HullClassification.Human;
             interactableSpawnCard.nodeGraphType = RoR2.Navigation.MapNodeGroup.GraphType.Ground;
@@ -938,6 +1081,8 @@ namespace RiskOfRoutes
 
             return interactableSpawnCard;
         }
+
+
 
         public static List<SceneDef> GetNextStagesScenesList()
         {

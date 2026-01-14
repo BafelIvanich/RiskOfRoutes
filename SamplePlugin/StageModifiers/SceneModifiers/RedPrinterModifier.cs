@@ -9,7 +9,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
     {
         public static InteractableSpawnCard redPrinterSpawnCard;
 
-        public RedPrinterModifier(int cost)
+        public RedPrinterModifier()
         {
             CreateRedPrinterSpawnCard();
             name = "Red item printer";
@@ -25,7 +25,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             {
                 Log.Error("failed to load red printer modifier");
             }
-            this.cost = cost;
         }
         public override void OnEnd()
         {

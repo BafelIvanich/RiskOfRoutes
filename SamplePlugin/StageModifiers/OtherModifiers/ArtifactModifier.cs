@@ -7,10 +7,9 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
     {
         private ArtifactDef currentArtifact;
         //TODO: артефакт жертвы не вырубает спавн сундуков
-        public ArtifactModifier(ArtifactDef artifact, int cost, bool isPositive)
+        public ArtifactModifier(ArtifactDef artifact, bool isPositive)
         {
             currentArtifact = artifact;
-            this.cost = cost;
             activeText = $"<style=cWorldEvent>{Language.GetString(currentArtifact.descriptionToken)}</style>";
             reservedText = $"<style=cWorldEvent>{Language.GetString(currentArtifact.descriptionToken)}</style>";
             name = artifact.cachedName;

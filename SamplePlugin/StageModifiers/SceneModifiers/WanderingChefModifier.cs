@@ -13,7 +13,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         public static bool spawnCardCreated = false;
         public static InteractableSpawnCard chefSpawnCard;
 
-        public WanderingChefModifier(int cost)
+        public WanderingChefModifier()
         {
             name = "Wandering CHEF";
             activeText = "<style=cIsHealth>Wandering CHEF</style> has appeared somewhere on the stage";
@@ -22,7 +22,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             stackable = false;
             negative = false;
             if (!spawnCardCreated) CreateChefSpawnCard();
-            this.cost = cost;
         }
 
         public override void OnEnd()

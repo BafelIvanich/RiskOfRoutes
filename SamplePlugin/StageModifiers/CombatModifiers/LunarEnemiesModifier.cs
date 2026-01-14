@@ -12,7 +12,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     {
         public List<DirectorCard> lunarEnemies;
 
-        public LunarEnemiesModifier(int cost)
+        public LunarEnemiesModifier()
         {
             name = "Moon invasion";
             reservedText = "<style=cLunarObjective>Enemies from the moon</style> might appear on the next stage.";
@@ -27,7 +27,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                 this.icon = icon;
             }
             negative = true;
-            this.cost = cost;
         }
 
 
