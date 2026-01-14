@@ -1,44 +1,75 @@
 ﻿using RiskOfRoutes;
 using RoR2;
-using System;
+using SamplePlugin.StageModifiers;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
-using UnityEngine.Bindings;
 using UnityEngine.Networking;
 
 namespace SamplePlugin
 {
-    public class StageModifierManager: MonoBehaviour
+    public class StageModifierManager : MonoBehaviour
     {
         public static StageModifierManager Instance;
-        public List<StageModifier> activeModifiers {  get; private set; }
+        public List<StageModifier> activeModifiers { get; private set; }
 
-        public int RouteCredits = 200;
-
-        public HashSet<StageModifier> availableModifiers;
-
+        public int routeCredits = 200;
         //red printer, yellow, drone interatables discounts
 
         public List<StageModifier> reservedModifiers;
-
-        bool postStageThird = false;
-
         public void Awake()
         {
             Instance = this;
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<StageModifier>();
-            availableModifiers = new HashSet<StageModifier>();
-
-            availableModifiers.Add(new MoreDronesModifier());
-            availableModifiers.Add(new PrinterItemModifier());
-            availableModifiers.Add(new BossItemModifier());
 
             Log.Info("StagaModifier managaer created");
 
+
+            RoR2.Run.onRunStartGlobal += Run_onRunStartGlobal;
+
+
             RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
             RoR2.Stage.onServerStageComplete += Stage_onServerStageComplete;
+
+            //RoR2.SceneDirector.onPostPopulateSceneServer += SceneDirector_onPostPopulateSceneServer;
+
+            //RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
+            
+        }
+
+        private void SceneDirector_onPrePopulateSceneServer(SceneDirector obj)
+        {
+            Log.Info($"Stage started, applying {reservedModifiers.Count} modifiers");
+            if (reservedModifiers.Count == 0) return;
+            Log.Info(reservedModifiers.Count);
+            activeModifiers = new List<StageModifier>(reservedModifiers);
+            reservedModifiers.Clear();
+
+            foreach (StageModifier modifier in activeModifiers)
+            {
+                modifier.OnStart();
+            }
+        }
+
+        private void SceneDirector_onPostPopulateSceneServer(SceneDirector obj)
+        {
+            Log.Info($"Stage started, applying {reservedModifiers.Count} modifiers");
+            if (reservedModifiers.Count == 0) return;
+            Log.Info(reservedModifiers.Count);
+            activeModifiers = new List<StageModifier>(reservedModifiers);
+            reservedModifiers.Clear();
+
+            foreach (StageModifier modifier in activeModifiers)
+            {
+                modifier.OnStart();
+            }
+        }
+
+        private void Run_onRunStartGlobal(Run obj)
+        {
+            Log.Info("Run started");
+            activeModifiers.Clear();
+            reservedModifiers.Clear();
         }
 
         private void Stage_onServerStageComplete(RoR2.Stage obj)
@@ -51,34 +82,19 @@ namespace SamplePlugin
             }
 
             SceneDef nextStageScene = Run.instance.nextStageScene;
-            RouteCredits = 200 + nextStageScene.stageOrder*50;
+            routeCredits = 200 + nextStageScene.stageOrder * 50;
             activeModifiers.Clear();
         }
 
         private void Stage_onServerStageBegin(RoR2.Stage obj)
         {
             Log.Info($"Stage started, applying {reservedModifiers.Count} modifiers");
-
-            //checks for extending modfiiers pool
-            //TODO потом придется поменять логику, чтобы модификаторы заново считались как это происходит в scenedirector, а то при пропаже у игрока желтых красных модификатор остается (пока используется hashset)
-            if(!postStageThird && Run.instance.nextStageScene.stageOrder >=3)
-            {
-                postStageThird = true;
-                availableModifiers.Add(new ArtifactModifier());
-            }
-            if(CheckPlayersRedItem())
-            {
-                availableModifiers.Add(new YellowPrinterModifier());
-            }
-            if (CheckPlayersYellowItem())
-            {
-                availableModifiers.Add(new YellowPrinterModifier());
-            }
+            if (reservedModifiers.Count == 0) return;
             Log.Info(reservedModifiers.Count);
             activeModifiers = new List<StageModifier>(reservedModifiers);
             reservedModifiers.Clear();
 
-            foreach(StageModifier modifier in activeModifiers)
+            foreach (StageModifier modifier in activeModifiers)
             {
                 modifier.OnStart();
             }
@@ -86,29 +102,114 @@ namespace SamplePlugin
 
         public List<StageModifier> GetNextStageModifiers(GameObject portal)
         {
-            WeightedSelection<StageModifier> weightedSelection;
-
-
-
+            WeightedSelection<StageModifier> weightedSelection = CreateWeightedSelection(portal);
             var res = new List<StageModifier>();
-            if(portal)
+
+            int routePortalCredits = 200;
+            int num = 100;
+            while (routePortalCredits > 0 && num > 0)
             {
-                var mg = portal.GetComponent<RoutePortalManager>();
-                if (mg.destinationScene.baseSceneName == "dampcavesimple")
+                num--;
+                StageModifier mod = SelectModifier(weightedSelection, routePortalCredits);
+                if (mod == null) break;
+                bool isDuplicate = false;
+
+                foreach (StageModifier m in res)
                 {
-                    res.Add(new RedPrinterModifier());
-                    res.Add(new MoreDronesModifier());
-                    res.Add(new WanderingChefModifier());
+                    if(mod.GetType()  == m.GetType())
+                    {
+                        if (m.stackable)
+                        {
+                            m.stack++;
+                            routePortalCredits -= mod.cost;
+                            Log.Info($"Stack here {mod}");
+                        }
+                        if (m is PrinterItemModifier && m.name!=mod.name) break;
+                        isDuplicate = true;
+
+                        break;
+                    }
                 }
-                else
+                if(!isDuplicate)
                 {
-                    res.Add(new YellowPrinterModifier());
-                    res.Add(new RedPrinterModifier());
-                    res.Add(new MoreDronesModifier());
+                routePortalCredits -= mod.cost;
+                res.Add(mod);
+                Log.Info($"Added mod {mod.name} to res");
+
                 }
-                 
             }
             return res;
+
+        }
+
+        //почти идентично SceneDirector.SelectCard()
+        private StageModifier SelectModifier(WeightedSelection<StageModifier> weightedSelection, int maxCost)
+        {
+            WeightedSelection<StageModifier> filtered = new WeightedSelection<StageModifier>();
+
+            for (int i = 0; i < weightedSelection.Count; i++)
+            {
+                WeightedSelection<StageModifier>.ChoiceInfo choice = weightedSelection.GetChoice(i);
+                Log.Info($"{i}/{weightedSelection.Count}: {choice.value.cost} / {maxCost}::{choice.value.name}");
+                if (choice.value.cost <= maxCost)
+                {
+                    filtered.AddChoice(choice);
+                    Log.Info($"Ti fultered was added {choice.value.name}");
+                }
+            }
+            if (filtered.Count == 0)
+            {
+                return null;
+            }
+
+
+            return filtered.Evaluate(RoR2.Run.instance.runRNG.nextNormalizedFloat);
+        }
+
+        private WeightedSelection<StageModifier> CreateWeightedSelection(GameObject portal)
+        {
+            WeightedSelection<StageModifier> res = new WeightedSelection<StageModifier>();
+            res.AddChoice(new BossItemModifier(), 0.5f);
+            res.AddChoice(new PrinterItemModifier(), 0.5f);
+            res.AddChoice(new MoreDronesModifier(), 0.5f);
+            res.AddChoice(new WanderingChefModifier(), 0.5f);
+            res.AddChoice(new MoreElitesModifier(), 0.5f);
+            res.AddChoice(new VoidEnemiesModifier(), 0.5f);
+            res.AddChoice(new LunarEnemiesModifier(), 0.5f);
+            if (portal)
+            {
+                var mg = portal.GetComponent<RoutePortalManager>();
+
+                //if ( Run.instance.nextStageScene.stageOrder >= 3)
+                //{
+                //    res.AddChoice(new ArtifactModifier(), 0.5f);
+                //}
+                if (CheckPlayersRedItem())
+                {
+                    res.AddChoice(new RedPrinterModifier(), 0.5f);
+                }
+                if (CheckPlayersYellowItem())
+                {
+                    res.AddChoice(new YellowPrinterModifier(), 0.5f);
+                }
+                if(CheckPlayersHaveConsumedItems())
+                {
+                    res.AddChoice(new RepairConsumedItemsModifier(), 1.0f);
+                }
+
+                if (mg.destinationScene.baseSceneName == "dampcavesimple")
+                {
+                    //TODO Позже будет уникальный
+                    Log.Info("UNIQUE MODIFIER FOR IMP CAVE");
+                }
+                if (mg.destinationScene.baseSceneName == "lemuriantemple")
+                {
+                    Log.Info("UNIQUE MODIFIER FOR LEMURIAN TEMPLE");
+                }
+
+            }
+            return res;
+
         }
 
         [Server]
@@ -149,7 +250,7 @@ namespace SamplePlugin
                         if (itemDef.tier == ItemTier.Boss)
                         {
 
-                            yellowItemCount+= cm.inventory.GetItemCount(item);
+                            yellowItemCount += cm.inventory.GetItemCount(item);
                         }
                     }
                 }
@@ -158,5 +259,31 @@ namespace SamplePlugin
 
             return yellowItemCount > 0;
         }
+
+        //TODO
+        [Server]
+        private bool CheckPlayersHaveConsumedItems()
+        {
+            int consumedItemsCount = 0;
+            foreach(CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
+            {
+                if (!cm.inventory) continue;
+                foreach(ItemIndex item in cm.inventory.itemAcquisitionOrder)
+                {
+                    ItemDef itemDef = ItemCatalog.GetItemDef(item);
+                    if(itemDef!=null)
+                    {
+                        if(itemDef.isConsumed && itemDef != RoR2.DLC1Content.Items.RegeneratingScrapConsumed && itemDef != RoR2.DLC2Content.Items.LowerPricedChestsConsumed && itemDef != RoR2.DLC2Content.Items.TeleportOnLowHealthConsumed)
+                        {
+                            consumedItemsCount++;
+                        }
+                    }
+                }
+            }
+            Log.Info($"Players have {consumedItemsCount} consumed items right now");
+
+            return consumedItemsCount > 0;
+        }
+
     }
 }

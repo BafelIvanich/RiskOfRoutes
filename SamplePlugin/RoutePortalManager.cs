@@ -1,7 +1,7 @@
 ﻿using RoR2;
 using SamplePlugin;
+using SamplePlugin.StageModifiers;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -10,8 +10,9 @@ namespace RiskOfRoutes
 {
     public class RoutePortalManager : NetworkBehaviour
     {
-        public PurchaseInteraction purchaseInteraction;
+        public GenericInteraction genericInteraction;
         public SceneExitController sceneExitController;
+        public bool isVanillaPortal = false;
 
         public int modifierCredits;
 
@@ -23,27 +24,33 @@ namespace RiskOfRoutes
         public string modifierTextSynced;
 
 
+        public void Awake()
+        {
+            genericInteraction = GetComponent<GenericInteraction>();
+            sceneExitController = GetComponent<SceneExitController>();
+
+            if (!genericInteraction) Log.Error("PurchaseInteraction missing!");
+            if (!sceneExitController) Log.Error("SceneExitController missing!");
+        }
 
         public void Start()
         {
             if (NetworkServer.active && Run.instance)
             {
-                purchaseInteraction.SetAvailable(true);
-
                 string positiveText = "Positive:\n";
                 string negativeText = "Negative:\n";
 
-                if(stageModifiers!=null)
+                if (stageModifiers != null)
                 {
                     foreach (var stageModifier in stageModifiers)
                     {
                         if (stageModifier.negative)
                         {
-                            negativeText += stageModifier.reservedText+'\n';
+                            negativeText += $"{stageModifier.reservedText} - x{stageModifier.stack}" + '\n';
                         }
                         else
                         {
-                            positiveText += stageModifier.reservedText + '\n';
+                            positiveText += $"{stageModifier.reservedText} - x{stageModifier.stack}" + '\n';
                         }
                     }
                 }
@@ -53,18 +60,21 @@ namespace RiskOfRoutes
                 }
 
 
-                    modifierTextSynced = $"{positiveText}\n{negativeText}";
+                modifierTextSynced = $"{positiveText}\n{negativeText}";
                 Log.Info(positiveText + negativeText);
             }
 
-            purchaseInteraction.onPurchase.AddListener(OnPurchase);
+            genericInteraction.onActivation.AddListener(OnActivation);
 
-            sceneExitController.useRunNextStageScene = true;
+            if (!isVanillaPortal)
+            {
+                sceneExitController.useRunNextStageScene = true;
+            }
 
         }
 
         [Server]
-        public void OnPurchase(Interactor interactor)
+        public void OnActivation(Interactor interactor)
         {
             if (!NetworkServer.active)
             {
@@ -72,27 +82,27 @@ namespace RiskOfRoutes
                 return;
             }
 
-            if(stageModifiers!=null && stageModifiers.Count>0)
+            if (stageModifiers != null && stageModifiers.Count > 0)
             {
                 StageModifierManager.Instance.reservedModifiers = stageModifiers;
             }
-            
+
             Log.Info($"Trying {StageModifierManager.Instance.activeModifiers.Count}");
 
-            purchaseInteraction.SetAvailable(false);
-            Run.instance.nextStageScene = destinationScene;
-            //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("itfrozenwall");
-            sceneExitController.Begin();
+            if (!isVanillaPortal)
+            {
+                genericInteraction.enabled = false;
+                Run.instance.nextStageScene = destinationScene;
+                Log.Info($"inside RPM: {destinationScene.cachedName}");
+                //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("itfrozenwall");
+                sceneExitController.Begin();
+
+            }
         }
 
         public void AddStageModifier(StageModifier mod)
         {
-           stageModifiers.Add(mod);
-        }
-
-        public void GetModifiersForPortal()
-        {
-
+            stageModifiers.Add(mod);
         }
 
     }
