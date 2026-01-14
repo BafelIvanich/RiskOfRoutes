@@ -5,6 +5,7 @@ using R2API;
 using RoR2;
 using RoR2.UI;
 using SamplePlugin;
+using System.IO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,6 +70,10 @@ namespace RiskOfRoutes
 
         public const int RouteCount = 3;
 
+        private AssetBundle bundle;
+
+        public Sprite placeholderIcon;
+
         public void Awake()
         {
 
@@ -77,9 +82,12 @@ namespace RiskOfRoutes
             chefPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/MealPrep/MealPrep.prefab").WaitForCompletion(), "mealPrep");
 
             ui = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/UI/Tooltip.prefab").WaitForCompletion(), "tooltipUI");
-            
-            
-            
+
+            string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "panel");
+            bundle = AssetBundle.LoadFromFile(path);
+
+            placeholderIcon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texMysteryIcon.png").WaitForCompletion();
+
             //statue
             CreateInteractable();
 
@@ -91,7 +99,96 @@ namespace RiskOfRoutes
             //On.RoR2.HalcyoniteShrineInteractable.AttemptSpawnPortal += HalcyoniteShrineInteractable_AttemptSpawnPortal;
             //On.RoR2.PortalSpawner.AttemptSpawnPortalServer += PortalSpawner_AttemptSpawnPortalServer;
             //On.RoR2.DirectorCore.TrySpawnObject += DirectorCore_TrySpawnObject;
-            
+            On.RoR2.UI.CurrentRunArtifactDisplayDataDriver.Refresh += CurrentRunArtifactDisplayDataDriver_Refresh;
+        }
+
+        private void CurrentRunArtifactDisplayDataDriver_Refresh(On.RoR2.UI.CurrentRunArtifactDisplayDataDriver.orig_Refresh orig, CurrentRunArtifactDisplayDataDriver self)
+        {
+            //if(StageModifierManager.Instance.activeModifiers.Count == 0) { return; }
+            bool hasVanillaArtifacts = RunArtifactManager.enabledArtifactsEnumerable.Any();
+            //если 0 артефактов то в цикле оно убирает добавляет панель из раза в раз
+            if (hasVanillaArtifacts)
+            {
+                orig(self);
+            }
+            else
+            {
+                if (StageModifierManager.Instance.activeModifiers.Count == 0) return;
+                //if (self.artifactDisplayPanelController && self.artifactDisplayPanelController.iconContainer)
+                //{
+                //    foreach(Transform child in self.artifactDisplayPanelController.iconContainer)
+                //    {
+                //        if(child.name != nam)
+                //    }
+                //}
+
+
+            }
+
+            if (self.artifactDisplayPanelController && self.artifactDisplayPanelController.iconContainer)
+            {
+                if (StageModifierManager.Instance.activeModifiers.Count == 0)
+                {
+                    self.artifactDisplayPanelController.panelObject.SetActive(false);
+                    return;
+                }
+                self.dirty = false;
+
+                //Log.Info("It does have icon container");
+                AddCustomIcon(self.artifactDisplayPanelController);
+
+
+
+                if(!self.artifactDisplayPanelController.panelObject.activeSelf)
+                {
+                    self.artifactDisplayPanelController.panelObject.SetActive(true);
+                }
+            }
+
+        }
+
+        private void AddCustomIcon(ArtifactDisplayPanelController controller)
+        {
+            foreach(var mod in StageModifierManager.Instance.activeModifiers)
+            {
+                if (mod is ArtifactModifier) continue;
+                string iconName = mod.name;
+                Transform container = controller.iconContainer;
+
+                if (container.Find(iconName)) return;
+                GameObject iconObj = new GameObject(iconName);
+                iconObj.transform.SetParent(container, false);
+                Image img = iconObj.AddComponent<Image>();
+
+                var sprite = mod.icon;
+                if (sprite != null)
+                {
+                    Log.Info("Succesfully loaded icon");
+                }
+                else
+                {
+                    sprite = placeholderIcon;
+                }
+
+                img.sprite = sprite;
+
+                LayoutElement layout = iconObj.AddComponent<LayoutElement>();
+                layout.preferredHeight = 32f;
+                layout.preferredWidth = 32f;
+
+                RoR2.UI.TooltipProvider tooltip = iconObj.AddComponent<RoR2.UI.TooltipProvider>();
+                tooltip.titleToken = mod.name;
+                tooltip.titleColor = new Color(0.86f, 0.57f, 0.57f, 1.0f);
+
+                tooltip.bodyToken = mod.activeText;
+
+
+                if (controller.panelObject && !controller.panelObject.activeSelf)
+                {
+                    controller.panelObject.SetActive(true);
+                }
+            }
+
         }
 
         private GameObject DirectorCore_TrySpawnObject(On.RoR2.DirectorCore.orig_TrySpawnObject orig, DirectorCore self, DirectorSpawnRequest directorSpawnRequest)
@@ -126,26 +223,27 @@ namespace RiskOfRoutes
             newUi.transform.SetParent(hud.mainContainer.transform);
             RectTransform rectTransform = newUi.GetComponent<RectTransform>();
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            rectTransform.anchorMin = new Vector2(0.8f,0.0f);
+            rectTransform.anchorMin = new Vector2(0.8f, 0.0f);
             rectTransform.anchorMax = new Vector2(1.0f, 1.0f);
             rectTransform.sizeDelta = Vector2.zero;
             rectTransform.anchoredPosition = Vector2.zero;
 
 
             var images = newUi.GetComponentsInChildren<Image>();
-            foreach(var img in images)
+            foreach (var img in images)
             {
-                if(img.name == "TitleRect")
+                if (img.name == "TitleRect")
                 {
-                    img.color = new Color(0.0f,0.8f,0.9f,1.0f);
+                    img.color = new Color(0.0f, 0.8f, 0.9f, 1.0f);
                 }
             }
 
-            tooltipSetText(newUi,"Unknown");
+            tooltipSetText(newUi, "Unknown");
 
             newUi.SetActive(false);
 
             ui = newUi;
+
         }
 
         private void tooltipSetText(GameObject tooltip,string bodyText,string labelText = "RoutePortal")
@@ -278,7 +376,7 @@ namespace RiskOfRoutes
                 if (portalObject)
                 {
                     var m = portalObject.GetComponent<RoutePortalManager>();
-                    m.stageModifiers = new List<StageModifier>() { new BossItemModifier(), new MoreDronesModifier(), };
+                    m.stageModifiers = new List<StageModifier>() {new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier()};
 
                     Log.Info($"Success? {m.stageModifiers.Count()}");
                     Log.Info($"{i+1}th portal placed successfully");

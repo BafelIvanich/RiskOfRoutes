@@ -81,6 +81,7 @@ namespace RiskOfRoutes
 
             purchaseInteraction.SetAvailable(false);
             Run.instance.nextStageScene = destinationScene;
+            //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("itfrozenwall");
             sceneExitController.Begin();
         }
 

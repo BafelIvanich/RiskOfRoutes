@@ -19,8 +19,12 @@ namespace SamplePlugin
 {
     public abstract class StageModifier
     {
-        public string activeText;
-        public string reservedText;
+        public string name = "temp";
+        public string activeText = "temp";
+        public string reservedText = "temp";
+
+        public Sprite icon;
+        public Color tooltipColor;
 
         public int cost;
 
@@ -122,6 +126,7 @@ namespace SamplePlugin
 
         public BossItemModifier()
         {
+            this.name = "Boss item modifier";  
             this.activeText = "Boss will drop yellow item on this stage.";
             this.reservedText = "Boss is guaranteed to drop <style=cShrine>Yellow Item.</style>";
             negative = false;
@@ -176,7 +181,7 @@ namespace SamplePlugin
         {
                 "SecondarySkillMagazine", 
                 "Crowbar",
-                "FocusConvergence",
+                "NearbyDamageBonus",
                 "Syringe",
                 "IgniteOnKill",           
                 "Bear",                  
@@ -208,9 +213,12 @@ namespace SamplePlugin
                 Util.ShuffleList(mergedNames);
                 var selectedItemName = mergedNames[0];
                 selectedItem = stringToItemDef(selectedItemName);
-                Log.Info($"Selected item:{selectedItem.name}, {mergedNames.Count}");
-                this.reservedText = $"Printer with {selectedItem.name} will appear on the next stage";
-                this.activeText = $"Printer with {selectedItem.name} has appeared somewhere on the stage.";
+                string name = Language.GetString(selectedItem.nameToken);
+                Log.Info($"Selected item:{name}, {mergedNames.Count}");
+                this.reservedText = $"Printer with {name} will appear on the next stage";
+                this.activeText = $"Printer with {name} has appeared somewhere on the stage.";
+                this.icon = selectedItem.pickupIconSprite;
+                this.name = name + " printer";
 
             }
             CreatePrinterSpawnCard();
@@ -567,6 +575,7 @@ namespace SamplePlugin
         {
             CreateChefSpawnCard();
             this.activeText = "WanderingChefModifier";
+            this.icon = Addressables.LoadAssetAsync<Sprite>( "RoR2/DLC3/MealPrep/texMealPrepIcon.png").WaitForCompletion();
             this.reservedText = "<style=cIsHealth>Wandering CHEF</style> is guaranteed to appear on next stage.";
             negative = false;
         }
@@ -648,6 +657,7 @@ namespace SamplePlugin
         public MoreElitesModifier()
         {
             this.activeText = "MoreElitesModifier";
+            this.icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveBossIcon.png").WaitForCompletion();
             negative = false;
         }
         public override void OnEnd()
@@ -674,14 +684,41 @@ namespace SamplePlugin
         }
     }
 
-    public class VoidEnemiesModifier
+    public class VoidEnemiesModifier : StageModifier
     {
+        public VoidEnemiesModifier()
+        {
+            this.icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/textITWaveVoidIcon.png").WaitForCompletion();
+        }
 
+        public override void OnEnd()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void OnStart()
+        {
+            throw new NotImplementedException();
+        }
     }
 
-    public class LunarEnemiesModifier
+    public class LunarEnemiesModifier : StageModifier
     {
+        public LunarEnemiesModifier()
+        {
+            this.icon = Addressables.LoadAssetAsync<Sprite>( "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/textITWaveVoidIcon.png").WaitForCompletion();
+        }
 
+
+        public override void OnEnd()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void OnStart()
+        {
+            throw new NotImplementedException();
+        }
     }
 
 }
