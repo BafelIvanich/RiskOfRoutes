@@ -9,6 +9,18 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.Networking;
+using UnityEngine.UI;
+using static Rewired.UI.ControlMapper.ControlMapper;
+
+//TODO
+//Включение артефактов
+//Гарантированное появление шефа (баг сейчас)
+//UI при наведении
+//Модификаторы для других порталов
+//Разный цвет у порталов
+//Кредиты
+//Нажатие на портал закрывает другие
 
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
@@ -29,6 +41,10 @@ namespace RiskOfRoutes
         public const string PluginVersion = "1.0.0";
 
         private GameObject portalPrefab;
+        private GameObject ui;
+
+        private HUD hud = null;
+
         private InteractableSpawnCard portalSpawnCard;
 
         public static GameObject chefPrefab;
@@ -40,14 +56,78 @@ namespace RiskOfRoutes
 
             Log.Init(Logger);
 
-            chefPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/MealPrep/MealPrepPickerPanel.prefab").WaitForCompletion(), "mealPrep");
+            chefPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/MealPrep/MealPrep.prefab").WaitForCompletion(), "mealPrep");
+            if (!chefPrefab.GetComponent<NetworkIdentity>())
+            {
+                chefPrefab.AddComponent<NetworkIdentity>();
+            }
+            var netId = chefPrefab.GetComponent <NetworkIdentity>();
+            if (netId)
+            {
+                Log.Info("Chef already has network identity");
+            }
+            else
+            {
+                Log.Info("Chef doesn't have network identity");
+            }
+                ui = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/UI/Tooltip.prefab").WaitForCompletion(), "tooltipUI");
+            
+            
+            
             //statue
             CreateInteractable();
 
             TeleporterInteraction.onTeleporterChargedGlobal += teleporterSpawnHologram;
             gameObject.AddComponent<StageModifierManager>();
             RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
+            On.RoR2.UI.HUD.Awake += HUD_Awake;
             
+        }
+
+
+        private void HUD_Awake(On.RoR2.UI.HUD.orig_Awake orig, HUD self)
+        {
+            orig(self);
+            hud = self;
+
+            GameObject newUi = UnityEngine.Object.Instantiate(LegacyResourcesAPI.Load<GameObject>("Prefabs/UI/Tooltip"));
+            newUi.transform.SetParent(hud.mainContainer.transform);
+            RectTransform rectTransform = newUi.GetComponent<RectTransform>();
+            rectTransform.pivot = new Vector2(1.0f, 1.0f);
+            rectTransform.anchorMin = new Vector2(0.9f,0.5f);
+            rectTransform.anchorMax = new Vector2(0.9f, 0.5f);
+            rectTransform.sizeDelta = Vector2.zero;
+            rectTransform.anchoredPosition = Vector2.zero;
+
+            var tc = newUi.GetComponent<TooltipController>();
+
+            var images = newUi.GetComponentsInChildren<Image>();
+            foreach(var img in images)
+            {
+                if(img.name == "TitleRect")
+                {
+                    img.color = new Color(0.5f,0.8f,0.9f,1.0f);
+                }
+            }
+
+
+            var label = tc.titleLabel;
+            var body = tc.bodyLabel;
+
+            label.text = "Route Portal";
+            body.text = "<style=cIsHealing>Positive:</style>\r\nNext stage is guaranteed to have <style=cHumanObjective>Wandering CHEF</style> on it.\r\n\r\n<style=cDeath>Negative:</style>\r\n<style=cWorldEvent>Wisps emerge from defeated monsters.</style>\r\n\r\n";
+            newUi.SetActive(false);
+
+            ui = newUi;
+        }
+
+        private void HUD_shouldHudDisplay(HUD hud, ref bool shouldDisplay)
+        {
+            var tc = ui.GetComponent<TooltipController>();
+            var rc = ui.GetComponent<RectTransform>();
+            tc.titleLabel.text = "frrrrrrrf";
+            tc.bodyLabel.text = "gfefefef";
+            ui.SetActive(true);
         }
 
         private void Stage_onServerStageBegin(Stage obj)
@@ -75,7 +155,7 @@ namespace RiskOfRoutes
             RoutePortalManager mgr = routePortal.AddComponent<RoutePortalManager>();
             PurchaseInteraction interaction = routePortal.AddComponent<PurchaseInteraction>();
             SceneExitController sceneExitController = routePortal.AddComponent<SceneExitController>();
-            interaction.contextToken = "Enter the portal";
+            interaction.contextToken = "Enter the portal <sprite name=Utility>";
             interaction.NetworkdisplayNameToken = "Route Portal to a next stage";
 
 
@@ -104,15 +184,11 @@ namespace RiskOfRoutes
         {
             List<SceneDef> scenes = GetNextStagesScenesList();
             List<StageModifier> modifiers = new List<StageModifier>();
-            //modifiers.Add(new ArtifactModifier());
-            //modifiers.Add(new BossItemModifier());
+            modifiers.Add(new ArtifactModifier());
+            modifiers.Add(new BossItemModifier());
             //modifiers.Add(new PrinterItemModifier());
             modifiers.Add(new WanderingChefModifier());
-            modifiers.Add(new WanderingChefModifier());
 
-            modifiers.Add(new WanderingChefModifier());
-
-            modifiers.Add(new WanderingChefModifier());
 
 
 
@@ -166,7 +242,7 @@ namespace RiskOfRoutes
                     var m = portalObject.GetComponent<RoutePortalManager>();
                     if (m != null) { 
                         m.stageModifier = mod;
-                        m.modifierTextSynced = mod.text;
+                        m.modifierTextSynced = mod.activeText;
                     }
 
                     Log.Info($"{i+1}th portal placed successfully");
@@ -261,7 +337,7 @@ namespace RiskOfRoutes
                     {
                         foreach (var modifier in mods)
                         {
-                            Log.Info(modifier.text);
+                            Log.Info(modifier.activeText);
                         }
                     }
                     else
@@ -289,7 +365,7 @@ namespace RiskOfRoutes
                     {
                         foreach (var modifier in mods)
                         {
-                            Log.Info(modifier.text);
+                            Log.Info(modifier.reservedText);
                         }
                     }
                     else
@@ -386,8 +462,16 @@ namespace RiskOfRoutes
                             Log.Info("Looking at route portal");
                             Log.Info(dr.currentInteractable.GetComponent<RoutePortalManager>().destinationScene.cachedName);
                             Log.Info(dr.currentInteractable.GetComponent<RoutePortalManager>().modifierTextSynced);
+                            ui.SetActive(true);
                             //ShowInterfaceElement();
                         }
+                        
+                    }
+                    else
+                    {
+
+                        ui.SetActive(false);
+
                     }
                 }
 

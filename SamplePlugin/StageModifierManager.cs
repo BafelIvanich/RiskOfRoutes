@@ -27,12 +27,14 @@ namespace SamplePlugin
         private void Stage_onServerStageComplete(RoR2.Stage obj)
         {
             Log.Info($"Stage completed, clearing {activeModifiers.Count} modifiers");
-            activeModifiers.Clear();
 
             foreach (StageModifier modifier in activeModifiers)
             {
                 modifier.OnEnd();
+                Log.Info("in loop");
             }
+
+            activeModifiers.Clear();
         }
 
         private void Stage_onServerStageBegin(RoR2.Stage obj)

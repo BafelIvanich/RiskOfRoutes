@@ -31,7 +31,7 @@ namespace RiskOfRoutes
 
                 if (stageModifier != null)
                 {
-                    modifierTextSynced = stageModifier.text;
+                    modifierTextSynced = stageModifier.activeText;
                 }
                 else
                 {

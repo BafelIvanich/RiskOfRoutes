@@ -1,5 +1,4 @@
-﻿using IL.RoR2;
-using RiskOfRoutes;
+﻿using RiskOfRoutes;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,7 +24,9 @@ namespace SamplePlugin
 {
     public abstract class StageModifier
     {
-        public string text;
+        public string activeText;
+        public string reservedText;
+
         public bool negative;
 
         public abstract void OnStart();
@@ -36,34 +37,68 @@ namespace SamplePlugin
     }
 
 
-    //available artifacts would be: devotion, dissonance, frailty, honor,soul, spite, vengeance
+    //available artifacts would be: dissonance, frailty, honor,soul, spite, vengeance
     public class ArtifactModifier : StageModifier
     {
+        private ArtifactDef currentArtifact;
+
+        private static readonly List<string> ArtifactNames = new List<string>()
+        {
+            "Dissonance",
+            "Frailty",
+            "Honor",
+            "Soul",
+            "Spite",
+            "Vengeance"
+        };
+
         public ArtifactModifier()
         {
-            this.text = "ArtifactModifier";
+            this.activeText = "ArtifactModifier";
             negative = true;
         }
 
         public override void OnEnd()
         {
-            Log.Info("ArtifactModifier end");
+            Log.Info("Mehod");
+            if(currentArtifact)
+            {
+                RoR2.RunArtifactManager.instance.SetArtifactEnabled(currentArtifact, false);
+                Log.Info("Succesfully false");
+            }
+            else
+            {
+                Log.Info("No current art");
+            }
         }
 
         public override void OnStart()
         {
             Log.Info("ArtifactModifier start");
-            //RoR2.RunArtifactManager.instance.SetArtifactEnabled();
-            RoR2.Chat.AddMessage("Art enabled");
+            ArtifactDef art = ArtifactCatalog.FindArtifactDef("Devotion");
+            if (art)
+            {
+                RoR2.RunArtifactManager.instance.SetArtifactEnabled(art, true);
+                RoR2.Chat.AddMessage("Art enabled");
+                currentArtifact = art;
+            }
+            else
+            {
+                Log.Info("No such artifact");
+            }
         }
+
     }
 
     public class BossItemModifier : StageModifier
     {
+
         public BossItemModifier()
         {
-            this.text = "BossItemModifier";
+            this.activeText = "Boss will drop yellow item on this stage.";
+            this.reservedText = "Boss is guaranteed to drop <style=cIsDamage>Yellow Item.</style>";
             negative = false;
+            
         }
         public override void OnEnd()
         {
@@ -82,7 +117,8 @@ namespace SamplePlugin
 
         private void BossGroup_DropRewards(On.RoR2.BossGroup.orig_DropRewards orig, RoR2.BossGroup self)
         {
-            self.bossDropChance = 100.0f;
+            self.bossDropChance = 1.0f;
+
             orig(self);
 
         }
@@ -95,7 +131,7 @@ namespace SamplePlugin
     {
         public PrinterItemModifier()
         {
-            this.text = "PrinterItemModifier";
+            this.activeText = "PrinterItemModifier";
             negative = false;
         }
         public override void OnEnd()
@@ -117,27 +153,36 @@ namespace SamplePlugin
         public WanderingChefModifier()
         {
             CreateChefSpawnCard();
-            this.text = "WanderingChefModifier";
+            this.activeText = "WanderingChefModifier";
             negative = false;
         }
 
         public override void OnEnd()
         {
-            On.RoR2.SceneDirector.Start -= AddWanderingChefToScene;
         }
 
         public override void OnStart()
         {
-            On.RoR2.SceneDirector.Start += AddWanderingChefToScene;
+            SpawnWanderingChef();
         }
 
-        private void AddWanderingChefToScene(On.RoR2.SceneDirector.orig_Start orig, RoR2.SceneDirector self)
+        private void SpawnWanderingChef()
         {
-            Log.Info("TRUING TO PLACE CHEF CREAET");
-            orig(self);
+            Log.Info("Trying to place CHEF");
 
+            if(!NetworkServer.active)
+            {
+                Log.Error("SERVER IS NOT ACTIVE");
+                return;
+            }
 
             RoR2.InteractableSpawnCard card = chefSpawnCard;
+
+            if(card == null)
+            {
+                Log.Error("Something wrong with card");
+                return;
+            }
 
             RoR2.DirectorPlacementRule placementRule = new RoR2.DirectorPlacementRule
             {
@@ -147,7 +192,7 @@ namespace SamplePlugin
             RoR2.DirectorSpawnRequest spawnRequest = new RoR2.DirectorSpawnRequest(
                 card,
                 placementRule,
-                self.rng
+                RoR2.Run.instance.stageRng
             );
 
             GameObject wanderingChef = RoR2.DirectorCore.instance.TrySpawnObject( spawnRequest );
@@ -155,7 +200,7 @@ namespace SamplePlugin
             {
                 Log.Info($"Wandering Chef appeared at {wanderingChef.transform.position} on stage");
 
-                wanderingChef.transform.position += wanderingChef.transform.up * 1.55f;
+                wanderingChef.transform.position += wanderingChef.transform.up * 1.2f;
             }
             else
             {
