@@ -2,23 +2,32 @@
 using RoR2;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.Networking;
 
 
 
-namespace SamplePlugin.StageModifiers
+namespace SamplePlugin.StageModifiers.SceneModifiers
 {
     public class YellowPrinterModifier : StageModifier
     {
         public static InteractableSpawnCard yellowPrinterSpawnCard;
 
-        public YellowPrinterModifier()
+        public YellowPrinterModifier(int cost)
         {
             CreateYellowPrinterSpawnCard();
             name = "Yellow item printer";
             reservedText = "<style=cShrine>Yellow printer</style> is guaranteed to appear somewhere on the next stage.";
             activeText = "<style=cShrine>Yellow printer</style> has appeared somewhere on the stage.";
             negative = false;
+            var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("yellowPrinter");
+            if (ic != null)
+            {
+                icon = ic;
+            }
+            else
+            {
+                Log.Error("failed to load yellow printer modifier");
+            }
+            this.cost = cost;
         }
         public override void OnEnd()
         {
@@ -33,40 +42,7 @@ namespace SamplePlugin.StageModifiers
 
         private void SpawnYellowPrinter()
         {
-            Log.Info("Trying to place Yellow Printer");
-
-            if (!NetworkServer.active)
-            {
-                Log.Error("SERVER IS NOT ACTIVE");
-                return;
-            }
-
-            if (yellowPrinterSpawnCard == null)
-            {
-                Log.Error("Something wrong with card");
-                return;
-            }
-
-            DirectorPlacementRule placementRule = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Random
-            };
-
-            DirectorSpawnRequest spawnRequest = new DirectorSpawnRequest(
-                yellowPrinterSpawnCard,
-                placementRule,
-                Run.instance.stageRng
-            );
-
-            GameObject redPrinter = DirectorCore.instance.TrySpawnObject(spawnRequest);
-            if (redPrinter)
-            {
-                Log.Info($"Yellow printer appeared at {redPrinter.transform.position} on stage");
-            }
-            else
-            {
-                Log.Error($"Couldn't place yellow printer on scene");
-            }
+            GameObject redPrinter = TryPlaceObjectOnScene(yellowPrinterSpawnCard, "Yellow item printer");
         }
 
         private void CreateYellowPrinterSpawnCard()

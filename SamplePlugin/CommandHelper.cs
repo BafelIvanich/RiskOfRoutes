@@ -1,7 +1,9 @@
 ﻿using RiskOfRoutes;
 using RoR2;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
 
 namespace SamplePlugin
@@ -27,14 +29,52 @@ namespace SamplePlugin
             Log.Info($"{scene.cachedName}");
         }
 
-        [ConCommand(commandName = "dccs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get nexeet stages")]
+        [ConCommand(commandName = "dccs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all cards for enemies that can spawn on current stage")]
         private static void GetDccs(ConCommandArgs args)
         {
-            foreach (var card in ClassicStageInfo.instance.monsterSelection.choices)
+            Log.Info("Available enemies");
+            var sel = ClassicStageInfo.instance.monsterSelection;
+            if (sel != null)
             {
-                var sc = card.value.spawnCard;
-                Log.Info($"Card:{sc.name},weight:{card.weight},cost:{card.value.cost}");
+                for (int i = 0; i < sel.Count; i++)
+                {
+                    var ch = sel.GetChoice(i).value;
+                    Log.Info($"DirectorCard {ch.spawnCard.name}, cost: {ch.cost}, weight: {ch.selectionWeight}");
+                }
             }
+
+
+        }
+
+        [ConCommand(commandName = "availableElites", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
+        private static void GetElitesAvailable(ConCommandArgs args)
+        {
+            FieldInfo eliteTiersField = typeof(CombatDirector).GetField("eliteTiers", BindingFlags.NonPublic | BindingFlags.Static);
+            if (eliteTiersField != null)
+            {
+                var eliteTiers = (CombatDirector.EliteTierDef[])eliteTiersField.GetValue(null);
+                Log.Info($"Tier count{eliteTiers.Length}");
+                for (int i = 0; i < eliteTiers.Length; i++)
+                {
+                    Log.Info($"Tier{i + 1}: {eliteTiers[i].availableDefs.Count}");
+                    foreach (var def in eliteTiers[i].availableDefs)
+                    {
+                        if (def != null)
+                            Log.Info($"\t {def.name}");
+                    }
+                }
+
+            }
+
+        }
+
+        [ConCommand(commandName = "numbers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
+        private static void GetCoeff(ConCommandArgs args)
+        {
+            Log.Info($"\tComp Diff coef:{Run.instance.compensatedDifficultyCoefficient}");
+            Log.Info($"\tDiff coef:{Run.instance.difficultyCoefficient}");
+            Log.Info($"\tStages completed:{Run.instance.stageClearCount}");
+            Log.Info($"\tRoute credits:{StageModifierDirector.instance.routeCredits}");
 
 
         }
@@ -46,7 +86,7 @@ namespace SamplePlugin
             {
                 args.senderMaster.GiveMoney(1000);
                 args.senderMaster.GiveMoneyWithOnLevelUpFreeUnlock(1000);
-                Debug.Log("Gave 1000 gold to " + args.senderMaster.name);
+                Log.Info("Gave 1000 gold to " + args.senderMaster.name);
 
                 NetworkUser nu = args.senderMaster.playerCharacterMasterController.networkUser;
                 if (nu)
@@ -54,18 +94,14 @@ namespace SamplePlugin
                     nu.AwardLunarCoins(100);
                 }
             }
-            else
-            {
-                Debug.LogWarning("Command sender has no character master.");
-            }
         }
 
         [ConCommand(commandName = "activeModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get currently active modifiers")]
         private static void GetActiveModifiersCommand(ConCommandArgs args)
         {
-            if (StageModifierDirector.Instance != null)
+            if (StageModifierDirector.instance != null)
             {
-                var mods = StageModifierDirector.Instance.activeModifiers;
+                var mods = StageModifierDirector.instance.activeModifiers;
                 if (mods != null)
                 {
                     if (mods.Count > 0)
@@ -92,9 +128,9 @@ namespace SamplePlugin
         [ConCommand(commandName = "reservedModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get modifiers that would be active on next stage")]
         private static void GetReservedModifiersCommand(ConCommandArgs args)
         {
-            if (StageModifierDirector.Instance != null)
+            if (StageModifierDirector.instance != null)
             {
-                var mods = StageModifierDirector.Instance.reservedModifiers;
+                var mods = StageModifierDirector.instance.reservedModifiers;
                 if (mods != null)
                 {
                     if (mods.Count > 0)
@@ -155,7 +191,7 @@ namespace SamplePlugin
                 }
             }
 
-            Log.Info("Teleporter charged and bosses eliminated.");
+            //Log.Info("Teleporter charged and bosses eliminated.");
         }
 
         [ConCommand(commandName = "tp", flags = ConVarFlags.ExecuteOnServer, helpText = "tp <x> <y> <z> - teleport local player to coordinates.")]
@@ -165,7 +201,7 @@ namespace SamplePlugin
 
             if (args.Count != 3)
             {
-                Debug.Log("Usage: tp <x> <y> <z>");
+                Log.Info("Usage: tp <x> <y> <z>");
                 return;
             }
 
@@ -192,13 +228,11 @@ namespace SamplePlugin
 
             if (!spawnCard)
             {
-                Debug.LogError("Could not load iscPortalColossus. Trying fallback name...");
                 spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
             }
 
             if (!spawnCard)
             {
-                Debug.LogError("Failed to load Green Portal SpawnCard.");
                 return;
             }
 
@@ -210,14 +244,6 @@ namespace SamplePlugin
 
             GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
 
-            if (spawnedObject)
-            {
-                Debug.Log("Successfully spawned Green Portal at " + position);
-            }
-            else
-            {
-                Debug.LogError("DirectorCore failed to spawn the portal.");
-            }
         }
 
 
@@ -233,13 +259,39 @@ namespace SamplePlugin
 
             if (!spawnCard)
             {
-                Debug.LogError("Could not load iscPortalColossus. Trying fallback name...");
                 spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
             }
 
             if (!spawnCard)
             {
-                Debug.LogError("Failed to load Shop Portal SpawnCard.");
+                return;
+            }
+
+            DirectorPlacementRule placementRule = new DirectorPlacementRule
+            {
+                placementMode = DirectorPlacementRule.PlacementMode.Direct,
+                position = position
+            };
+
+            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
+        }
+
+        [ConCommand(commandName = "virtualportal", flags = ConVarFlags.ExecuteOnServer)]
+        private static void SpawnVirtualPortal(ConCommandArgs args)
+        {
+
+            CharacterBody body = args.senderMaster.GetBody();
+            Vector3 position = body.transform.position + body.transform.forward * 5f;
+            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
+            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscHardwareProgPortal");
+
+            if (!spawnCard)
+            {
+                spawnCard = Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC3/iscHardwareProgPortal.asset").WaitForCompletion();
+            }
+
+            if (!spawnCard)
+            {
                 return;
             }
 
@@ -251,14 +303,6 @@ namespace SamplePlugin
 
             GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
 
-            if (spawnedObject)
-            {
-                Debug.Log("Successfully spawned Shop Portal at " + position);
-            }
-            else
-            {
-                Debug.LogError("DirectorCore failed to spawn the portal.");
-            }
         }
 
         [ConCommand(commandName = "goldportal", flags = ConVarFlags.ExecuteOnServer)]
@@ -272,13 +316,11 @@ namespace SamplePlugin
 
             if (!spawnCard)
             {
-                Debug.LogError("Could not load iscPortalColossus. Trying fallback name...");
                 spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
             }
 
             if (!spawnCard)
             {
-                Debug.LogError("Failed to load GoldShores Portal SpawnCard.");
                 return;
             }
 
@@ -290,14 +332,6 @@ namespace SamplePlugin
 
             GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
 
-            if (spawnedObject)
-            {
-                Debug.Log("Successfully spawned GoldShores Portal at " + position);
-            }
-            else
-            {
-                Debug.LogError("DirectorCore failed to spawn the portal.");
-            }
         }
 
         [ConCommand(commandName = "fing", flags = ConVarFlags.ExecuteOnServer)]

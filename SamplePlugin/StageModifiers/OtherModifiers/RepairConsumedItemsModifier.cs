@@ -2,17 +2,18 @@
 using RoR2;
 using System.Collections.Generic;
 
-namespace SamplePlugin.StageModifiers
+namespace SamplePlugin.StageModifiers.OtherModifiers
 {
     public class RepairConsumedItemsModifier : StageModifier
     {
 
 
-        public RepairConsumedItemsModifier()
+        public RepairConsumedItemsModifier(int cost)
         {
             reservedText = "All consumed items will be restored.";
             activeText = "Consumed items restored.";
             stackable = false;
+            this.cost = cost;
         }
 
         public override void OnEnd()
@@ -32,16 +33,16 @@ namespace SamplePlugin.StageModifiers
                     ItemDef itemDef = ItemCatalog.GetItemDef(item);
                     if (itemDef != null)
                     {
-                        if (itemDef.isConsumed && itemDef != RoR2.DLC1Content.Items.RegeneratingScrapConsumed && itemDef != RoR2.DLC2Content.Items.LowerPricedChestsConsumed && itemDef != RoR2.DLC2Content.Items.TeleportOnLowHealthConsumed)
+                        if (itemDef.isConsumed && itemDef != DLC1Content.Items.RegeneratingScrapConsumed && itemDef != DLC2Content.Items.LowerPricedChestsConsumed && itemDef != DLC2Content.Items.TeleportOnLowHealthConsumed)
                         {
                             var count = cm.inventory.GetItemCount(itemDef);
 
                             cm.inventory.RemoveItem(itemDef, count);
                             ItemDef repairedItem = new ItemDef();
-                            if (itemDef == RoR2.DLC1Content.Items.FragileDamageBonusConsumed) repairedItem = RoR2.DLC1Content.Items.FragileDamageBonus;
-                            else if (itemDef == RoR2.DLC1Content.Items.HealingPotionConsumed) repairedItem = RoR2.DLC1Content.Items.HealingPotion;
-                            else if (itemDef == RoR2.DLC1Content.Items.ExtraLifeVoidConsumed) repairedItem = RoR2.DLC1Content.Items.ExtraLifeVoid;
-                            else if (itemDef == RoR2.RoR2Content.Items.ExtraLifeConsumed) repairedItem = RoR2.RoR2Content.Items.ExtraLife;
+                            if (itemDef == DLC1Content.Items.FragileDamageBonusConsumed) repairedItem = DLC1Content.Items.FragileDamageBonus;
+                            else if (itemDef == DLC1Content.Items.HealingPotionConsumed) repairedItem = DLC1Content.Items.HealingPotion;
+                            else if (itemDef == DLC1Content.Items.ExtraLifeVoidConsumed) repairedItem = DLC1Content.Items.ExtraLifeVoid;
+                            else if (itemDef == RoR2Content.Items.ExtraLifeConsumed) repairedItem = RoR2Content.Items.ExtraLife;
 
 
                             Log.Debug($"For consumed item{itemDef} in count {count} found repaired {repairedItem}");

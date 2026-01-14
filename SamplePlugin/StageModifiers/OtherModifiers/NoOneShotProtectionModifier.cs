@@ -1,15 +1,15 @@
-﻿
-
-namespace SamplePlugin.StageModifiers
+﻿namespace SamplePlugin.StageModifiers.OtherModifiers
 {
     public class NoOneShotProtectionModifier : StageModifier
     {
-        public NoOneShotProtectionModifier()
+        public NoOneShotProtectionModifier(int cost)
         {
             name = "Fragility";
             reservedText = "<style=cDeath>One shot protection</style> will be disabled on the next stage.";
             activeText = "<style=cDeath>One shot protection</style> will be disabled on this stage.";
             stackable = false;
+            negative = true;
+            this.cost = cost;
         }
 
         public override void OnEnd()

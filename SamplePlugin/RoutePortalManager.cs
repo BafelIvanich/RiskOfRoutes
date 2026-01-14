@@ -2,7 +2,6 @@
 using SamplePlugin;
 using SamplePlugin.StageModifiers;
 using System.Collections.Generic;
-using UnityEngine;
 using UnityEngine.Networking;
 
 
@@ -101,23 +100,23 @@ namespace RiskOfRoutes
         {
             if (!NetworkServer.active)
             {
-                Debug.LogWarning("[Server] function 'RoutePortalManager::OnPurchase(RoR2.Interactor)' called on client");
+                Log.Warning("[Server] function 'RoutePortalManager::OnPurchase(RoR2.Interactor)' called on client");
                 return;
             }
 
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
-                StageModifierDirector.Instance.reservedModifiers = stageModifiers;
+                StageModifierDirector.instance.reservedModifiers = stageModifiers;
             }
 
-            Log.Info($"Trying {StageModifierDirector.Instance.activeModifiers.Count}");
+            Log.Info($"Trying {StageModifierDirector.instance.activeModifiers.Count}");
 
             if (!isVanillaPortal)
             {
                 genericInteraction.enabled = false;
                 Run.instance.nextStageScene = destinationScene;
                 Log.Info($"inside RPM: {destinationScene.cachedName}");
-                //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("itfrozenwall");
+                //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("computationalexchange");
                 sceneExitController.Begin();
 
             }
@@ -128,13 +127,13 @@ namespace RiskOfRoutes
         {
             if (!NetworkServer.active)
             {
-                Debug.LogWarning("[Server] function 'RoutePortalManager::OnPurchase(RoR2.Interactor)' called on client");
+                Log.Warning("[Server] function 'RoutePortalManager::OnPurchase(RoR2.Interactor)' called on client");
                 return;
             }
 
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
-                StageModifierDirector.Instance.reservedModifiers = stageModifiers;
+                StageModifierDirector.instance.reservedModifiers = stageModifiers;
                 Log.Info("Seer got modifiers");
             }
         }
@@ -143,6 +142,8 @@ namespace RiskOfRoutes
         {
             stageModifiers.Add(mod);
         }
+
+
 
     }
 }

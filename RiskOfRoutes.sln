@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SamplePlugin", "SamplePlugin\SamplePlugin.csproj", "{99D084E6-26E8-4275-BC19-3FE0A1AB603C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RiskOfRoutes", "SamplePlugin\RiskOfRoutes.csproj", "{99D084E6-26E8-4275-BC19-3FE0A1AB603C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

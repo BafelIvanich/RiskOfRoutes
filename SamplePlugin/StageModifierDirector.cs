@@ -1,6 +1,10 @@
 ﻿using RiskOfRoutes;
 using RoR2;
 using SamplePlugin.StageModifiers;
+using SamplePlugin.StageModifiers.BossRewardModifiers;
+using SamplePlugin.StageModifiers.CombatModifiers;
+using SamplePlugin.StageModifiers.OtherModifiers;
+using SamplePlugin.StageModifiers.SceneModifiers;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -9,34 +13,74 @@ namespace SamplePlugin
 {
     public class StageModifierDirector : MonoBehaviour
     {
-        public static StageModifierDirector Instance;
+        public static StageModifierDirector instance;
         public List<StageModifier> activeModifiers { get; private set; }
 
-        public int routeCredits = 200;
+        public List<ArtifactDef> runArtifactsApplied;
+
+        public int startingCredits = 60;
+        public int routeCredits = 60;
+        public int negativeCredits = 30;
         //red printer, yellow, drone interatables discounts
 
         public List<StageModifier> reservedModifiers;
         public void Awake()
         {
-            Instance = this;
+            instance = this;
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<StageModifier>();
 
-            Log.Info("StagaModifier managaer created");
-
+            Log.Info("StageModifierDirector created");
 
             RoR2.Run.onRunStartGlobal += Run_onRunStartGlobal;
+            RoR2.Run.onRunDestroyGlobal += Run_onRunDestroyGlobal;
 
-
-            RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
+            RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
             RoR2.Stage.onServerStageComplete += Stage_onServerStageComplete;
+        }
 
-            //RoR2.SceneDirector.onPostPopulateSceneServer += SceneDirector_onPostPopulateSceneServer;
 
-            //RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
+        protected virtual void FixedUpdate()
+        {
+            if (Run.instance != null)
+            {
+                routeCredits = (int)(startingCredits * Run.instance.difficultyCoefficient) + 30 * Run.instance.stageClearCount;
+            }
+        }
+
+
+        private void Run_onRunStartGlobal(Run obj)
+        {
+            Log.Info("Run started");
+            activeModifiers.Clear();
+            reservedModifiers.Clear();
+            runArtifactsApplied = GetArtifactsAppliedThisRun();
+        }
+        private void Run_onRunDestroyGlobal(Run obj)
+        {
+            Log.Info("On run ended");
+            Log.Info($"Run ended, clearing {activeModifiers.Count} modifiers");
+
+            foreach (StageModifier modifier in activeModifiers)
+            {
+                modifier.OnEnd();
+            }
+            reservedModifiers.Clear();
 
         }
 
+        public List<ArtifactDef> GetArtifactsAppliedThisRun()
+        {
+            List<ArtifactDef> res = new List<ArtifactDef>();
+            foreach (var art in RoR2.RunArtifactManager.enabledArtifactsEnumerable)
+            {
+                res.Add(art);
+                Log.Info($"Added {art}");
+            }
+            return res;
+        }
+
+        //TODO ПРАВКИ В ПОРЯДОК ВЫПОЛНЕНИЯ
         private void SceneDirector_onPrePopulateSceneServer(SceneDirector obj)
         {
             Log.Info($"Stage started, applying {reservedModifiers.Count} modifiers");
@@ -65,12 +109,6 @@ namespace SamplePlugin
             }
         }
 
-        private void Run_onRunStartGlobal(Run obj)
-        {
-            Log.Info("Run started");
-            activeModifiers.Clear();
-            reservedModifiers.Clear();
-        }
 
         private void Stage_onServerStageComplete(RoR2.Stage obj)
         {
@@ -82,7 +120,7 @@ namespace SamplePlugin
             }
 
             SceneDef nextStageScene = Run.instance.nextStageScene;
-            routeCredits = 200 + nextStageScene.stageOrder * 50;
+            routeCredits = (int)(100 * Mathf.Pow(1.15f, Run.instance.stageClearCount));
             activeModifiers.Clear();
         }
 
@@ -102,50 +140,97 @@ namespace SamplePlugin
 
         public List<StageModifier> GetNextStageModifiers(GameObject portal)
         {
-            WeightedSelection<StageModifier> weightedSelection = CreateWeightedSelection(portal);
+            Log.Info($"StageModifierdirectos has {routeCredits} credits");
+            WeightedSelection<StageModifier> weightedSelection = CreateAvailableModifierSelection(portal);
             var res = new List<StageModifier>();
             var mg = portal.GetComponent<RoutePortalManager>();
+            bool hasBossRewardModifier = false;
+            AurelioniteRewardModifier aurelioniteRewardModifier = null;
+            if (mg)
+            {
+                if ((mg.destinationScene.baseSceneName == "lemuriantemple" || mg.destinationScene.baseSceneName == "habitat"))
+                {
+                    aurelioniteRewardModifier = new AurelioniteRewardModifier();
+                    res.Add(aurelioniteRewardModifier);
+                    hasBossRewardModifier = true;
+                }
 
-            int routePortalCredits = 200;
+                if ((mg.destinationScene.baseSceneName == "conduitcanyon" || mg.destinationScene.baseSceneName == "repurposedcrater"))
+                {
+                    res.Insert(0, new DroneBossRewardModifier(0, dropLegendary: true));
+                    hasBossRewardModifier = true;
+                }
+            }
+
+            int routePortalCredits = routeCredits;
             int num = 100;
             while (routePortalCredits > 0 && num > 0)
             {
                 num--;
-                StageModifier mod = SelectModifier(weightedSelection, routePortalCredits);
-                if (mod == null) break;
+                StageModifier currentModifier = SelectModifier(weightedSelection, routePortalCredits);
+                //в weightedselection один printeritem с выбранным предметом, здесь рероллит
+                if (currentModifier == null) break;
+                if (currentModifier is PrinterItemModifier) currentModifier = new PrinterItemModifier();
+                Log.Info($"SELECTED MODIFIER:{currentModifier.name}");
                 bool isDuplicate = false;
 
-                foreach (StageModifier m in res)
+                foreach (StageModifier selectedModifier in res)
                 {
-                    if (mod.GetType() == m.GetType())
+                    if (currentModifier.GetType() == selectedModifier.GetType())
                     {
-                        if (m.stackable)
+                        if (selectedModifier is PrinterItemModifier)
                         {
-                            m.stack++;
-                            routePortalCredits -= mod.cost;
-                            Log.Info($"Stack here {mod}");
-                        }
-                        if (m is PrinterItemModifier && m.name != mod.name) break;
-                        isDuplicate = true;
+                            Log.Info("Its item mod");
+                            if (selectedModifier.name == currentModifier.name)
+                            {
+                                Log.Info($"SAME ITEM:{selectedModifier.name},{currentModifier.name}");
 
+                            }
+                            else
+                            {
+                                Log.Info("Different item printers");
+                                continue;
+                            }
+                        }
+                        if (selectedModifier is ArtifactModifier && selectedModifier.name != currentModifier.name)
+                        {
+                            continue;
+                        }
+                        if (selectedModifier.stackable)
+                        {
+                            selectedModifier.stack++;
+                            routePortalCredits -= currentModifier.cost;
+                            Log.Info($"Stack here {currentModifier}");
+                        }
+
+
+                        isDuplicate = true;
                         break;
                     }
                 }
                 if (!isDuplicate)
                 {
-                    routePortalCredits -= mod.cost;
-                    res.Add(mod);
-                    Log.Info($"Added mod {mod.name} to res");
+                    routePortalCredits -= currentModifier.cost;
+                    if (currentModifier is OnlyFlyingEnemiesModifier)
+                    {
+                        res.Insert(0, currentModifier);
+                    }
+                    else if (currentModifier is DroneBossRewardModifier && aurelioniteRewardModifier != null)
+                    {
+                        aurelioniteRewardModifier.hasDroneRewardModifier = true;
+                        var droneMod = (DroneBossRewardModifier)currentModifier;
+                        droneMod.isAurelioniteActive = true;
+                        Log.Info("Modified aurelionite modifier");
+                        res.Add(currentModifier);
+                    }
+                    else
+                    {
+                        res.Add(currentModifier);
+
+                    }
+                    Log.Info($"Added mod {currentModifier.name} to res");
 
                 }
-            }
-            if (mg)
-            {
-                if (res.Count > 0 && mg.destinationScene.baseSceneName == "lemuriantemple" || mg.destinationScene.baseSceneName == "habitat")
-                {
-                    res.Insert(0, new AurelioniteRewardModifier());
-                }
-
             }
 
             return res;
@@ -176,33 +261,48 @@ namespace SamplePlugin
             return filtered.Evaluate(RoR2.Run.instance.runRNG.nextNormalizedFloat);
         }
 
-        private WeightedSelection<StageModifier> CreateWeightedSelection(GameObject portal)
+        [System.Obsolete]
+        private WeightedSelection<StageModifier> CreateAvailableModifierSelection(GameObject portal)
         {
             WeightedSelection<StageModifier> res = new WeightedSelection<StageModifier>();
-            res.AddChoice(new BossItemModifier(), 0.5f);
-            res.AddChoice(new PrinterItemModifier(), 0.5f);
-            res.AddChoice(new MoreDronesModifier(), 0.5f);
-            res.AddChoice(new WanderingChefModifier(), 0.5f);
-            res.AddChoice(new MoreElitesModifier(), 0.5f);
-            res.AddChoice(new VoidEnemiesModifier(), 0.5f);
-            res.AddChoice(new LunarEnemiesModifier(), 0.5f);
+            
+            var printerItemMod = new PrinterItemModifier();
+            res.AddChoice(new PrinterItemModifier(), printerItemMod.itemInfo.weight);
+            Log.Info("Hello "+printerItemMod.itemInfo.internalName+" "+ printerItemMod.itemInfo.cost);
+
+            res.AddChoice(new MoreDronesModifier(60), 1f);
+            res.AddChoice(new BossYellowItemModifier(60), 0.75f);
+            res.AddChoice(new BossRedItemModifier(200), 0.5f);
+            res.AddChoice(new DroneBossRewardModifier(60), 1f);
+            res.AddChoice(new LunarEnemiesModifier(100), 1f);
+            res.AddChoice(new MoreElitesModifier(60), 1f);
+            res.AddChoice(new OnlyFlyingEnemiesModifier(100), 0.75f);
+            res.AddChoice(new Tier2ElitesEarlierModifier(100), 1f);
+            res.AddChoice(new VoidEnemiesModifier(100), 1f);
+            res.AddChoice(new MysteryModifier(100), 0.5f);
+            res.AddChoice(new WanderingChefModifier(200), 0.50f);
+
+            WeightedSelection<ArtifactModifier> arts = CreateArtifactAvailableSelection();
+            Log.Info(arts.choices.Length);
+            for (int i = 0; i < arts.Count; i++)
+            {
+                var art = arts.GetChoice(i);
+                res.AddChoice(art.value, art.weight);
+            }
+
             if (portal)
             {
-                if (Run.instance.nextStageScene.stageOrder >= 3)
-                {
-                    //res.AddChoice(new ArtifactModifier(), 0.5f);
-                }
                 if (CheckPlayersRedItem())
                 {
-                    res.AddChoice(new RedPrinterModifier(), 0.5f);
+                    res.AddChoice(new RedPrinterModifier(60), 1.0f);
                 }
                 if (CheckPlayersYellowItem())
                 {
-                    res.AddChoice(new YellowPrinterModifier(), 0.5f);
+                    res.AddChoice(new YellowPrinterModifier(60), 1.0f);
                 }
                 if (CheckPlayersHaveConsumedItems())
                 {
-                    res.AddChoice(new RepairConsumedItemsModifier(), 1.0f);
+                    res.AddChoice(new RepairConsumedItemsModifier(150), 1.0f);
                 }
                 var mg = portal.GetComponent<RoutePortalManager>();
 
@@ -227,6 +327,7 @@ namespace SamplePlugin
             int redItemCount = 0;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {
+                if (cm.playerCharacterMasterController == null) continue;
                 foreach (ItemIndex item in cm.inventory.itemAcquisitionOrder)
                 {
                     ItemDef itemDef = ItemCatalog.GetItemDef(item);
@@ -246,11 +347,13 @@ namespace SamplePlugin
         }
 
         [Server]
+        [System.Obsolete]
         private bool CheckPlayersYellowItem()
         {
             int yellowItemCount = 0;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {
+                if (cm.playerCharacterMasterController == null) continue;
                 if (!cm.inventory) continue;
                 foreach (ItemIndex item in cm.inventory.itemAcquisitionOrder)
                 {
@@ -277,6 +380,7 @@ namespace SamplePlugin
             int consumedItemsCount = 0;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {
+                if (cm.playerCharacterMasterController == null) continue;
                 if (!cm.inventory) continue;
                 foreach (ItemIndex item in cm.inventory.itemAcquisitionOrder)
                 {
@@ -310,6 +414,7 @@ namespace SamplePlugin
             int foodItems = 0;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {
+                if (cm.playerCharacterMasterController == null) continue;
                 if (!cm.inventory) continue;
                 foreach (ItemIndex item in cm.inventory.itemAcquisitionOrder)
                 {
@@ -327,5 +432,59 @@ namespace SamplePlugin
             return foodItems;
         }
 
+        //вес артефакта на элиток может увеличиваться с числом пройденных стейджей, артефакт на смерть команды доступен только в мультиплеере
+        private WeightedSelection<ArtifactModifier> CreateArtifactAvailableSelection()
+        {
+            WeightedSelection<ArtifactModifier> res = new WeightedSelection<ArtifactModifier>();
+
+            if (RiskOfRoutes.RiskOfRoutes.allowChaosArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.FriendlyFire, 60, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowCommandArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.Command, 200, 1f, true);
+            if (RiskOfRoutes.RiskOfRoutes.allowDelusionArtifact.Value) AddArtifact(res, RoR2.CU8Content.Artifacts.Delusion, 100, 1f, true);
+            if (RiskOfRoutes.RiskOfRoutes.allowDevotionArtifact.Value) AddArtifact(res, RoR2.CU8Content.Artifacts.Devotion, 60, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowDissonanceArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.MixEnemy, 60, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowEnigmaArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.Enigma, 100, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowEvolutionArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.MonsterTeamGainsItems, 60, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowFrailtyArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.WeakAssKnees, 60, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowGlassArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.Glass, 200, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowHonorArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.EliteOnly, 200, 0.5f);
+            if (RiskOfRoutes.RiskOfRoutes.allowKinArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.SingleMonsterType, 60, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowMetamorphosisArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.RandomSurvivorOnRespawn, 200, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowRebirthArtifact.Value) AddArtifact(res, RoR2.DLC2Content.Artifacts.Rebirth, 60, 1f, true);
+            if (RiskOfRoutes.RiskOfRoutes.allowSacrificeArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.Sacrifice, 100, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowSoulArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.WispOnDeath, 60, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowSpiteArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.Bomb, 60, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowSwarmsArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.Swarms, 60, 1f);
+            if (RiskOfRoutes.RiskOfRoutes.allowVengeanceArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.ShadowClone, 60, 1f);
+
+
+
+            if (Run.instance.participatingPlayerCount > 1)
+            {
+                if (RiskOfRoutes.RiskOfRoutes.allowDeathArtifact.Value) AddArtifact(res, RoR2.RoR2Content.Artifacts.TeamDeath, 60, 1f);
+            }
+
+            Log.Info($"Added {res.Count} choices");
+            return res;
+        }
+
+        private void AddArtifact(WeightedSelection<ArtifactModifier> sel, ArtifactDef art, int cost, float weight, bool isPositive = false)
+        {
+            if (art != null)
+            {
+                if (runArtifactsApplied.Contains(art))
+                {
+                    Log.Debug($"Artifact {art.cachedName} was already applied, cannotadd");
+                    return;
+                }
+                sel.AddChoice(new ArtifactModifier(art, cost, isPositive), weight);
+                Log.Info($"Succesfully added artifact {art.cachedName}");
+            }
+            else
+            {
+                Log.Error($"Could not find artifact by name {name}");
+            }
+        }
+
     }
 }
+

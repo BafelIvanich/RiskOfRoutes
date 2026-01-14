@@ -37,6 +37,9 @@
 	  <Reference Include="R2API.RecalculateStats">
 	    <HintPath>..\R2API.RecalculateStats.dll</HintPath>
 	  </Reference>
+	  <Reference Include="RiskOfOptions">
+	    <HintPath>..\..\..\AppData\Roaming\r2modmanPlus-local\RiskOfRain2\profiles\TEstling\BepInEx\plugins\Rune580-Risk_Of_Options\RiskOfOptions\RiskOfOptions.dll</HintPath>
+	  </Reference>
 	  <Reference Include="RoR2">
 	    <HintPath>D:\SteamLibrary\steamapps\common\Risk of Rain 2\Risk of Rain 2_Data\Managed\RoR2.dll</HintPath>
 	  </Reference>
