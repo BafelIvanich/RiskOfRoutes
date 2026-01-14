@@ -190,7 +190,7 @@ namespace RiskOfRoutes
 
             if (scenes.Count == 0)
             {
-                Log.Error("No stages available next");
+                Log.Error("No stages availble next");
                 return;
             }
 
