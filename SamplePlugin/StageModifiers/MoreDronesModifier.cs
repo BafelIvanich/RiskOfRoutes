@@ -33,7 +33,7 @@ namespace SamplePlugin.StageModifiers
         public void PopulateDrones()
         {
             var credits = ClassicStageInfo.instance.sceneDirectorInteractibleCredits;
-            int droneCredits = (int)(credits * stack*0.15);
+            int droneCredits = (int)(credits * stack * 0.15);
 
 
             //tood nullcheck
@@ -42,26 +42,26 @@ namespace SamplePlugin.StageModifiers
             var stageInfo = ClassicStageInfo.instance;
             WeightedSelection<DirectorCard> availableDrones = new WeightedSelection<DirectorCard>();
             var droneCategory = stageInfo.interactableCategories.categories.FirstOrDefault(c => c.name == "Drones");
-            foreach(var card in droneCategory.cards)
+            foreach (var card in droneCategory.cards)
             {
-                availableDrones.AddChoice(card,card.selectionWeight);
+                availableDrones.AddChoice(card, card.selectionWeight);
                 //Log.Info($"Added {card.spawnCard.name}");
             }
 
             while (droneCredits > 0)
             {
                 DirectorCard directorCard = SelectCard(availableDrones, droneCredits);
-                if(directorCard == null)
+                if (directorCard == null)
                 {
                     //Log.Info("Breal");
                     break;
                 }
-                if(!directorCard.IsAvailable())
+                if (!directorCard.IsAvailable())
                 {
                     continue;
                 }
                 droneCredits -= directorCard.cost;
-                if(!Run.instance)
+                if (!Run.instance)
                 {
                     continue;
                 }
@@ -187,6 +187,6 @@ namespace SamplePlugin.StageModifiers
         }
     }
 
-    
+
 
 }

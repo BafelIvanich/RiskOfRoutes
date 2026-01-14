@@ -125,9 +125,9 @@ namespace SamplePlugin.StageModifiers
                 shop.dropTable = null;
                 shop.selfGeneratePickup = false;
                 PickupIndex currentPickupIndex = PickupCatalog.FindPickupIndex(selectedItem.itemIndex);
+                UniquePickup pickup = new UniquePickup { pickupIndex = currentPickupIndex };
 
-                shop.pickupIndex = currentPickupIndex;
-                shop.SetPickupIndex(currentPickupIndex, false);
+                shop.SetPickup(pickup, false);
 
             }
             else
@@ -152,6 +152,6 @@ namespace SamplePlugin.StageModifiers
         }
     }
 
-    
+
 
 }

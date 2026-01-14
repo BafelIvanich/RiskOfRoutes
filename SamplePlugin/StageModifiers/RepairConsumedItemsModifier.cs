@@ -1,8 +1,6 @@
 ﻿using RiskOfRoutes;
 using RoR2;
-using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace SamplePlugin.StageModifiers
 {
@@ -10,7 +8,8 @@ namespace SamplePlugin.StageModifiers
     {
 
 
-        public RepairConsumedItemsModifier() {
+        public RepairConsumedItemsModifier()
+        {
             reservedText = "All consumed items will be restored.";
             activeText = "Consumed items restored.";
             stackable = false;
@@ -33,20 +32,21 @@ namespace SamplePlugin.StageModifiers
                     ItemDef itemDef = ItemCatalog.GetItemDef(item);
                     if (itemDef != null)
                     {
-                        if(itemDef.isConsumed && itemDef != RoR2.DLC1Content.Items.RegeneratingScrapConsumed && itemDef != RoR2.DLC2Content.Items.LowerPricedChestsConsumed && itemDef != RoR2.DLC2Content.Items.TeleportOnLowHealthConsumed)
+                        if (itemDef.isConsumed && itemDef != RoR2.DLC1Content.Items.RegeneratingScrapConsumed && itemDef != RoR2.DLC2Content.Items.LowerPricedChestsConsumed && itemDef != RoR2.DLC2Content.Items.TeleportOnLowHealthConsumed)
                         {
                             var count = cm.inventory.GetItemCount(itemDef);
 
-                            cm.inventory.RemoveItem(itemDef,count);
+                            cm.inventory.RemoveItem(itemDef, count);
                             ItemDef repairedItem = new ItemDef();
                             if (itemDef == RoR2.DLC1Content.Items.FragileDamageBonusConsumed) repairedItem = RoR2.DLC1Content.Items.FragileDamageBonus;
                             else if (itemDef == RoR2.DLC1Content.Items.HealingPotionConsumed) repairedItem = RoR2.DLC1Content.Items.HealingPotion;
                             else if (itemDef == RoR2.DLC1Content.Items.ExtraLifeVoidConsumed) repairedItem = RoR2.DLC1Content.Items.ExtraLifeVoid;
                             else if (itemDef == RoR2.RoR2Content.Items.ExtraLifeConsumed) repairedItem = RoR2.RoR2Content.Items.ExtraLife;
 
+
                             Log.Debug($"For consumed item{itemDef} in count {count} found repaired {repairedItem}");
 
-                            cm.inventory.GiveItem(repairedItem,count);
+                            cm.inventory.GiveItem(repairedItem, count);
 
 
                             Log.Info($"Succesfully repaired {itemDef.name}");

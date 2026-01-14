@@ -12,9 +12,12 @@ namespace RiskOfRoutes
     {
         public GenericInteraction genericInteraction;
         public SceneExitController sceneExitController;
+        //для seer'a
+        public PurchaseInteraction purchaseInteraction;
         public bool isVanillaPortal = false;
 
         public int modifierCredits;
+        public bool isSeerStation;
 
         public SceneDef destinationScene;
 
@@ -28,6 +31,7 @@ namespace RiskOfRoutes
         {
             genericInteraction = GetComponent<GenericInteraction>();
             sceneExitController = GetComponent<SceneExitController>();
+            purchaseInteraction = GetComponent<PurchaseInteraction>();
 
             if (!genericInteraction) Log.Error("PurchaseInteraction missing!");
             if (!sceneExitController) Log.Error("SceneExitController missing!");
@@ -35,6 +39,33 @@ namespace RiskOfRoutes
 
         public void Start()
         {
+            UpdateText();
+
+            Log.Info("Here");
+            if (isSeerStation)
+            {
+                if (purchaseInteraction)
+                {
+                    purchaseInteraction.onPurchase.AddListener(OnSeerActivation);
+                    return;
+                }
+                else
+                {
+                    Log.Error("Error with seer purchase interaction");
+                }
+            }
+            genericInteraction.onActivation.AddListener(OnPortalActivation);
+
+            if (!isVanillaPortal)
+            {
+                sceneExitController.useRunNextStageScene = true;
+            }
+
+        }
+
+        public void UpdateText()
+        {
+            Log.Info("Called method UpdateText");
             if (NetworkServer.active && Run.instance)
             {
                 string positiveText = "Positive:\n";
@@ -63,18 +94,10 @@ namespace RiskOfRoutes
                 modifierTextSynced = $"{positiveText}\n{negativeText}";
                 Log.Info(positiveText + negativeText);
             }
-
-            genericInteraction.onActivation.AddListener(OnActivation);
-
-            if (!isVanillaPortal)
-            {
-                sceneExitController.useRunNextStageScene = true;
-            }
-
         }
 
         [Server]
-        public void OnActivation(Interactor interactor)
+        public void OnPortalActivation(Interactor interactor)
         {
             if (!NetworkServer.active)
             {
@@ -84,10 +107,10 @@ namespace RiskOfRoutes
 
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
-                StageModifierManager.Instance.reservedModifiers = stageModifiers;
+                StageModifierDirector.Instance.reservedModifiers = stageModifiers;
             }
 
-            Log.Info($"Trying {StageModifierManager.Instance.activeModifiers.Count}");
+            Log.Info($"Trying {StageModifierDirector.Instance.activeModifiers.Count}");
 
             if (!isVanillaPortal)
             {
@@ -97,6 +120,22 @@ namespace RiskOfRoutes
                 //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("itfrozenwall");
                 sceneExitController.Begin();
 
+            }
+        }
+
+        [Server]
+        public void OnSeerActivation(Interactor interactor)
+        {
+            if (!NetworkServer.active)
+            {
+                Debug.LogWarning("[Server] function 'RoutePortalManager::OnPurchase(RoR2.Interactor)' called on client");
+                return;
+            }
+
+            if (stageModifiers != null && stageModifiers.Count > 0)
+            {
+                StageModifierDirector.Instance.reservedModifiers = stageModifiers;
+                Log.Info("Seer got modifiers");
             }
         }
 

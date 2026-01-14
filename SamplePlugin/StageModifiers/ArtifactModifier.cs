@@ -43,7 +43,7 @@ namespace SamplePlugin.StageModifiers
             Log.Info("1");
             //здесь исключение
             activeText = ArtifactDesc[currentArtifact.descriptionToken];
-            if(activeText == null)
+            if (activeText == null)
             {
                 Log.Error($"{currentArtifact.cachedName} error with getting description");
             }
@@ -97,6 +97,6 @@ namespace SamplePlugin.StageModifiers
 
     }
 
-    
+
 
 }

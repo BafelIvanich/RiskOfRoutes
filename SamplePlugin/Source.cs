@@ -1,4 +1,6 @@
 ﻿using BepInEx;
+using Mono.Cecil.Cil;
+using MonoMod.Cil;
 using R2API;
 using RoR2;
 using RoR2.UI;
@@ -10,18 +12,14 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityHotReloadNS;
 
 //TODO
 //Core:
-//Взаимодейтсвие с Seer'ами на базаре
-//Модификаторы для других порталов
 //Разный цвет у порталов
 //Особые модификаторы для стейджей
-//Переход на базар
-//Разобраться с синими, зелёными, золотыми порталами из оригинальной игры
-//Зеленый портал не переносит на свои локи
 //Логика стака модификаторов
 //Добавить конфиг
 //(Подкорректировать)Добавить больше предметов в пулл зеленых и белых, добавить возможность для такого же с предметами любого тира через конфиг
@@ -39,6 +37,7 @@ using UnityHotReloadNS;
 //модификатор на тир2 элиток
 //(Возможно)красный предмет с босса 
 //(Возможно) Шанс на модификаторы повышается с получением подходящих предметов
+//Конфликт с артефакт модификат
 
 
 //Визуал:
@@ -62,6 +61,7 @@ using UnityHotReloadNS;
 //(Возможно) Меньше сундуков, но больше магазинов
 //(Возможно) Портал, очищающий лунные предметы
 //(Возможно) категории порталов?
+//Двойник
 
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
@@ -83,16 +83,15 @@ namespace RiskOfRoutes
 
         private GameObject portalPrefab;
         private GameObject ui;
+        public static GameObject chefPrefab;
 
         private HUD hud = null;
 
         private InteractableSpawnCard portalSpawnCard;
 
-        public static GameObject chefPrefab;
-
         public const int RouteCount = 3;
 
-        private AssetBundle bundle;
+        public static AssetBundle bundle;
 
         private TMP_FontAsset bomb;
 
@@ -100,45 +99,134 @@ namespace RiskOfRoutes
 
         public void Awake()
         {
-
             Log.Init(Logger);
-
-            //шрифт для стаков
-            bomb = Addressables.LoadAssetAsync<TMP_FontAsset>("RoR2/Base/Common/Fonts/Bombardier/tmpBombDropShadow.asset").WaitForCompletion();
-
+            //префабы
+            CreateRoutePortalPrefab();
             chefPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/MealPrep/MealPrep.prefab").WaitForCompletion(), "mealPrep");
-
             ui = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/UI/Tooltip.prefab").WaitForCompletion(), "tooltipUI");
-
             //для своих префабов
-            //string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "panel");
-            //bundle = AssetBundle.LoadFromFile(path);
-
+            string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "riskofroutes");
+            bundle = AssetBundle.LoadFromFile(path);
+            //для панели , шрифт для стаков
+            bomb = Addressables.LoadAssetAsync<TMP_FontAsset>("RoR2/Base/Common/Fonts/Bombardier/tmpBombDropShadow.asset").WaitForCompletion();
             placeholderIcon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texMysteryIcon.png").WaitForCompletion();
+            //директор
+            gameObject.AddComponent<StageModifierDirector>();
 
-            //statue
-            CreateInteractable();
 
-            TeleporterInteraction.onTeleporterChargedGlobal += teleporterSpawnHologram;
-            gameObject.AddComponent<StageModifierManager>();
-            RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
+
+            TeleporterInteraction.onTeleporterChargedGlobal += TeleporterEventSpawnRoutePortals;
             On.RoR2.UI.HUD.Awake += HUD_Awake;
             On.RoR2.UI.CurrentRunArtifactDisplayDataDriver.Refresh += CurrentRunArtifactDisplayDataDriver_Refresh;
-
-            On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
             //On.RoR2.PortalSpawner.AttemptSpawnPortalServer += PortalSpawner_AttemptSpawnPortalServer;
 
             On.RoR2.DirectorCore.TrySpawnObject += OnVanillaPortalSpawn;
 
-            On.RoR2.SceneDirector.PlaceTeleporter += SceneDirector_PlaceTeleporter;
+            //Портал выхода с базара
+            On.RoR2.SceneDirector.Start += SceneDirector_Start;
+            On.RoR2.SeerStationController.SetRunNextStageToTarget += SeerStationController_SetRunNextStageToTarget;
+            On.RoR2.SeerStationController.OnStartClient += AddRouteManagerToSeerStation;
+
         }
 
-        private void SceneDirector_PlaceTeleporter(On.RoR2.SceneDirector.orig_PlaceTeleporter orig, SceneDirector self)
+
+
+        private void AddRouteManagerToSeerStation(On.RoR2.SeerStationController.orig_OnStartClient orig, SeerStationController self)
         {
             orig(self);
+            if (!self.gameObject.GetComponent<RoutePortalManager>())
+            {
+                Log.Info("Adding route manager");
+                var mg = self.gameObject.AddComponent<RoutePortalManager>();
+                mg.isSeerStation = true;
 
-            Log.Info(self.teleporterInstance.transform);
+                SceneDef targetScene = SceneCatalog.GetSceneDef((SceneIndex)self.targetSceneDefIndex);
+                if (targetScene)
+                {
+                    mg.destinationScene = targetScene;
+                }
+                else
+                {
+                    Log.Error("Seer does not have scene");
+                }
+                Log.Info($"SEER:{mg.destinationScene}");
+                mg.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(self.gameObject);
+
+            }
         }
+
+        private void SeerStationController_SetRunNextStageToTarget(On.RoR2.SeerStationController.orig_SetRunNextStageToTarget orig, SeerStationController self)
+        {
+            SceneDef targetScene = SceneCatalog.GetSceneDef((SceneIndex)self.targetSceneDefIndex);
+            orig(self);
+
+            if (SceneManager.GetActiveScene().name == "bazaar")
+            {
+                GameObject shopPortal = GameObject.Find("PortalShop");
+                if (!shopPortal)
+                {
+                    Log.Error("Could not find");
+                }
+                if (!shopPortal.GetComponent<RoutePortalManager>())
+                {
+                    var mg = shopPortal.AddComponent<RoutePortalManager>();
+                    mg.destinationScene = targetScene;
+                    mg.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(shopPortal);
+                    Log.Info("Succesfully attached");
+                }
+                else
+                {
+                    var seerRouteManager = self.gameObject.GetComponent<RoutePortalManager>();
+
+                    var mng = shopPortal.GetComponent<RoutePortalManager>();
+                    string previous = mng.destinationScene.cachedName;
+                    mng.destinationScene = targetScene;
+                    if (seerRouteManager)
+                        mng.stageModifiers = seerRouteManager.stageModifiers;
+                    else
+                        mng.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(shopPortal);
+                    mng.UpdateText();
+                    Log.Info($"Updated destination:{previous}->{Run.instance.nextStageScene}");
+                }
+
+            }
+            else
+            {
+                Log.Debug("Not bazaar");
+            }
+        }
+
+        private void SceneDirector_Start(On.RoR2.SceneDirector.orig_Start orig, SceneDirector self)
+        {
+            Log.Info("WOOOORKING");
+
+            Log.Info($"Current scene: {SceneManager.GetActiveScene().name}");
+
+            if (SceneManager.GetActiveScene().name == "bazaar")
+            {
+                GameObject shopPortal = GameObject.Find("PortalShop");
+                if (!shopPortal)
+                {
+                    Log.Error("Could not find");
+                }
+                if (!shopPortal.GetComponent<RoutePortalManager>())
+                {
+                    var mg = shopPortal.AddComponent<RoutePortalManager>();
+                    mg.destinationScene = Run.instance.nextStageScene;
+                    mg.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(shopPortal);
+                    Log.Info("Succesfully attached");
+                }
+
+            }
+            else
+            {
+                Log.Debug("Not bazaar");
+            }
+            orig(self);
+
+        }
+
+
 
         private GameObject OnVanillaPortalSpawn(On.RoR2.DirectorCore.orig_TrySpawnObject orig, DirectorCore self, DirectorSpawnRequest directorSpawnRequest)
         {
@@ -163,35 +251,36 @@ namespace RiskOfRoutes
                         mgr.isVanillaPortal = true;
                         Log.Info(mgr.destinationScene);
 
-                        mgr.stageModifiers = StageModifierManager.Instance.GetNextStageModifiers(obj);
+                        mgr.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(obj);
                         Log.Info($"Wjat: {mgr.stageModifiers.Count}");
                     }
-                    if (directorSpawnRequest.spawnCard.name == "iscGoldshoresPortal")
+                    else if (directorSpawnRequest.spawnCard.name == "iscGoldshoresPortal")
                     {
-                        Log.Info("Director spawned goldshores portal");
-                        var exMgr = obj.GetComponent<SceneExitController>();
-                        if (!exMgr.useRunNextStageScene)
+                        if (SceneManager.GetActiveScene().name == "goldshores")
                         {
-                            Log.Info("Portal is not leading to the next stage.");
+                            Log.Info("Director spawned goldshores exit portal");
+                            var mgr = obj.GetComponent<RoutePortalManager>();
+
+                            if (!mgr)
+                            {
+                                mgr = obj.AddComponent<RoutePortalManager>();
+                                Log.Info("Added succesfully");
+                            }
+                            Log.Info($"Mgr:{mgr.name}");
+                            mgr.destinationScene = Run.instance.nextStageScene;
+                            mgr.isVanillaPortal = true;
+                            Log.Info(mgr.destinationScene);
+
+                            mgr.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(obj);
+                            Log.Info($"Wjat: {mgr.stageModifiers.Count}");
+                        }
+                        else
+                        {
+                            Log.Info($"Director spawned portal leading to goldshores");
                             return obj;
                         }
-                        var mgr = obj.GetComponent<RoutePortalManager>();
-
-                        if (!mgr)
-                        {
-                            mgr = obj.AddComponent<RoutePortalManager>();
-                            Log.Info("Added succesfully");
-                        }
-                        Log.Info($"Mgr:{mgr.name}");
-                        mgr.destinationScene = GetGreenPortalScene();
-                        mgr.isVanillaPortal = true;
-                        Log.Info(mgr.destinationScene);
-
-                        mgr.stageModifiers = StageModifierManager.Instance.GetNextStageModifiers(obj);
-                        Log.Info($"Wjat: {mgr.stageModifiers.Count}");
-
                     }
-                    if (directorSpawnRequest.spawnCard.name == "iscShopPortal")
+                    else if (directorSpawnRequest.spawnCard.name == "iscShopPortal")
                     {
                         Log.Info("Director spawned blue portal");
                         var exMgr = obj.GetComponent<SceneExitController>();
@@ -213,9 +302,34 @@ namespace RiskOfRoutes
                         mgr.isVanillaPortal = true;
                         Log.Info(mgr.destinationScene);
 
-                        mgr.stageModifiers = StageModifierManager.Instance.GetNextStageModifiers(obj);
+                        mgr.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(obj);
                         Log.Info($"Wjat: {mgr.stageModifiers.Count}");
                     }
+                    else if (directorSpawnRequest.spawnCard.name == "iscHardwareProgPortal")
+                    {
+                        //если текущий стейдж 3 то есть manager
+                        if (Stage.instance.sceneDef.stageOrder == 3)
+                        {
+                            Log.Info("Director spawned drone portal");
+                            var mgr = obj.GetComponent<RoutePortalManager>();
+
+                            if (!mgr)
+                            {
+                                mgr = obj.AddComponent<RoutePortalManager>();
+                                Log.Info("Added succesfully");
+                            }
+                            Log.Info($"Mgr:{mgr.name}");
+                            var scene = SceneCatalog.GetSceneDefFromSceneName("conduitcanyon");
+                            if (scene == null) scene = Run.instance.nextStageScene;
+                            mgr.destinationScene = scene;
+                            mgr.isVanillaPortal = true;
+                            Log.Info(mgr.destinationScene);
+
+                            mgr.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(obj);
+                            Log.Info($"Wjat: {mgr.stageModifiers.Count}");
+                        }
+                    }
+
                 }
             }
 
@@ -226,9 +340,16 @@ namespace RiskOfRoutes
 
         private void CurrentRunArtifactDisplayDataDriver_Refresh(On.RoR2.UI.CurrentRunArtifactDisplayDataDriver.orig_Refresh orig, CurrentRunArtifactDisplayDataDriver self)
         {
+            //Игра не перестает лагать, если грузятся иконки модификаторов, и при этом не активен ни один из артефактов
+            //Если артефакты есть, то лаг никогда не возникает
+
+            if (RunArtifactManager.enabledArtifactsEnumerable.GetEnumerator().MoveNext())
+            {
+                orig(self);
+            }
             if (self.artifactDisplayPanelController && self.artifactDisplayPanelController.iconContainer)
             {
-                if (StageModifierManager.Instance.activeModifiers.Count == 0)
+                if (StageModifierDirector.Instance.activeModifiers.Count == 0)
                 {
                     orig(self);
                     return;
@@ -251,8 +372,8 @@ namespace RiskOfRoutes
 
         private void AddCustomIcon(ArtifactDisplayPanelController controller)
         {
-            //Log.Info($"For icons there are {StageModifierManager.Instance.activeModifiers.Count}");
-            foreach (var mod in StageModifierManager.Instance.activeModifiers)
+            //Log.Info($"For icons there are {StageModifierDirector.Instance.activeModifiers.Count}");
+            foreach (var mod in StageModifierDirector.Instance.activeModifiers)
             {
 
                 if (mod is ArtifactModifier) continue;
@@ -262,28 +383,14 @@ namespace RiskOfRoutes
                 if (container.Find(iconName))
                 {
                     //Log.Error($"Found repeating name:{iconName}, could not load");
-                    return;
+                    //return;
+                    continue;
 
                 }
                 GameObject iconObj = new GameObject(iconName);
                 iconObj.transform.SetParent(container, false);
+
                 Image img = iconObj.AddComponent<Image>();
-
-                //текст стака как у предметов
-                GameObject stackTextObj = new GameObject("StackText");
-                stackTextObj.transform.SetParent(img.transform, false);
-                HGTextMeshProUGUI textComp = stackTextObj.AddComponent<HGTextMeshProUGUI>();
-
-                RectTransform rect = textComp.GetComponent<RectTransform>();
-                rect.anchorMin = Vector2.zero;
-                rect.offsetMax = new Vector2(0, 0);
-
-                textComp.font = bomb;
-                textComp.fontSize = 12f;
-
-                textComp.alignment = TextAlignmentOptions.TopRight;
-                if(mod.stack>1) textComp.text = $"x{mod.stack}";
-
                 var sprite = mod.icon;
                 if (sprite != null)
                 {
@@ -296,16 +403,40 @@ namespace RiskOfRoutes
                 }
 
                 img.sprite = sprite;
+                //img.raycastTarget = true;
 
                 LayoutElement layout = iconObj.AddComponent<LayoutElement>();
                 layout.preferredHeight = 32f;
                 layout.preferredWidth = 32f;
+                layout.flexibleHeight = 0f;
+                layout.flexibleWidth = 0f;
+
+                //вроде похуй
+                RectTransform iconRect = iconObj.GetComponent<RectTransform>();
+                iconRect.sizeDelta = new Vector2(32f, 32f);
+
+
+                //текст стака как у предметов
+                GameObject stackTextObj = new GameObject("StackText");
+                stackTextObj.transform.SetParent(img.transform, false);
+
+                HGTextMeshProUGUI textComp = stackTextObj.AddComponent<HGTextMeshProUGUI>();
+                RectTransform rect = textComp.GetComponent<RectTransform>();
+
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.one;
+                rect.sizeDelta = Vector2.zero;
+
+                textComp.font = bomb;
+                textComp.fontSize = 12f;
+
+                textComp.alignment = TextAlignmentOptions.TopRight;
+                if (mod.stack > 1) textComp.text = $"x{mod.stack}";
 
                 //TODO недочет если наводиться на панель то отображается текст последнего модификатора
                 RoR2.UI.TooltipProvider tooltip = iconObj.AddComponent<RoR2.UI.TooltipProvider>();
                 tooltip.titleToken = mod.name;
-                tooltip.titleColor = new Color(0.86f, 0.57f, 0.57f, 1.0f);
-
+                tooltip.titleColor = mod.tooltipColor;
                 tooltip.bodyToken = mod.activeText;
 
                 if (controller.panelObject && !controller.panelObject.activeSelf)
@@ -336,7 +467,7 @@ namespace RiskOfRoutes
                 var mgr = portal.GetComponent<RoutePortalManager>();
                 var exitMgr = portal.GetComponent<SceneExitController>();
                 mgr.destinationScene = exitMgr.destinationScene;
-                mgr.stageModifiers = StageModifierManager.Instance.GetNextStageModifiers(portal);
+                mgr.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(portal);
                 Log.Info($"Success? {mgr.stageModifiers.Count()}");
                 Log.Info($"Destination scene of green portal: {mgr.destinationScene}");
 
@@ -371,7 +502,7 @@ namespace RiskOfRoutes
             hud = self;
 
             GameObject newUi = UnityEngine.Object.Instantiate(LegacyResourcesAPI.Load<GameObject>("Prefabs/UI/Tooltip"));
-            newUi.transform.SetParent(hud.mainContainer.transform,false);
+            newUi.transform.SetParent(hud.mainContainer.transform, false);
             Image imga = newUi.AddComponent<Image>();
             imga.sprite = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveLunarIcon.png").WaitForCompletion();
 
@@ -411,32 +542,33 @@ namespace RiskOfRoutes
             body.text = bodyText;
         }
 
-        private void HUD_shouldHudDisplay(HUD hud, ref bool shouldDisplay)
+
+
+        private void CreateRoutePortalPrefab()
         {
-            var tc = ui.GetComponent<TooltipController>();
-            var rc = ui.GetComponent<RectTransform>();
-            tc.titleLabel.text = "frrrrrrrf";
-            tc.bodyLabel.text = "gfefefef";
-            ui.SetActive(true);
-        }
-
-        private void Stage_onServerStageBegin(Stage obj)
-        {
-            Log.Info($"Stage {SceneCatalog.mostRecentSceneDef.cachedName} started");
-            return;
-        }
-
-
-
-
-
-        private void CreateInteractable()
-        {
-            GameObject routePortal = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/PortalShop/PortalShop.prefab").WaitForCompletion(), "BeebleMemorialStatue");
+            GameObject routePortal = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/PortalShop/PortalShop.prefab").WaitForCompletion(), "RoutePortal");
+            //GameObject routePortal = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/bazaar/SeerStation.prefab").WaitForCompletion(), "BeebleMemorialStatue");
             Log.Info("Invoked");
 
             Destroy(routePortal.GetComponent<GenericInteraction>());
             Destroy(routePortal.GetComponent<SceneExitController>());
+            //Destroy(routePortal.GetComponent<PurchaseAvailabilityIndicator>());
+            //Destroy(routePortal.GetComponent<PurchaseInteraction>());
+            //Destroy(routePortal.GetComponent<SeerStationController>());
+
+            //var renderers = routePortal.GetComponentsInChildren<MeshRenderer>();
+
+            ////Material mat = SceneInfo.instance.sceneDef.portalMaterial;
+            //foreach (var renderer in renderers)
+            //{
+            //    Log.Info($"Renderer:{renderer}");
+            //    if (renderer.name == "Mesh")
+            //    {
+            //        UnityEngine.Object.Destroy(renderer.gameObject);
+            //    }
+            //}
+
+
 
             routePortal.name = "RoutePortal";
             routePortal.transform.localScale = new Vector3(1f, 1f, 1f);
@@ -445,7 +577,7 @@ namespace RiskOfRoutes
             RoutePortalManager mgr = routePortal.AddComponent<RoutePortalManager>();
             GenericInteraction interaction = routePortal.AddComponent<GenericInteraction>();
             SceneExitController sceneExitController = routePortal.AddComponent<SceneExitController>();
-            interaction.contextToken = "Enter dentfer the portal <sprite name=Utility>";
+            interaction.contextToken = "Enter the portal";
 
 
             mgr.genericInteraction = interaction;
@@ -464,7 +596,7 @@ namespace RiskOfRoutes
 
         }
 
-        private void teleporterSpawnHologram(TeleporterInteraction interaction)
+        private void TeleporterEventSpawnRoutePortals(TeleporterInteraction interaction)
         {
             spawnRoutePortals(interaction.transform.position);
         }
@@ -513,7 +645,7 @@ namespace RiskOfRoutes
                 if (portalObject)
                 {
                     var m = portalObject.GetComponent<RoutePortalManager>();
-                    m.stageModifiers = StageModifierManager.Instance.GetNextStageModifiers(portalObject);
+                    m.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(portalObject);
                     Log.Info($"Success? {m.stageModifiers.Count()}");
                     Log.Info($"{i + 1}th portal placed successfully");
                 }
@@ -525,9 +657,17 @@ namespace RiskOfRoutes
                 }
                 Vector3 rdir = portalObject.transform.right;
 
-                var renderers = portalObject.GetComponentsInChildren<ParticleSystem>();
+                var renderers = portalObject.GetComponentsInChildren<MeshRenderer>();
 
-                Material mat = SceneInfo.instance.sceneDef.portalMaterial;
+                //Material mat = SceneInfo.instance.sceneDef.portalMaterial;
+                //foreach (var renderer in renderers)
+                //{
+                //    Log.Info($"Renderer:{renderer}");
+                //    if (renderer.name == "Mesh")
+                //    {
+                //        UnityEngine.Object.Destroy(renderer.gameObject);
+                //    }
+                //}
 
             }
 
@@ -557,12 +697,7 @@ namespace RiskOfRoutes
             return interactableSpawnCard;
         }
 
-        private void ClosePortals(GameObject obj)
-        {
-            GameObject.Destroy(obj);
-        }
-
-        private static List<SceneDef> GetNextStagesScenesList()
+        public static List<SceneDef> GetNextStagesScenesList()
         {
             //TODO луп вариации проверить
             SceneDef nextStageScene = Run.instance.nextStageScene;
@@ -623,148 +758,7 @@ namespace RiskOfRoutes
             return sceneDef;
         }
 
-        [ConCommand(commandName = "nextStages", flags = ConVarFlags.ExecuteOnServer, helpText = "Get next stages")]
-        private static void GetNextStagesScenesCommand(ConCommandArgs args)
-        {
-            Log.Info("Next stages available:");
-            foreach (var scene in GetNextStagesScenesList())
-            {
-                Log.Info(scene.cachedName);
-            }
-            Log.Info(Run.instance.nextStageScene.destinationsGroup);
-
-        }
-
-        [ConCommand(commandName = "green", flags = ConVarFlags.ExecuteOnServer, helpText = "Get nexeet stages")]
-        private static void GetNextGreenStage(ConCommandArgs args)
-        {
-            var scene = GetGreenPortalScene();
-            Log.Info($"{scene.cachedName}");
-        }
-
-        [ConCommand(commandName = "dccs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get nexeet stages")]
-        private static void GetDccs(ConCommandArgs args)
-        {
-            //var stageInfo = ClassicStageInfo.instance;
-            //var categories = stageInfo.monsterCategories;
-            //float temp = 0;
-            //foreach (var c in categories.categories)
-            //{
-            //    //TODO stageInfo.interactableDccsPool. --- interactableCategories помечен как deprecated стоит посмотреть что за DCCS
-            //    //еще есть             stageInfo.GetInteractableDccsPool
-            //    Log.Info($"Category:{c.name}");
-            //    foreach(var f in c.cards)
-            //    {
-            //        Log.Info($"Card:{f.spawnCard.directorCreditCost}");
-            //    }
-            //}
-
-            CharacterMaster master = args.senderMaster;
-            if (!master || !master.inventory)
-            {
-                master = PlayerCharacterMasterController.instances[0].master;
-                if (!master || !master.inventory) return;
-            }
-
-            Log.Info($"Giving all broken items to {master.name}...");
-
-            foreach (ItemDef itemDef in ItemCatalog.allItemDefs)
-            {
-                if (itemDef.isConsumed)
-                {
-                    if (itemDef == DLC1Content.Items.RegeneratingScrapConsumed) continue;
-                    if (itemDef == DLC2Content.Items.LowerPricedChestsConsumed) continue;
-
-                    master.inventory.GiveItem(itemDef, 1);
-
-                }
-            }
-
-
-        }
-
-        [ConCommand(commandName = "give_money", flags = ConVarFlags.ExecuteOnServer, helpText = "Gives 1000 gold to the executing player")]
-        private static void CCGiveMoney(ConCommandArgs args)
-        {
-            if (args.senderMaster)
-            {
-                args.senderMaster.GiveMoney(1000);
-                Debug.Log("Gave 1000 gold to " + args.senderMaster.name);
-            }
-            else
-            {
-                Debug.LogWarning("Command sender has no character master.");
-            }
-        }
-
-        [ConCommand(commandName = "activeModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get currently active modifiers")]
-        private static void GetActiveModifiersCommand(ConCommandArgs args)
-        {
-            if (StageModifierManager.Instance != null)
-            {
-                var mods = StageModifierManager.Instance.activeModifiers;
-                if (mods != null)
-                {
-                    if (mods.Count > 0)
-                    {
-                        foreach (var modifier in mods)
-                        {
-                            Log.Info($"{modifier.activeText}:{modifier.stack}");
-                        }
-                    }
-                    else
-                    {
-                        Log.Info("There are no modifiers");
-                    }
-                }
-                else
-                {
-                    Log.Error("Modifiers list is null");
-                }
-            }
-
-        }
-
-
-        [ConCommand(commandName = "reservedModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get modifiers that would be active on next stage")]
-        private static void GetReservedModifiersCommand(ConCommandArgs args)
-        {
-            if (StageModifierManager.Instance != null)
-            {
-                var mods = StageModifierManager.Instance.reservedModifiers;
-                if (mods != null)
-                {
-                    if (mods.Count > 0)
-                    {
-                        foreach (var modifier in mods)
-                        {
-                            Log.Info(modifier.reservedText);
-                        }
-                    }
-                    else
-                    {
-                        Log.Info("There are no modifiers");
-                    }
-
-                }
-                else
-                {
-                    Log.Error("Modifiers list is null");
-                }
-            }
-
-        }
-
-        [ConCommand(commandName = "checkOneShot", flags = ConVarFlags.ExecuteOnServer, helpText = "Check if players have one shot prot (for one of modifiers)")]
-        private static void CheckOneShotProtection(ConCommandArgs args)
-        {
-            var instances = PlayerCharacterMasterController.instances;
-            foreach (var playerCharacterMaster in PlayerCharacterMasterController.instances)
-            {
-                Log.Info($"{playerCharacterMaster.body.hasOneShotProtection}:{playerCharacterMaster.name}");
-                playerCharacterMaster.body.hasOneShotProtection = false;
-            }
-        }
+        
 
 
 
@@ -783,212 +777,7 @@ namespace RiskOfRoutes
             return sceneDef.validForRandomSelection;
         }
 
-        //телпорт сразу
-        [ConCommand(commandName = "charge", flags = ConVarFlags.ExecuteOnServer, helpText = "Charges TP and kills boss")]
-        static void ChargeTeleporter(ConCommandArgs args)
-        {
-            if (!TeleporterInteraction.instance) return;
-
-            var tp = TeleporterInteraction.instance;
-
-            tp.holdoutZoneController.charge = 0.99f;
-
-            if (tp.bossGroup && tp.bossGroup.combatSquad)
-            {
-
-                List<CharacterMaster> bossMasters = new List<CharacterMaster>(tp.bossGroup.combatSquad.readOnlyMembersList);
-
-                foreach (CharacterMaster master in bossMasters)
-                {
-                    CharacterBody body = master.GetBody();
-
-                    if (body && body.healthComponent && body.healthComponent.alive)
-                    {
-                        body.healthComponent.Suicide(null, null, DamageType.Generic);
-                    }
-                }
-            }
-
-            Log.Info("Teleporter charged and bosses eliminated.");
-        }
-
-        [ConCommand(commandName = "tp", flags = ConVarFlags.ExecuteOnServer, helpText = "tp <x> <y> <z> - teleport local player to coordinates.")]
-        private static void CC_Teleport(ConCommandArgs args)
-        {
-            if (!NetworkServer.active) return;
-
-            if (args.Count != 3)
-            {
-                Debug.Log("Usage: tp <x> <y> <z>");
-                return;
-            }
-
-            float x = (float)args.TryGetArgFloat(0);
-            float y = (float)args.TryGetArgFloat(1);
-            float z = (float)args.TryGetArgFloat(2);
-
-            var body = args.GetSenderBody();
-            if (!body) return;
-
-            var newPos = new Vector3(x, y, z);
-            body.characterMotor?.Motor.SetPositionAndRotation(newPos, body.transform.rotation);
-            body.transform.position = newPos;
-        }
-
-        [ConCommand(commandName = "greenportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void SpawnGreenPortal(ConCommandArgs args)
-        {
-
-            CharacterBody body = args.senderMaster.GetBody();
-            Vector3 position = body.transform.position + body.transform.forward * 5f;
-            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
-            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscColossusPortal");
-
-            if (!spawnCard)
-            {
-                Debug.LogError("Could not load iscPortalColossus. Trying fallback name...");
-                spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
-            }
-
-            if (!spawnCard)
-            {
-                Debug.LogError("Failed to load Green Portal SpawnCard.");
-                return;
-            }
-
-            DirectorPlacementRule placementRule = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Direct,
-                position = position
-            };
-
-            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
-
-            if (spawnedObject)
-            {
-                Debug.Log("Successfully spawned Green Portal at " + position);
-            }
-            else
-            {
-                Debug.LogError("DirectorCore failed to spawn the portal.");
-            }
-        }
-
-
-
-        [ConCommand(commandName = "shopportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void SpawnShopPortal(ConCommandArgs args)
-        {
-
-            CharacterBody body = args.senderMaster.GetBody();
-            Vector3 position = body.transform.position + body.transform.forward * 5f;
-            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
-            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscShopPortal");
-
-            if (!spawnCard)
-            {
-                Debug.LogError("Could not load iscPortalColossus. Trying fallback name...");
-                spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
-            }
-
-            if (!spawnCard)
-            {
-                Debug.LogError("Failed to load Shop Portal SpawnCard.");
-                return;
-            }
-
-            DirectorPlacementRule placementRule = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Direct,
-                position = position
-            };
-
-            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
-
-            if (spawnedObject)
-            {
-                Debug.Log("Successfully spawned Shop Portal at " + position);
-            }
-            else
-            {
-                Debug.LogError("DirectorCore failed to spawn the portal.");
-            }
-        }
-
-        [ConCommand(commandName = "goldportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void SpawnGoldPortal(ConCommandArgs args)
-        {
-
-            CharacterBody body = args.senderMaster.GetBody();
-            Vector3 position = body.transform.position + body.transform.forward * 5f;
-            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward); 
-            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscGoldshoresPortal");
-
-            if (!spawnCard)
-            {
-                Debug.LogError("Could not load iscPortalColossus. Trying fallback name...");
-                spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
-            }
-
-            if (!spawnCard)
-            {
-                Debug.LogError("Failed to load GoldShores Portal SpawnCard.");
-                return;
-            }
-
-            DirectorPlacementRule placementRule = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Direct,
-                position = position
-            };
-
-            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
-
-            if (spawnedObject)
-            {
-                Debug.Log("Successfully spawned GoldShores Portal at " + position);
-            }
-            else
-            {
-                Debug.LogError("DirectorCore failed to spawn the portal.");
-            }
-        }
-
-        [ConCommand(commandName = "fing", flags = ConVarFlags.ExecuteOnServer)]
-        private static void FindShopPortal(ConCommandArgs args)
-        {
-            GameObject obj = GameObject.Find("Portal");
-            if (obj == null)
-            {
-                Log.Error("Could not find it");
-            }
-            else
-            {
-                Log.Info("Found it");
-                foreach (var c in obj.GetComponentsInChildren<Component>())
-                {
-                    Log.Info(c.GetType());
-                }
-                var mgr = obj.GetComponent<RoutePortalManager>();
-
-                if (!mgr)
-                {
-                    mgr = obj.AddComponent<RoutePortalManager>();
-                    Log.Info("Added succesfully");
-                }
-                Log.Info($"Mgr:{mgr.name}");
-                mgr.destinationScene = GetGreenPortalScene();
-                mgr.isVanillaPortal = true;
-                Log.Info(mgr.destinationScene);
-
-                //mgr.stageModifiers = StageModifierManager.Instance.GetNextStageModifiers(obj);
-                mgr.stageModifiers = new List<StageModifier>() { new MoreDronesModifier() { stack = 10} };
-                Log.Info($"Wjat: {mgr.stageModifiers.Count}");
-
-            }
-        }
-
-
+        
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.F2))
@@ -998,7 +787,7 @@ namespace RiskOfRoutes
 
                 // And then drop our defined item in front of the player.
 
-                Log.Info($"Player pressed F2. Spawning our custom item at coordinates {transform.position}");
+                Log.Info($"Player pressed F2. Spawning route portals {transform.position}");
                 spawnRoutePortals(transform.position);
             }
 
@@ -1019,19 +808,11 @@ namespace RiskOfRoutes
                 {
                     if (dr.currentInteractable != null)
                     {
-                        if (dr.currentInteractable.name.Contains("RoutePortal") || dr.currentInteractable.name.Contains("Portal"))
+                        if (dr.currentInteractable.name.Contains("RoutePortal") || dr.currentInteractable.name.Contains("Portal") || dr.currentInteractable.name.Contains("SeerStation"))
                         {
                             var manager = dr.currentInteractable.GetComponentInChildren<RoutePortalManager>();
 
                             if (!manager) manager = dr.currentInteractable.GetComponentInParent<RoutePortalManager>();
-                            //foreach (var c in dr.currentInteractable.GetComponentsInChildren<Component>())
-                            //{
-                            //    Log.Info($"Component:{c.GetType()}");
-                            //    if (c is RoutePortalManager)
-                            //    {
-                            //        Log.Info("GERER");
-                            //    }
-                            //}
                             if (manager != null)
                             {
                                 //Log.Info("Looking at route portal");
@@ -1043,20 +824,11 @@ namespace RiskOfRoutes
                                 }
                                 else
                                 {
-                                    Log.Info("hiii");
+                                    Log.Error("Could not set text to Tooltip");
                                 }
                                 ui.SetActive(true);
                             }
-                            else
-                            {
-
-                                Log.Error("No manager");
-
-                            }
-
-
                         }
-
                     }
                     else
                     {

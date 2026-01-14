@@ -1,5 +1,4 @@
-﻿using HarmonyLib;
-using RiskOfRoutes;
+﻿using RiskOfRoutes;
 using RoR2;
 using System.Collections.Generic;
 using UnityEngine;
@@ -85,6 +84,6 @@ namespace SamplePlugin.StageModifiers
         }
     }
 
-    
+
 
 }

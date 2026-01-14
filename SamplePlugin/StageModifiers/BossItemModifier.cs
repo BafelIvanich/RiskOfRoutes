@@ -21,21 +21,29 @@ namespace SamplePlugin.StageModifiers
         }
         public override void OnEnd()
         {
-            //On.RoR2.BossGroup.DropRewards -= BossGroup_DropRewards;
+            On.RoR2.BossGroup.DropRewards -= BossGroup_DropRewards;
             Log.Info("BossItemModifier end");
         }
 
         public override void OnStart()
         {
-            //On.RoR2.BossGroup.DropRewards += BossGroup_DropRewards;
+            On.RoR2.BossGroup.DropRewards += BossGroup_DropRewards;
             Log.Info("BossItemModifier start");
             RoR2.Chat.AddMessage("Boss would drop yellow");
 
         }
 
         //todo ллогика если группа мобов заместо босса
+        //todo нынешняя реализация навсегда замещает
         private void BossGroup_DropRewards(On.RoR2.BossGroup.orig_DropRewards orig, RoR2.BossGroup self)
         {
+            RoR2.PickupDropTable initialTable = self.dropTable;
+            Log.Info("Available boss drops");
+            foreach (var c in self.bossDropTables)
+            {
+                Log.Info(c);
+            }
+
             Log.Info("Active");
             var bossDropTable = ScriptableObject.CreateInstance<RoR2.BasicPickupDropTable>();
             self.bossDropChance = 1.0f;
@@ -52,15 +60,23 @@ namespace SamplePlugin.StageModifiers
             var originalDropTable = self.dropTable;
             self.dropTable = bossDropTable;
 
+            if (self.bossDropTables.Count == 0) bossDropTable.Add(RoR2.Run.instance.availableBossDropList, 1.0f);
             orig(self);
 
-            Log.Info(self.dropTable.ToString());
+            Log.Info("Drop " + " " + self.dropTable.name);
+            Log.Info(self.dropTable);
+
+            self.dropTable = initialTable;
+
+            UnityEngine.Object.Destroy(bossDropTable);
+
+
         }
 
 
 
     }
 
-    
+
 
 }

@@ -85,6 +85,6 @@ namespace SamplePlugin.StageModifiers
 
     }
 
-    
+
 
 }

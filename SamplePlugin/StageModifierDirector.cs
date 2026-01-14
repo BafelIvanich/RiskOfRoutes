@@ -7,9 +7,9 @@ using UnityEngine.Networking;
 
 namespace SamplePlugin
 {
-    public class StageModifierManager : MonoBehaviour
+    public class StageModifierDirector : MonoBehaviour
     {
-        public static StageModifierManager Instance;
+        public static StageModifierDirector Instance;
         public List<StageModifier> activeModifiers { get; private set; }
 
         public int routeCredits = 200;
@@ -34,7 +34,7 @@ namespace SamplePlugin
             //RoR2.SceneDirector.onPostPopulateSceneServer += SceneDirector_onPostPopulateSceneServer;
 
             //RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
-            
+
         }
 
         private void SceneDirector_onPrePopulateSceneServer(SceneDirector obj)
@@ -104,6 +104,7 @@ namespace SamplePlugin
         {
             WeightedSelection<StageModifier> weightedSelection = CreateWeightedSelection(portal);
             var res = new List<StageModifier>();
+            var mg = portal.GetComponent<RoutePortalManager>();
 
             int routePortalCredits = 200;
             int num = 100;
@@ -116,7 +117,7 @@ namespace SamplePlugin
 
                 foreach (StageModifier m in res)
                 {
-                    if(mod.GetType()  == m.GetType())
+                    if (mod.GetType() == m.GetType())
                     {
                         if (m.stackable)
                         {
@@ -124,20 +125,29 @@ namespace SamplePlugin
                             routePortalCredits -= mod.cost;
                             Log.Info($"Stack here {mod}");
                         }
-                        if (m is PrinterItemModifier && m.name!=mod.name) break;
+                        if (m is PrinterItemModifier && m.name != mod.name) break;
                         isDuplicate = true;
 
                         break;
                     }
                 }
-                if(!isDuplicate)
+                if (!isDuplicate)
                 {
-                routePortalCredits -= mod.cost;
-                res.Add(mod);
-                Log.Info($"Added mod {mod.name} to res");
+                    routePortalCredits -= mod.cost;
+                    res.Add(mod);
+                    Log.Info($"Added mod {mod.name} to res");
 
                 }
             }
+            if (mg)
+            {
+                if (res.Count > 0 && mg.destinationScene.baseSceneName == "lemuriantemple" || mg.destinationScene.baseSceneName == "habitat")
+                {
+                    res.Add(new AurelioniteRewardModifier());
+                }
+
+            }
+
             return res;
 
         }
@@ -150,11 +160,11 @@ namespace SamplePlugin
             for (int i = 0; i < weightedSelection.Count; i++)
             {
                 WeightedSelection<StageModifier>.ChoiceInfo choice = weightedSelection.GetChoice(i);
-                Log.Info($"{i}/{weightedSelection.Count}: {choice.value.cost} / {maxCost}::{choice.value.name}");
+                //Log.Info($"{i}/{weightedSelection.Count}: {choice.value.cost} / {maxCost}::{choice.value.name}");
                 if (choice.value.cost <= maxCost)
                 {
                     filtered.AddChoice(choice);
-                    Log.Info($"Ti fultered was added {choice.value.name}");
+                    //Log.Info($"Ti fultered was added {choice.value.name}");
                 }
             }
             if (filtered.Count == 0)
@@ -178,8 +188,6 @@ namespace SamplePlugin
             res.AddChoice(new LunarEnemiesModifier(), 0.5f);
             if (portal)
             {
-                var mg = portal.GetComponent<RoutePortalManager>();
-
                 //if ( Run.instance.nextStageScene.stageOrder >= 3)
                 //{
                 //    res.AddChoice(new ArtifactModifier(), 0.5f);
@@ -192,10 +200,11 @@ namespace SamplePlugin
                 {
                     res.AddChoice(new YellowPrinterModifier(), 0.5f);
                 }
-                if(CheckPlayersHaveConsumedItems())
+                if (CheckPlayersHaveConsumedItems())
                 {
                     res.AddChoice(new RepairConsumedItemsModifier(), 1.0f);
                 }
+                var mg = portal.GetComponent<RoutePortalManager>();
 
                 if (mg.destinationScene.baseSceneName == "dampcavesimple")
                 {
@@ -265,15 +274,15 @@ namespace SamplePlugin
         private bool CheckPlayersHaveConsumedItems()
         {
             int consumedItemsCount = 0;
-            foreach(CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
+            foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {
                 if (!cm.inventory) continue;
-                foreach(ItemIndex item in cm.inventory.itemAcquisitionOrder)
+                foreach (ItemIndex item in cm.inventory.itemAcquisitionOrder)
                 {
                     ItemDef itemDef = ItemCatalog.GetItemDef(item);
-                    if(itemDef!=null)
+                    if (itemDef != null)
                     {
-                        if(itemDef.isConsumed && itemDef != RoR2.DLC1Content.Items.RegeneratingScrapConsumed && itemDef != RoR2.DLC2Content.Items.LowerPricedChestsConsumed && itemDef != RoR2.DLC2Content.Items.TeleportOnLowHealthConsumed)
+                        if (itemDef.isConsumed && itemDef != RoR2.DLC1Content.Items.RegeneratingScrapConsumed && itemDef != RoR2.DLC2Content.Items.LowerPricedChestsConsumed && itemDef != RoR2.DLC2Content.Items.TeleportOnLowHealthConsumed)
                         {
                             consumedItemsCount++;
                         }
@@ -283,6 +292,13 @@ namespace SamplePlugin
             Log.Info($"Players have {consumedItemsCount} consumed items right now");
 
             return consumedItemsCount > 0;
+        }
+
+        [Server]
+        private bool CheckPlayersHaveFoodItems()
+        {
+            return false;
+            //TODO
         }
 
     }
