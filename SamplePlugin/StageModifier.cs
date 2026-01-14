@@ -4,8 +4,11 @@ using UnityEngine;
 using UnityEngine.Networking;
 using RoR2;
 using UnityEngine.AddressableAssets;
+using R2API.Utils;
+using System.Reflection;
 
-
+//whites: crowbar, bears, bleed, bombs, watches, gasoline, focus crystal, syringe, key
+//greens: reload one, ukulele, active charge, wisps, band 1, band 2, injection, pinwheel, fin, star, rockets, energy shield, gasoline, wire
 
 
 namespace SamplePlugin
@@ -137,10 +140,25 @@ namespace SamplePlugin
 
         private void BossGroup_DropRewards(On.RoR2.BossGroup.orig_DropRewards orig, RoR2.BossGroup self)
         {
+            Log.Info("Active");
+            var bossDropTable = ScriptableObject.CreateInstance<RoR2.BasicPickupDropTable>();
             self.bossDropChance = 1.0f;
+            bossDropTable.tier1Weight = -0f;  
+            bossDropTable.tier2Weight = 0f; 
+            bossDropTable.tier3Weight = 0f; 
+            bossDropTable.bossWeight = 1f;  
+            bossDropTable.lunarItemWeight = 0f;
+            bossDropTable.voidTier1Weight = 0f;
+            bossDropTable.voidTier2Weight = 0f;
+            bossDropTable.voidTier3Weight = 0f;
+            bossDropTable.voidBossWeight = 0f;
 
+            var originalDropTable = self.dropTable;
+            self.dropTable = bossDropTable;
+            
             orig(self);
 
+            Log.Info(self.dropTable.ToString());
         }
 
 
@@ -170,6 +188,7 @@ namespace SamplePlugin
         public MoreDronesModifier()
         {
             this.activeText = "MoreDronesModifier";
+            this.reservedText = "More <style=cIsUtility>drones</style> will appear on next stage.";
             negative = false;
         }
         public override void OnEnd()
@@ -180,6 +199,54 @@ namespace SamplePlugin
         public override void OnStart()
         {
             Log.Info("MoreDronesModifier start");
+            On.RoR2.SceneDirector.Start += SceneDirector_Start;
+        }
+
+        private void SceneDirector_Start(On.RoR2.SceneDirector.orig_Start orig, SceneDirector self)
+        {
+            //отсюда все возможные для спавна интерктаблы
+            var stageInfo = ClassicStageInfo.instance;
+
+            var categories = stageInfo.interactableCategories.categories;
+
+            for (int i = 0;i < categories.Length;i++)
+            {
+                //TODO stageInfo.interactableDccsPool. --- interactableCategories помечен как deprecated стоит посмотреть что за DCCS
+                //еще есть             stageInfo.GetInteractableDccsPool
+                var category = stageInfo.interactableCategories.categories[i];
+                Log.Info($"{category.name}:{category.selectionWeight}");
+                if (categories[i].name == "Drones")
+                {
+                    Log.Info("Drones category available");
+                    categories[i].selectionWeight = 1000f;
+                    foreach(var card in category.cards)
+                    {
+                        string initialCost = card.spawnCard.directorCreditCost.ToString();
+                        string initialWeight = card.selectionWeight.ToString();
+
+                        card.spawnCard.directorCreditCost = 0;
+                        card.selectionWeight = 1000;
+                        var isc = card.spawnCard as InteractableSpawnCard;
+                        if (isc)
+                        {
+                            isc.maxSpawnsPerStage = -1;
+                            isc.occupyPosition = false;
+                        }
+                        else
+                        {
+                            Log.Error("GO");
+                        }
+                            Log.Info($"Succesfully set price of {card.spawnCard.name} from {initialCost} to {0}");
+                            Log.Info($"Succesfully set weight of {card.spawnCard.name} from {initialWeight} to {1000}");
+                    }
+                }
+            }
+
+            //TODO проверить возвращаются ли цены по умолчанию или стоит это делать вручную
+
+            Log.Info("Done modifying drone cost");
+
+            orig(self);
         }
     }
 
@@ -257,6 +324,8 @@ namespace SamplePlugin
                 Log.Info("Asset path is invalid");
             }
         }
+
+
     }
 
     public class RedPrinterModifier : StageModifier
@@ -333,6 +402,8 @@ namespace SamplePlugin
                 Log.Info("Asset path is invalid");
             }
         }
+
+
     }
 
     public class WanderingChefModifier : StageModifier
@@ -419,7 +490,6 @@ namespace SamplePlugin
         }
     }
 
-
     //не артефакт, элитки становятся дешевле для директора
     public class MoreElitesModifier : StageModifier
     {
@@ -452,5 +522,14 @@ namespace SamplePlugin
         }
     }
 
+    public class VoidEnemiesModifier
+    {
+
+    }
+
+    public class LunarEnemiesModifier
+    {
+
+    }
 
 }
