@@ -28,7 +28,8 @@ namespace SamplePlugin
 
         public int cost;
 
-        public bool negative;
+        public bool negative = false;
+        public bool stackable = false;
 
         public abstract void OnStart();
 
@@ -316,8 +317,10 @@ namespace SamplePlugin
     {
         public MoreDronesModifier()
         {
+            this.name = "More drones";
             this.activeText = "MoreDronesModifier";
             this.reservedText = "More <style=cIsUtility>drones</style> will appear on next stage.";
+            this.icon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texDroneIconOutlined.png").WaitForCompletion();
             negative = false;
         }
         public override void OnEnd()
@@ -417,6 +420,7 @@ namespace SamplePlugin
         public YellowPrinterModifier()
         {
             CreateYellowPrinterSpawnCard();
+            this.name = "Boss item printer";
             this.reservedText = "<style=cShrine>Yellow printer</style> is guaranteed to appear somewhere on the next stage.";
             this.activeText = "<style=cShrine>Yellow printer</style> has appeared somewhere on the stage.";
             negative = false;
@@ -495,6 +499,7 @@ namespace SamplePlugin
         public RedPrinterModifier()
         {
             CreateRedPrinterSpawnCard();
+            this.name = "Red item printer";
             this.reservedText = "<style=cDeath>Red printer</style> is guaranteed to appear somewhere on the next stage.";
             this.activeText = "<style=cDeath>Red printer</style> has appeared somewhere on the stage.";
             negative = false;
@@ -574,6 +579,7 @@ namespace SamplePlugin
         public WanderingChefModifier()
         {
             CreateChefSpawnCard();
+            this.name = "Wandering CHEF";
             this.activeText = "WanderingChefModifier";
             this.icon = Addressables.LoadAssetAsync<Sprite>( "RoR2/DLC3/MealPrep/texMealPrepIcon.png").WaitForCompletion();
             this.reservedText = "<style=cIsHealth>Wandering CHEF</style> is guaranteed to appear on next stage.";
@@ -656,8 +662,13 @@ namespace SamplePlugin
     {
         public MoreElitesModifier()
         {
+            this.name = "More elites";
             this.activeText = "MoreElitesModifier";
             this.icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveBossIcon.png").WaitForCompletion();
+            if(!icon)
+            {
+                Log.Info("GFGG");
+            }
             negative = false;
         }
         public override void OnEnd()
@@ -688,17 +699,28 @@ namespace SamplePlugin
     {
         public VoidEnemiesModifier()
         {
-            this.icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/textITWaveVoidIcon.png").WaitForCompletion();
+            this.name = "Void invasion";
+            this.reservedText = "Enemies from void might appear on the next stage.";
+            this.activeText = "Enemies from void might appear on this stage.";
+            var icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveVoidIcon.png").WaitForCompletion();
+            if (!icon)
+            {
+                Log.Info("GFGG");
+            }
+            else
+            {
+                this.icon = icon;
+            }
         }
 
         public override void OnEnd()
         {
-            throw new NotImplementedException();
+            Log.Info("Void invasion on end");
         }
 
         public override void OnStart()
         {
-            throw new NotImplementedException();
+            Log.Info("Void invasion on start");
         }
     }
 
@@ -706,18 +728,30 @@ namespace SamplePlugin
     {
         public LunarEnemiesModifier()
         {
-            this.icon = Addressables.LoadAssetAsync<Sprite>( "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/textITWaveVoidIcon.png").WaitForCompletion();
+
+            this.name = "Moon invasion";
+            this.reservedText = "Enemies from moon might appear on the next stage.";
+            this.activeText = "Enemies from moon might appear on this stage.";
+            var icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveLunarIcon.png").WaitForCompletion();
+            if (!icon)
+            {
+                Log.Info("GFGG");
+            }
+            else
+            {
+                this.icon = icon;
+            }
         }
 
 
         public override void OnEnd()
         {
-            throw new NotImplementedException();
+            Log.Info("Moon invasion on end");
         }
 
         public override void OnStart()
         {
-            throw new NotImplementedException();
+            Log.Info("Moon invasion on start");
         }
     }
 

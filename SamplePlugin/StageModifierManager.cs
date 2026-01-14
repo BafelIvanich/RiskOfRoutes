@@ -84,9 +84,31 @@ namespace SamplePlugin
             }
         }
 
-        public void GetNextStageModifiers()
+        public List<StageModifier> GetNextStageModifiers(GameObject portal)
         {
+            WeightedSelection<StageModifier> weightedSelection;
 
+
+
+            var res = new List<StageModifier>();
+            if(portal)
+            {
+                var mg = portal.GetComponent<RoutePortalManager>();
+                if (mg.destinationScene.baseSceneName == "dampcavesimple")
+                {
+                    res.Add(new RedPrinterModifier());
+                    res.Add(new MoreDronesModifier());
+                    res.Add(new WanderingChefModifier());
+                }
+                else
+                {
+                    res.Add(new YellowPrinterModifier());
+                    res.Add(new RedPrinterModifier());
+                    res.Add(new MoreDronesModifier());
+                }
+                 
+            }
+            return res;
         }
 
         [Server]
