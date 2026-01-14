@@ -13,7 +13,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     {
         public Dictionary<CombatDirector.EliteTierDef, float> tierAndInitialPrice = new Dictionary<CombatDirector.EliteTierDef, float>();
 
-        public MoreElitesModifier()
+        public MoreElitesModifier(int stack)
         {
             name = "More elites";
             activeText = "More <style=cDeath>elite</style> enemies will appear.";
@@ -24,6 +24,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                 Log.Info("GFGG");
             }
             negative = true;
+            this.stack = stack;
         }
         public override void OnEnd()
         {
@@ -49,7 +50,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                     if (eliteTier != null)
                     {
                         if (eliteTier.costMultiplier == 1) continue;
-                        float pct = 1 - ((stack - 1) * 0.15f);
+                        float pct = 1 - 0.15f - ((stack - 1) * 0.15f);
 
                         Log.Info($"Elite cost lowered by {(stack - 1) * 0.15f}: {eliteTier.costMultiplier}->{eliteTier.costMultiplier * pct}");
                         tierAndInitialPrice.Add(eliteTier, eliteTier.costMultiplier);

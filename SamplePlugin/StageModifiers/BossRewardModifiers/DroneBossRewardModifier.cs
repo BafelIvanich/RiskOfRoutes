@@ -19,7 +19,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
         //todo может и зеленых
         //todo кроме equipment Дрона
-        public DroneBossRewardModifier(int cost, bool dropLegendary = false)
+        public DroneBossRewardModifier(bool dropLegendary = false)
         {
             if (dropLegendary)
             {
@@ -75,7 +75,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
         private void BossGroup_DropRewards(ILContext il)
         {
             var aurelioniteMod = StageModifierDirector.instance.activeModifiers.OfType<AurelioniteRewardModifier>().FirstOrDefault();
-            if (aurelioniteMod!=null) return;
+            if (aurelioniteMod != null) return;
             ILCursor c = new ILCursor(il);
             bool noBossTables = true;
 
@@ -94,6 +94,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                         UniquePickup pickup = origPickup;
 
                         //var droneDef = RoR2.DLC3Content.DroneDefs.JunkDrone.droneIndex;
+                        //todo убрать дрона снаряжения
                         RoR2.DroneIndex reward;
                         if (dropLegendary)
                             reward = Run.instance.stageRng.NextElementUniform(Run.instance.availableTier3DroneList);

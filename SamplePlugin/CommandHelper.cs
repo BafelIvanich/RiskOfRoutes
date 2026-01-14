@@ -246,6 +246,32 @@ namespace SamplePlugin
 
         }
 
+        [ConCommand(commandName = "mount", flags = ConVarFlags.ExecuteOnServer)]
+        private static void SpawnMountainShrine(ConCommandArgs args)
+        {
+
+            CharacterBody body = args.senderMaster.GetBody();
+            Vector3 position = body.transform.position + body.transform.forward * 5f;
+            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
+            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscColossusPortal");
+            spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/Base/ShrineBoss/iscShrineBoss.asset").WaitForCompletion();
+            
+
+            if (!spawnCard)
+            {
+                return;
+            }
+
+            DirectorPlacementRule placementRule = new DirectorPlacementRule
+            {
+                placementMode = DirectorPlacementRule.PlacementMode.Direct,
+                position = position
+            };
+
+            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
+
+        }
+
 
 
         [ConCommand(commandName = "shopportal", flags = ConVarFlags.ExecuteOnServer)]

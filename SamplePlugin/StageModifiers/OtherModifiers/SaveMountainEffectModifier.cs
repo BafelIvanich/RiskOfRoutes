@@ -1,26 +1,41 @@
 ﻿using SamplePlugin.StageModifiers;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace RiskOfRoutes.StageModifiers.OtherModifiers
 {
     //На стейдже будет активно то количество артефактов горы, что были на том стейдже, где был выбран этот портал
-    public class SaveMountainEffectModifier: StageModifier
+    public class SaveMountainEffectModifier : StageModifier
     {
         public SaveMountainEffectModifier()
         {
-            reservedText = "Save all mountain shrine effects from the current stage";
+            name = "Save mountain effect";
+            reservedText = "Save all mountain shrine effects from the current stage.";
+            stack = RoR2.TeleporterInteraction.instance.shrineBonusStacks;
+            activeText = $"Get {stack} mountain shrine stacks";
+            icon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Shrines/ShrineBoss/texShrineBossSymbol.png").WaitForCompletion();
+            if (!icon)
+            {
+                Log.Info("GFGG");
+            }
         }
 
         public override void OnEnd()
         {
-            throw new NotImplementedException();
+            Log.Info("Shrine safe on end");
+            RoR2.Stage.onServerStageBegin -= Stage_onServerStageBegin;
+
         }
 
         public override void OnStart()
         {
-            throw new NotImplementedException();
+            RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
+        }
+
+        private void Stage_onServerStageBegin(RoR2.Stage obj)
+        {
+            RoR2.TeleporterInteraction.instance.SetShrineStack(stack);
         }
     }
 }

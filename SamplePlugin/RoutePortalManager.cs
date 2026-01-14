@@ -53,7 +53,7 @@ namespace RiskOfRoutes
                 else
                 {
                     Log.Error("Error with seer purchase interaction");
-                    
+
                 }
             }
             genericInteraction.onActivation.AddListener(OnPortalActivation);
@@ -76,10 +76,12 @@ namespace RiskOfRoutes
                 string positiveText = "Positive:\n";
                 string negativeText = "Negative:\n";
 
-                if (stageModifiers != null)
+                if (stageModifiers != null && stageModifiers.Count > 0)
                 {
+                    Log.Info(stageModifiers.Count);
                     foreach (var stageModifier in stageModifiers)
                     {
+                        Log.Info(stageModifier.GetType());
                         if (stageModifier.negative)
                         {
                             negativeText += $"{stageModifier.reservedText} - x{stageModifier.stack}" + '\n';
@@ -105,10 +107,10 @@ namespace RiskOfRoutes
         public void UpdateBubbles()
         {
             var portalCenter = transform.Find("PortalCenter");
-            for (int i = portalCenter.childCount-1; i >=0 ; i--)
-            { 
+            for (int i = portalCenter.childCount - 1; i >= 0; i--)
+            {
                 var child = portalCenter.GetChild(i);
-                if(child.name.Contains("Bubble"))
+                if (child.name.Contains("Bubble"))
                 {
                     Destroy(child.gameObject);
                 }
@@ -136,7 +138,7 @@ namespace RiskOfRoutes
             for (int i = 0; i < stageModifiers.Count; i++)
             {
                 Log.Info("act");
-                if(RiskOfRoutes.iconBubblePrefab==null)
+                if (RiskOfRoutes.iconBubblePrefab == null)
                 {
                     RiskOfRoutes.iconBubblePrefab = RiskOfRoutes.CreateIconBubblePrefab();
                 }
@@ -154,8 +156,8 @@ namespace RiskOfRoutes
 
                 float stepAngleRad = (stepAngle * i) * Mathf.Deg2Rad;
 
-                float x = -(Mathf.Cos(stepAngleRad) * radius/(1f));
-                float y = (Mathf.Sin(stepAngleRad)* radius/(1f));
+                float x = -(Mathf.Cos(stepAngleRad) * radius / (1f));
+                float y = (Mathf.Sin(stepAngleRad) * radius / (1f));
                 bubble.transform.localPosition = new Vector3(x, y, 0);
 
                 var portalActiveDisplay = bubble.transform.Find("PortalActiveDisplay");
@@ -178,7 +180,7 @@ namespace RiskOfRoutes
                     Texture2D tex = null;
                     if (stageModifiers[i].icon != null)
                     {
-                        tex = SpriteToTexture(stageModifiers[i].icon);
+                        tex = stageModifiers[i].icon.texture;
                     }
                     else
                     {
@@ -203,10 +205,10 @@ namespace RiskOfRoutes
             Color[] spritePixels = sprite.texture.GetPixels((int)sprite.rect.x, (int)sprite.rect.y, (int)sprite.rect.width, (int)sprite.rect.height);
 
 
-            Texture2D newTexture = new Texture2D(newWidth,newHeight);
-            Color[] pixels = new Color[newWidth*newHeight];
+            Texture2D newTexture = new Texture2D(newWidth, newHeight);
+            Color[] pixels = new Color[newWidth * newHeight];
 
-            newTexture.SetPixels(offsetPix,offsetPix,(int)sprite.rect.width,(int)sprite.rect.height,spritePixels);
+            newTexture.SetPixels(offsetPix, offsetPix, (int)sprite.rect.width, (int)sprite.rect.height, spritePixels);
 
             return newTexture;
 
@@ -260,8 +262,10 @@ namespace RiskOfRoutes
         {
             stageModifiers.Add(mod);
         }
-
-
-
     }
+}
+
+enum RoutePortalType
+{
+    Rare, ItemType, DroneType, ChefType
 }

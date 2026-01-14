@@ -92,6 +92,7 @@ namespace RiskOfRoutes
         public static ConfigEntry<bool> uniqueDestinations { get; set; }
         public static ConfigEntry<bool> showPortalDestination { get; set; }
         public static ConfigEntry<bool> teleporterUseRandomMods { get; set; }
+        public static ConfigEntry<bool> modifiersCanBeBanned { get; set; }
 
         public static ConfigEntry<bool> allowChaosArtifact;
         public static ConfigEntry<bool> allowCommandArtifact;
@@ -173,12 +174,18 @@ namespace RiskOfRoutes
                 Log.Error("Could not load default elite tiers");
                 defaultEliteTiers = new CombatDirector.EliteTierDef[] { };
             }
+            On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
 
 
 
 
         }
 
+
+        private bool CombatDirector_AttemptSpawnOnTarget(On.RoR2.CombatDirector.orig_AttemptSpawnOnTarget orig, CombatDirector self, Transform spawnTarget, DirectorPlacementRule.PlacementMode placementMode)
+        {
+            throw new System.NotImplementedException();
+        }
 
         private void BindConfig()
         {
@@ -202,6 +209,10 @@ namespace RiskOfRoutes
             teleporterUseRandomMods = Config.Bind<bool>(
                 "Tweaks", "Teleporter Use Random mods", true, "Makes teleporter use random modifiers of spawned route portals after interacting with it, set false if you want it not to use any stage modifiers");
             ModSettingsManager.AddOption(new CheckBoxOption(teleporterUseRandomMods));
+            //todo
+            modifiersCanBeBanned = Config.Bind<bool>(
+                "Tweaks", "Modifiers can be banned after being used", true, "Prevents some of stage modifiers appearing on the next stage, if they were active on a current stage");
+            ModSettingsManager.AddOption(new CheckBoxOption(modifiersCanBeBanned));
 
             //artifacts
             allowChaosArtifact = Config.Bind<bool>(
@@ -327,7 +338,7 @@ namespace RiskOfRoutes
                     var mg = shopPortal.AddComponent<RoutePortalManager>();
                     mg.destinationScene = targetScene;
                     mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopPortal);
-                    Log.Info("Succesfully attached");
+                    Log.Info("Succesfully attached route portal manager to seer station");
                 }
                 else
                 {
@@ -341,7 +352,7 @@ namespace RiskOfRoutes
                     else
                         mng.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopPortal);
                     mng.UpdateText();
-                    Log.Info($"Updated destination:{previous}->{Run.instance.nextStageScene}");
+                    Log.Info($"Updated destination:{previous}->{mng.destinationScene.cachedName}");
                 }
 
             }
@@ -412,29 +423,6 @@ namespace RiskOfRoutes
                         mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
                         Log.Info($"Wjat: {mgr.stageModifiers.Count}");
 
-                        foreach(var t in obj.GetComponentsInChildren<MeshFilter>())
-                        {
-                            if(t.name == "Donut")
-                            {
-                                var mf = t.GetComponent<MeshFilter>();
-                                if(mf!=null)
-                                {
-                                    if (tempBundle == null)
-                                    {
-                                        string pathT = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "majime");
-                                        tempBundle = AssetBundle.LoadFromFile(pathT);
-                                    }
-                                    GameObject g = tempBundle.LoadAsset<GameObject>("majime");
-                                    Log.Info(mf.sharedMesh.name);
-                                    var maj = g.GetComponentInChildren<MeshFilter>();
-                                    if (maj != null)
-                                    {
-                                        Log.Info("Succs");
-                                    }
-                                    mf.mesh = maj.sharedMesh;
-                                }
-                            }
-                        }
                     }
                     else if (directorSpawnRequest.spawnCard.name == "iscGoldshoresPortal")
                     {
@@ -483,7 +471,7 @@ namespace RiskOfRoutes
                         Log.Info($"Mgr:{mgr.name}");
                         mgr.destinationScene = GetGreenPortalScene();
                         mgr.isVanillaPortal = true;
-                        mgr.isOval =true;
+                        mgr.isOval = true;
                         Log.Info(mgr.destinationScene);
 
                         mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
@@ -507,7 +495,7 @@ namespace RiskOfRoutes
                             if (scene == null) scene = Run.instance.nextStageScene;
                             mgr.destinationScene = scene;
                             mgr.isVanillaPortal = true;
-                            mgr.isOval=false;
+                            mgr.isOval = false;
                             Log.Info(mgr.destinationScene);
 
                             mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
@@ -693,7 +681,7 @@ namespace RiskOfRoutes
         private void SetupRoutePortalPanel()
         {
             GameObject prefab = bundle.LoadAsset<GameObject>("RoutePortalPortraitPanel");
-            if(prefab==null)
+            if (prefab == null)
             {
                 Log.Error("What?");
             }
@@ -704,7 +692,7 @@ namespace RiskOfRoutes
             blur.color = new Color(0, 0, 0, 0.7f);
             //текст //плейсхолдер
             var text = prefab.GetComponentInChildren<TextMeshProUGUI>();
-            if(text==null)
+            if (text == null)
             {
                 Log.Error("No text meshprougui");
             }
@@ -814,7 +802,7 @@ namespace RiskOfRoutes
             Destroy(routePortal.GetComponent<SceneExitController>());
 
             var scaleCurve = routePortal.GetComponentInChildren<ObjectScaleCurve>();
-            if(routePortal.transform.Find("PortalCenter") != null)
+            if (routePortal.transform.Find("PortalCenter") != null)
             {
                 Log.Info("ScaleCurveFound");
             }
@@ -826,15 +814,15 @@ namespace RiskOfRoutes
             routePortal.transform.localScale = new Vector3(portalScaleX, portalScaleY, portalScaleX);
 
             var portalCenter = routePortal.transform.Find("PortalCenter");
-            if(portalCenter != null)
+            if (portalCenter != null)
             {
                 var pointLight = portalCenter.Find("Point Light");
                 if (pointLight != null)
                 {
                     var light = pointLight.GetComponent<Light>();
-                    if(light!=null)
+                    if (light != null)
                     {
-            light.intensity = 2;
+                        light.intensity = 2;
 
                     }
                     else
@@ -856,6 +844,7 @@ namespace RiskOfRoutes
             RoutePortalManager mgr = routePortal.AddComponent<RoutePortalManager>();
             GenericInteraction interaction = routePortal.AddComponent<GenericInteraction>();
             SceneExitController sceneExitController = routePortal.AddComponent<SceneExitController>();
+            GenericDisplayNameProvider genericDisplayNameProvider = routePortal.AddComponent<GenericDisplayNameProvider>();
             GenericInspectInfoProvider genericInspectInfo = routePortal.AddComponent<GenericInspectInfoProvider>();
 
             //todo таб сюдаа
@@ -864,6 +853,9 @@ namespace RiskOfRoutes
             mgr.genericInteraction = interaction;
             mgr.sceneExitController = sceneExitController;
             mgr.modifierCredits = 1;
+
+            interaction.contextToken = "Enter Route Portal";
+
 
 
             //routePortal.GetComponent<Highlight>().targetRenderer = routePortal.GetComponentInChildren<SkinnedMeshRenderer>();
@@ -895,7 +887,7 @@ namespace RiskOfRoutes
                 parent.SetActive(false);
                 portalDisplay.SetParent(parent.transform);
                 portalDisplay.transform.localPosition = new Vector3(0, 0f, 0);
-                portalDisplay.transform.localRotation = Quaternion.Euler(0f,180f,0);
+                portalDisplay.transform.localRotation = Quaternion.Euler(0f, 180f, 0);
                 portalDisplay.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
                 var pointLight = portalDisplay.transform.Find("Point Light");
                 var light = pointLight.GetComponent<Light>();
@@ -916,7 +908,7 @@ namespace RiskOfRoutes
 
                         mat.SetTextureScale("_MainTex", new Vector2(1.75f, 1.75f));
                         mat.SetTextureOffset("_MainTex", new Vector2(-0.4f, -0.4f));
-                        rend.materials = new Material[] { mat,mat };
+                        rend.materials = new Material[] { mat, mat };
                     }
                 }
 
@@ -1009,7 +1001,7 @@ namespace RiskOfRoutes
                 if (portalObject)
                 {
                     //TODO ОТДЕЛЬНЫЙ МЕТОД И ОПТИМИЗАЦИЯ
-                    foreach(Transform child in portalObject.GetComponentsInChildren<Transform>())
+                    foreach (Transform child in portalObject.GetComponentsInChildren<Transform>())
                     {
                         if (child.name.Contains("bubble"))
                         {
@@ -1020,7 +1012,7 @@ namespace RiskOfRoutes
 
                     var m = portalObject.GetComponent<RoutePortalManager>();
 
-                    
+
 
                     m.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(portalObject);
                     Vector3 facingVector = position - portalObject.transform.position;

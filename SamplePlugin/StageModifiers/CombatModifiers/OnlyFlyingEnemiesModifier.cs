@@ -24,7 +24,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             Log.Info("On flyingEnemies start");
             // RoR2.ClassicStageInfo.instance.monsterSelection;
             var categories = ClassicStageInfo.instance.monsterCategories.categories;
-            if(categories==null)
+            if (categories == null)
             {
                 Log.Error("Could not access categories");
                 return;

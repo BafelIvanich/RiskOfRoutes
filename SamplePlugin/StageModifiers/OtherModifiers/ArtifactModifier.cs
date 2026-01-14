@@ -18,6 +18,22 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
             stackable = false;
         }
 
+        public ArtifactModifier(string name, bool isPositive)
+        {
+            currentArtifact = RoR2.ArtifactCatalog.FindArtifactDef(name);
+            if (currentArtifact == null)
+            {
+                Log.Error($"Could not find artifact by the name {name}");
+                return;
+            }
+            activeText = $"<style=cWorldEvent>{Language.GetString(currentArtifact.descriptionToken)}</style>";
+            reservedText = $"<style=cWorldEvent>{Language.GetString(currentArtifact.descriptionToken)}</style>";
+            name = currentArtifact.cachedName;
+            icon = currentArtifact.smallIconSelectedSprite;
+            negative = !isPositive;
+            stackable = false;
+        }
+
         public ArtifactModifier()
         {
             currentArtifact = RoR2Content.Artifacts.MixEnemy;
