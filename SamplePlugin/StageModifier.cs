@@ -15,6 +15,8 @@ namespace SamplePlugin
         public string activeText;
         public string reservedText;
 
+        public int cost;
+
         public bool negative;
 
         public abstract void OnStart();
@@ -434,6 +436,19 @@ namespace SamplePlugin
         public override void OnStart()
         {
             Log.Info("MoreElitesModifier start");
+        }
+    }
+
+    public class NoOneShotProtectionModifier : StageModifier
+    {
+        public override void OnEnd()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public override void OnStart()
+        {
+            throw new System.NotImplementedException();
         }
     }
 

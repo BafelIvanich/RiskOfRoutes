@@ -11,6 +11,10 @@ namespace SamplePlugin
         public static StageModifierManager Instance;
         public List<StageModifier> activeModifiers {  get; private set; }
 
+        public int RouteCredits;
+
+        //red printer, yellow, drone interatables discounts
+
         public List<StageModifier> reservedModifiers;
 
         public void Awake()

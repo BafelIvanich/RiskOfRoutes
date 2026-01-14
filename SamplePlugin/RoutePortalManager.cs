@@ -92,5 +92,10 @@ namespace RiskOfRoutes
            stageModifiers.Add(mod);
         }
 
+        public void GetModifiersForPortal()
+        {
+
+        }
+
     }
 }

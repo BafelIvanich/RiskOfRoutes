@@ -12,6 +12,7 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using UnityHotReloadNS;
 using static Rewired.UI.ControlMapper.ControlMapper;
 
 //TODO
@@ -73,6 +74,8 @@ namespace RiskOfRoutes
             RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
             On.RoR2.UI.HUD.Awake += HUD_Awake;
             On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
+
+            
         }
 
 
@@ -84,9 +87,9 @@ namespace RiskOfRoutes
             GameObject newUi = UnityEngine.Object.Instantiate(LegacyResourcesAPI.Load<GameObject>("Prefabs/UI/Tooltip"));
             newUi.transform.SetParent(hud.mainContainer.transform);
             RectTransform rectTransform = newUi.GetComponent<RectTransform>();
-            rectTransform.pivot = new Vector2(1.0f, 1.0f);
-            rectTransform.anchorMin = new Vector2(0.9f,0.5f);
-            rectTransform.anchorMax = new Vector2(0.9f, 0.5f);
+            rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            rectTransform.anchorMin = new Vector2(0.8f,0.0f);
+            rectTransform.anchorMax = new Vector2(1.0f, 1.0f);
             rectTransform.sizeDelta = Vector2.zero;
             rectTransform.anchoredPosition = Vector2.zero;
 
@@ -96,7 +99,7 @@ namespace RiskOfRoutes
             {
                 if(img.name == "TitleRect")
                 {
-                    img.color = new Color(0.5f,0.8f,0.9f,1.0f);
+                    img.color = new Color(0.0f,0.8f,0.9f,1.0f);
                 }
             }
 
@@ -152,7 +155,7 @@ namespace RiskOfRoutes
             RoutePortalManager mgr = routePortal.AddComponent<RoutePortalManager>();
             PurchaseInteraction interaction = routePortal.AddComponent<PurchaseInteraction>();
             SceneExitController sceneExitController = routePortal.AddComponent<SceneExitController>();
-            interaction.contextToken = "Enter the portal <sprite name=Utility>";
+            interaction.contextToken = "Enter dentfer the portal <sprite name=Utility>";
             interaction.NetworkdisplayNameToken = "Route Portal to a next stage";
 
 
@@ -181,12 +184,6 @@ namespace RiskOfRoutes
         {
             List<SceneDef> scenes = GetNextStagesScenesList();
             List<StageModifier> modifiers = new List<StageModifier>();
-            modifiers.Add(new ArtifactModifier());
-            modifiers.Add(new BossItemModifier());
-            modifiers.Add(new PrinterItemModifier());
-
-
-
 
             if (scenes.Count == 0)
             {
@@ -238,10 +235,7 @@ namespace RiskOfRoutes
                 if (portalObject)
                 {
                     var m = portalObject.GetComponent<RoutePortalManager>();
-                    if (m != null) {
-                        Log.Info($"Trying to add modifier to portal");
-                        m.AddStageModifier(mod);
-                    }
+                    m.GetModifiersForPortal();
 
                     Log.Info($"Success? {m.stageModifiers.Count()}");
                     Log.Info($"{i+1}th portal placed successfully");
@@ -388,6 +382,17 @@ namespace RiskOfRoutes
 
         }
 
+        [ConCommand(commandName = "checkOneShot", flags = ConVarFlags.ExecuteOnServer, helpText = "Check if players have one shot prot (for one of modifiers)")]
+        private static void CheckOneShotProtection(ConCommandArgs args)
+        {
+            var instances = PlayerCharacterMasterController.instances;
+            foreach (var playerCharacterMaster in PlayerCharacterMasterController.instances)
+            {
+                Log.Info($"{playerCharacterMaster.body.hasOneShotProtection}:{playerCharacterMaster.name}");
+                playerCharacterMaster.body.hasOneShotProtection = false;
+            }
+        }
+
 
 
         static bool IsValidNextStage(SceneDef sceneDef)
@@ -450,9 +455,11 @@ namespace RiskOfRoutes
 
             if (Input.GetKeyDown(KeyCode.F3))
             {
-                var transform = PlayerCharacterMasterController.instances[0].master.GetBodyObject().transform;
-
-                Log.Info($"{transform.position}");
+                UnityHotReload.LoadNewAssemblyVersion(
+                    typeof(RiskOfRoutes).Assembly, // The currently loaded assembly to replace.
+                    "C:/Users/vit/AppData/Roaming/r2modmanPlus-local/RiskOfRain2/profiles/TEstling/BepInEx/plugins/SamplePlugin.dll"  // The path to the newly compiled DLL.
+                );
+                Log.Info("Done");
             }
             var localUser = LocalUserManager.GetFirstLocalUser();
             //TODO: Сделать смену при смене интерактбла, не чекать каждый кадр
