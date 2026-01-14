@@ -74,10 +74,7 @@ namespace RiskOfRoutes
 
             if(stageModifiers!=null)
             {
-                foreach(StageModifier stageModifier in stageModifiers)
-                {
-                    StageModifierManager.Instance.reservedModifiers.Add(stageModifier);
-                }
+                StageModifierManager.Instance.reservedModifiers = stageModifiers;
             }
             
             Log.Info($"Trying {StageModifierManager.Instance.activeModifiers.Count}");
