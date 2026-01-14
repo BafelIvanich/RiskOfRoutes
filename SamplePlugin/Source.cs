@@ -16,15 +16,29 @@ using UnityHotReloadNS;
 using static Rewired.UI.ControlMapper.ControlMapper;
 
 //TODO
-//Включение артефактов
-//Гарантированное появление шефа (баг сейчас)
-//UI при наведении
+//поменять UI при наведении
 //Модификаторы для других порталов
 //Разный цвет у порталов
 //Кредиты
-//Нажатие на портал закрывает другие
-//Вынести метод спавна объекта рандомно на сцене (для шефа, принтеров и другого)
 //Директор модификатор
+//Текстура локи в портале
+//Особые модификаторы для стейджей
+//Иконки модификаторов в меню objective
+//Переход на базар
+//Шеф должен появлять со столом
+//(Возможно) фиксированные места поялвения шефа
+//Добавить конфиг
+//Поменять логику гаранта жёлтых предметов
+//Чек на наличие у игроков жёлтых/красных предметов для принтеров
+//Артефакт инфляции
+//Пулл предметов для гарантированных серых/зеленых принтеров
+//TC дрон гарант
+//Вынести метод спавна объекта рандомно на сцене (для шефа, принтеров и другого)
+//(Возможно) Можно ли сделать так, чтобы любые мобы могли воровать предметы?
+//(Возможно) Бродячий дрифтер или можно рюкзак
+//(Возможно) модификатор на онли летающих врагов
+//(Возможно) рюзкак дрифтера позволяет поделиться предметами
+
 
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
@@ -74,10 +88,34 @@ namespace RiskOfRoutes
             RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
             On.RoR2.UI.HUD.Awake += HUD_Awake;
             On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
-
+            //On.RoR2.HalcyoniteShrineInteractable.AttemptSpawnPortal += HalcyoniteShrineInteractable_AttemptSpawnPortal;
+            //On.RoR2.PortalSpawner.AttemptSpawnPortalServer += PortalSpawner_AttemptSpawnPortalServer;
+            //On.RoR2.DirectorCore.TrySpawnObject += DirectorCore_TrySpawnObject;
             
         }
 
+        private GameObject DirectorCore_TrySpawnObject(On.RoR2.DirectorCore.orig_TrySpawnObject orig, DirectorCore self, DirectorSpawnRequest directorSpawnRequest)
+        {
+            return null;
+        }
+
+        private bool PortalSpawner_AttemptSpawnPortalServer(On.RoR2.PortalSpawner.orig_AttemptSpawnPortalServer orig, PortalSpawner self)
+        {
+            if(self.PortalSpawnCard.name.Contains("Colossus"))
+            {
+                self.PortalSpawnCard.prefab.AddComponent<RoutePortalManager>();
+                var mgr = self.PortalSpawnCard.prefab.GetComponent<RoutePortalManager>();
+                mgr.modifierTextSynced = "Hello";
+                Log.Info("Green portal spawned");
+            }
+
+            return orig(self);
+        }
+
+        private void HalcyoniteShrineInteractable_AttemptSpawnPortal(On.RoR2.HalcyoniteShrineInteractable.orig_AttemptSpawnPortal orig, HalcyoniteShrineInteractable self)
+        {
+            return;
+        }
 
         private void HUD_Awake(On.RoR2.UI.HUD.orig_Awake orig, HUD self)
         {
@@ -110,15 +148,15 @@ namespace RiskOfRoutes
             ui = newUi;
         }
 
-        private void tooltipSetText(GameObject tooltip,string text)
+        private void tooltipSetText(GameObject tooltip,string bodyText,string labelText = "RoutePortal")
         {
             var tc = tooltip.GetComponent<TooltipController>();
 
             var label = tc.titleLabel;
             var body = tc.bodyLabel;
 
-            label.text = "Route Portal";
-            body.text = text;
+            label.text = labelText;
+            body.text = bodyText;
         }
 
         private void HUD_shouldHudDisplay(HUD hud, ref bool shouldDisplay)
@@ -185,6 +223,10 @@ namespace RiskOfRoutes
             List<SceneDef> scenes = GetNextStagesScenesList();
             List<StageModifier> modifiers = new List<StageModifier>();
 
+            modifiers.Add(new WanderingChefModifier());
+            modifiers.Add(new ArtifactModifier());
+            modifiers.Add(new BossItemModifier());
+
             if (scenes.Count == 0)
             {
                 Log.Error("No stages availble next");
@@ -202,7 +244,8 @@ namespace RiskOfRoutes
                 int index = scenes.Count - 1;
                 int jndex = modifiers.Count - 1;
                 SceneDef destination = scenes[index];
-                StageModifier mod = modifiers[jndex];
+                //на время
+                StageModifier mod = new MoreDronesModifier();
                 scenes.RemoveAt(index);
                 modifiers.RemoveAt(jndex);
                 if(mod==null)
@@ -235,7 +278,7 @@ namespace RiskOfRoutes
                 if (portalObject)
                 {
                     var m = portalObject.GetComponent<RoutePortalManager>();
-                    m.GetModifiersForPortal();
+                    m.stageModifiers = new List<StageModifier>() { mod};
 
                     Log.Info($"Success? {m.stageModifiers.Count()}");
                     Log.Info($"{i+1}th portal placed successfully");
@@ -470,21 +513,29 @@ namespace RiskOfRoutes
                 {
                     if (dr.currentInteractable != null)
                     {
-                        if (dr.currentInteractable.name.Contains("RoutePortal"))
+                        if (dr.currentInteractable.name.Contains("RoutePortal") || dr.currentInteractable.name.Contains("Colossus"))
                         {
                             var manager = dr.currentInteractable.GetComponent<RoutePortalManager>();
-                            Log.Info("Looking at route portal");
-                            Log.Info(manager.destinationScene.cachedName);
-                            //TODO: вроде можно переделать через TooltipProvider
-                            if(manager.modifierTextSynced != null)
+                            if(manager != null)
                             {
-                            tooltipSetText(ui,manager.modifierTextSynced);
+                                Log.Info("Looking at route portal");
+                                //Log.Info(manager.destinationScene.cachedName);
+                                //TODO: вроде можно переделать через TooltipProvider
+                                if (manager.modifierTextSynced != null)
+                                {
+                                    tooltipSetText(ui, manager.modifierTextSynced, manager.destinationScene.baseSceneName);
+                                }
+                                else
+                                {
+                                    Log.Info("hiii");
+                                }
+                                ui.SetActive(true);
                             }
                             else
                             {
-                                Log.Info("hiii");
+                                Log.Error("No manager");
                             }
-                            ui.SetActive(true);
+
 
                         }
                         
