@@ -15,6 +15,7 @@ using UnityEngine.Networking;
 using UnityEngine.UI;
 using UnityHotReloadNS;
 using static Rewired.UI.ControlMapper.ControlMapper;
+using TMPro;
 
 //TODO
 //поменять UI при наведении
@@ -24,22 +25,22 @@ using static Rewired.UI.ControlMapper.ControlMapper;
 //Директор модификатор
 //Текстура локи в портале
 //Особые модификаторы для стейджей
-//Иконки модификаторов в меню objective
 //Переход на базар
+//Разобраться с синими, зелёными, золотыми порталами из оригинальной игры
 //Шеф должен появлять со столом
-//(Возможно) фиксированные места поялвения шефа
 //Добавить конфиг
 // ?Поменять логику гаранта жёлтых предметов
-//Чек на наличие у игроков жёлтых/красных предметов для принтеров
 //Артефакт инфляции
-//Пулл предметов для гарантированных серых/зеленых принтеров
 //TC дрон гарант
 //Вынести метод спавна объекта рандомно на сцене (для шефа, принтеров и другого)
 //(Возможно) Можно ли сделать так, чтобы любые мобы могли воровать предметы?
 //(Возможно) Бродячий дрифтер или можно рюкзак
 //(Возможно) модификатор на онли летающих врагов
 //(Возможно) рюзкак дрифтера позволяет поделиться предметами
-
+//(Возможно) фиксированные места поялвения шефа
+//(Возможно) Void Stage
+//(Возможно) Святилище, что рероллит все предметы, лежащие на земле
+//Добавить на спрайт модификатора его стаки, как у предметов
 
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
@@ -72,12 +73,16 @@ namespace RiskOfRoutes
 
         private AssetBundle bundle;
 
+        private TMP_FontAsset bomb;
+
         public Sprite placeholderIcon;
 
         public void Awake()
         {
 
             Log.Init(Logger);
+
+            bomb = Addressables.LoadAssetAsync<TMP_FontAsset>("RoR2/Base/Common/Fonts/Bombardier/tmpBombDropShadow.asset").WaitForCompletion();
 
             chefPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/MealPrep/MealPrep.prefab").WaitForCompletion(), "mealPrep");
 
@@ -104,27 +109,6 @@ namespace RiskOfRoutes
 
         private void CurrentRunArtifactDisplayDataDriver_Refresh(On.RoR2.UI.CurrentRunArtifactDisplayDataDriver.orig_Refresh orig, CurrentRunArtifactDisplayDataDriver self)
         {
-            //if(StageModifierManager.Instance.activeModifiers.Count == 0) { return; }
-            bool hasVanillaArtifacts = RunArtifactManager.enabledArtifactsEnumerable.Any();
-            //если 0 артефактов то в цикле оно убирает добавляет панель из раза в раз
-            if (hasVanillaArtifacts)
-            {
-                orig(self);
-            }
-            else
-            {
-                if (StageModifierManager.Instance.activeModifiers.Count == 0) return;
-                //if (self.artifactDisplayPanelController && self.artifactDisplayPanelController.iconContainer)
-                //{
-                //    foreach(Transform child in self.artifactDisplayPanelController.iconContainer)
-                //    {
-                //        if(child.name != nam)
-                //    }
-                //}
-
-
-            }
-
             if (self.artifactDisplayPanelController && self.artifactDisplayPanelController.iconContainer)
             {
                 if (StageModifierManager.Instance.activeModifiers.Count == 0)
@@ -159,6 +143,21 @@ namespace RiskOfRoutes
                 GameObject iconObj = new GameObject(iconName);
                 iconObj.transform.SetParent(container, false);
                 Image img = iconObj.AddComponent<Image>();
+
+                //текст стака как у предметов
+                GameObject stackTextObj = new GameObject("StackText");
+                stackTextObj.transform.SetParent(img.transform, false);
+                HGTextMeshProUGUI textComp = stackTextObj.AddComponent<HGTextMeshProUGUI>();
+
+                RectTransform rect = textComp.GetComponent<RectTransform>();
+                rect.anchorMin = Vector2.zero;
+                rect.offsetMax = new Vector2(-4, -4);
+
+                textComp.font = bomb;
+                textComp.fontSize = 12f;
+
+                textComp.alignment = TextAlignmentOptions.TopRight;
+                textComp.text = "x5";
 
                 var sprite = mod.icon;
                 if (sprite != null)
@@ -376,8 +375,10 @@ namespace RiskOfRoutes
                 if (portalObject)
                 {
                     var m = portalObject.GetComponent<RoutePortalManager>();
-                    m.stageModifiers = new List<StageModifier>() {new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier(), new PrinterItemModifier()};
-
+                    m.stageModifiers = new List<StageModifier>();
+                    m.stageModifiers.Add(new VoidEnemiesModifier());
+                    m.stageModifiers.Add(new MoreElitesModifier());
+                    m.stageModifiers.Add(new LunarEnemiesModifier());
                     Log.Info($"Success? {m.stageModifiers.Count()}");
                     Log.Info($"{i+1}th portal placed successfully");
                 }
