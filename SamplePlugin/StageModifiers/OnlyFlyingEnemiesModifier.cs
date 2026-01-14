@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace SamplePlugin.StageModifiers
+﻿namespace SamplePlugin.StageModifiers
 {
-    internal class OnlyFlyingEnemiesModifier
+    public class OnlyFlyingEnemiesModifier
     {
     }
 }

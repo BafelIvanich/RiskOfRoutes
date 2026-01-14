@@ -1,14 +1,12 @@
 ﻿using RiskOfRoutes;
 using RoR2;
-using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 
 namespace SamplePlugin
 {
-    public class CommandHelper:MonoBehaviour
+    public class CommandHelper : MonoBehaviour
     {
         [ConCommand(commandName = "nextStages", flags = ConVarFlags.ExecuteOnServer, helpText = "Get next stages")]
         private static void GetNextStagesScenesCommand(ConCommandArgs args)
@@ -32,42 +30,11 @@ namespace SamplePlugin
         [ConCommand(commandName = "dccs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get nexeet stages")]
         private static void GetDccs(ConCommandArgs args)
         {
-            //var stageInfo = ClassicStageInfo.instance;
-            //var categories = stageInfo.monsterCategories;
-            //float temp = 0;
-            //foreach (var c in categories.categories)
-            //{
-            //    //TODO stageInfo.interactableDccsPool. --- interactableCategories помечен как deprecated стоит посмотреть что за DCCS
-            //    //еще есть             stageInfo.GetInteractableDccsPool
-            //    Log.Info($"Category:{c.name}");
-            //    foreach(var f in c.cards)
-            //    {
-            //        Log.Info($"Card:{f.spawnCard.directorCreditCost}");
-            //    }
-            //}
-
-            //CharacterMaster master = args.senderMaster;
-            //if (!master || !master.inventory)
-            //{
-            //    master = PlayerCharacterMasterController.instances[0].master;
-            //    if (!master || !master.inventory) return;
-            //}
-
-            //Log.Info($"Giving all broken items to {master.name}...");
-
-            //foreach (ItemDef itemDef in ItemCatalog.allItemDefs)
-            //{
-            //    if (itemDef.isConsumed)
-            //    {
-            //        if (itemDef == DLC1Content.Items.RegeneratingScrapConsumed) continue;
-            //        if (itemDef == DLC2Content.Items.LowerPricedChestsConsumed) continue;
-
-            //        master.inventory.GiveItem(itemDef, 1);
-
-            //    }
-            //}
-
-            Log.Info($"{Stage.instance.sceneDef.stageOrder}");
+            foreach (var card in ClassicStageInfo.instance.monsterSelection.choices)
+            {
+                var sc = card.value.spawnCard;
+                Log.Info($"Card:{sc.name},weight:{card.weight},cost:{card.value.cost}");
+            }
 
 
         }

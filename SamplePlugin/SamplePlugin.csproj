@@ -28,6 +28,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Reference Include="R2API.Director">
+	    <HintPath>..\R2API.Director.dll</HintPath>
+	  </Reference>
 	  <Reference Include="R2API.Prefab">
 	    <HintPath>..\R2API.Prefab.dll</HintPath>
 	  </Reference>

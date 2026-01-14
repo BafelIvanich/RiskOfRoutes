@@ -143,7 +143,7 @@ namespace SamplePlugin
             {
                 if (res.Count > 0 && mg.destinationScene.baseSceneName == "lemuriantemple" || mg.destinationScene.baseSceneName == "habitat")
                 {
-                    res.Add(new AurelioniteRewardModifier());
+                    res.Insert(0, new AurelioniteRewardModifier());
                 }
 
             }
@@ -188,10 +188,10 @@ namespace SamplePlugin
             res.AddChoice(new LunarEnemiesModifier(), 0.5f);
             if (portal)
             {
-                //if ( Run.instance.nextStageScene.stageOrder >= 3)
-                //{
-                //    res.AddChoice(new ArtifactModifier(), 0.5f);
-                //}
+                if (Run.instance.nextStageScene.stageOrder >= 3)
+                {
+                    //res.AddChoice(new ArtifactModifier(), 0.5f);
+                }
                 if (CheckPlayersRedItem())
                 {
                     res.AddChoice(new RedPrinterModifier(), 0.5f);
@@ -235,6 +235,7 @@ namespace SamplePlugin
                         if (itemDef.tier == ItemTier.Tier3)
                         {
                             redItemCount++;
+                            Log.Info($"Found red item:{itemDef}");
                         }
                     }
                 }
@@ -269,7 +270,7 @@ namespace SamplePlugin
             return yellowItemCount > 0;
         }
 
-        //TODO
+        //TODO можно проверить и активки
         [Server]
         private bool CheckPlayersHaveConsumedItems()
         {
@@ -295,10 +296,35 @@ namespace SamplePlugin
         }
 
         [Server]
-        private bool CheckPlayersHaveFoodItems()
+        private int CheckPlayersHaveFoodItems()
         {
-            return false;
-            //TODO
+            List<ItemDef> foodRelated = new List<ItemDef>()
+            {
+                RoR2.RoR2Content.Items.FlatHealth,
+                RoR2.RoR2Content.Items.Mushroom,
+                RoR2.RoR2Content.Items.Infusion,
+                RoR2.RoR2Content.Items.HealWhileSafe,
+                RoR2.DLC1Content.Items.MushroomVoid
+
+            };
+            int foodItems = 0;
+            foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
+            {
+                if (!cm.inventory) continue;
+                foreach (ItemIndex item in cm.inventory.itemAcquisitionOrder)
+                {
+                    ItemDef itemDef = ItemCatalog.GetItemDef(item);
+                    if (itemDef != null)
+                    {
+                        if (foodRelated.Contains(itemDef))
+                        {
+                            foodItems += cm.inventory.GetItemCount(itemDef);
+                        }
+                    }
+                }
+            }
+            Log.Info($"Players have {foodItems} food related items right now");
+            return foodItems;
         }
 
     }

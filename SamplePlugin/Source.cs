@@ -1,6 +1,4 @@
 ﻿using BepInEx;
-using Mono.Cecil.Cil;
-using MonoMod.Cil;
 using R2API;
 using RoR2;
 using RoR2.UI;
@@ -11,7 +9,6 @@ using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityHotReloadNS;
@@ -91,11 +88,16 @@ namespace RiskOfRoutes
 
         public const int RouteCount = 3;
 
+
         public static AssetBundle bundle;
+
+        List<Texture2D> portalColors = new List<Texture2D>();
 
         private TMP_FontAsset bomb;
 
         public Sprite placeholderIcon;
+
+        public bool useColoredPortals = false;
 
         public void Awake()
         {
@@ -107,12 +109,12 @@ namespace RiskOfRoutes
             //для своих префабов
             string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "riskofroutes");
             bundle = AssetBundle.LoadFromFile(path);
+            LoadColors();
             //для панели , шрифт для стаков
             bomb = Addressables.LoadAssetAsync<TMP_FontAsset>("RoR2/Base/Common/Fonts/Bombardier/tmpBombDropShadow.asset").WaitForCompletion();
             placeholderIcon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texMysteryIcon.png").WaitForCompletion();
             //директор
             gameObject.AddComponent<StageModifierDirector>();
-
 
 
             TeleporterInteraction.onTeleporterChargedGlobal += TeleporterEventSpawnRoutePortals;
@@ -129,7 +131,32 @@ namespace RiskOfRoutes
 
         }
 
+        private void LoadColors()
+        {
+            portalColors = new List<Texture2D>();
 
+            int variantCount = 28;
+
+            for (int i = 0; i < variantCount; i++)
+            {
+                string edgeName = $"variant_{i}_1";
+                string centerName = $"variant_{i}_2";
+
+                Texture2D edgeTex = bundle.LoadAsset<Texture2D>(edgeName);
+                Texture2D centerTex = bundle.LoadAsset<Texture2D>(centerName);
+
+                if (edgeTex && centerTex)
+                {
+                    portalColors.Add(edgeTex);
+                    portalColors.Add(centerTex);
+                }
+                else
+                {
+                    Log.Error($"Could not find portal textures: {edgeName} or {centerName}");
+
+                }
+            }
+        }
 
         private void AddRouteManagerToSeerStation(On.RoR2.SeerStationController.orig_OnStartClient orig, SeerStationController self)
         {
@@ -571,7 +598,7 @@ namespace RiskOfRoutes
 
 
             routePortal.name = "RoutePortal";
-            routePortal.transform.localScale = new Vector3(1f, 1f, 1f);
+            routePortal.transform.localScale = new Vector3(0.7f, 1.26f, 0.7f);
 
             //создаем интеракцию
             RoutePortalManager mgr = routePortal.AddComponent<RoutePortalManager>();
@@ -648,26 +675,48 @@ namespace RiskOfRoutes
                     m.stageModifiers = StageModifierDirector.Instance.GetNextStageModifiers(portalObject);
                     Log.Info($"Success? {m.stageModifiers.Count()}");
                     Log.Info($"{i + 1}th portal placed successfully");
-                }
-                Vector3 facingVector = position - portalObject.transform.position;
-                facingVector.y = 0;
-                if (facingVector != Vector3.zero)
-                {
-                    portalObject.transform.rotation = Quaternion.LookRotation(facingVector);
-                }
-                Vector3 rdir = portalObject.transform.right;
+                    Vector3 facingVector = position - portalObject.transform.position;
+                    facingVector.y = 0;
+                    if (facingVector != Vector3.zero)
+                    {
+                        portalObject.transform.rotation = Quaternion.LookRotation(facingVector);
+                    }
+                    Vector3 rdir = portalObject.transform.right;
 
-                var renderers = portalObject.GetComponentsInChildren<MeshRenderer>();
+                    var renderers = portalObject.GetComponentsInChildren<Renderer>();
 
-                //Material mat = SceneInfo.instance.sceneDef.portalMaterial;
-                //foreach (var renderer in renderers)
-                //{
-                //    Log.Info($"Renderer:{renderer}");
-                //    if (renderer.name == "Mesh")
-                //    {
-                //        UnityEngine.Object.Destroy(renderer.gameObject);
-                //    }
-                //}
+                    Material mat = m.destinationScene.portalMaterial;
+
+                    if (portalColors.Count >= 2)
+                    {
+                        int d = portalColors.Count / 2;
+                        int selected = Run.instance.stageRng.RangeInt(0, d);
+                        Log.Info("Selected:" + selected);
+
+                        selected *= 2;
+
+                        var edge = portalColors[selected];
+                        var center = portalColors[selected + 1];
+
+
+                        if (useColoredPortals)
+                        {
+                            foreach (var renderer in renderers)
+                            {
+                                if (renderer.material.name.Contains("Edge"))
+                                {
+                                    renderer.material.SetTexture("_RemapTex", edge);
+                                }
+                                else if (renderer.material.name.Contains("Center"))
+                                {
+                                    renderer.material.SetTexture("_RemapTex", center);
+                                }
+                            }
+                        }
+
+
+                    }
+                }
 
             }
 
@@ -758,7 +807,7 @@ namespace RiskOfRoutes
             return sceneDef;
         }
 
-        
+
 
 
 
@@ -777,7 +826,7 @@ namespace RiskOfRoutes
             return sceneDef.validForRandomSelection;
         }
 
-        
+
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.F2))

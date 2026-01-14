@@ -13,36 +13,20 @@ namespace SamplePlugin.StageModifiers
     {
         private ArtifactDef currentArtifact;
 
-        private static readonly List<string> ArtifactNames = new List<string>()
-        {
-            "MixEnemy", //Dissonance
-            "WeakAssKnees", //Frailty
-            "ElityOnly", //Honor
-            "WispOnDeath", //Soul
-            "Bomb", //Spite
-            "ShadowClone", //Vengeance
-            "FriendlyFire"
-        };
+        private static Dictionary<ArtifactDef, int> availableArtifactsAndPrices;
 
-
-        //TODO: сделать Struct артефактов может быть со стоимостью
-        private static readonly Dictionary<string, string> ArtifactDesc = new Dictionary<string, string>()
-        {
-            { "ARTIFACT_MIXENEMY_DESCRIPTION","<style=cWorldEvent>Monsters can appear outside their usual environments.</style>" },
-            { "ARTIFACT_WEAKASSKNEES_DESCRIPTION","<style=cWorldEvent>Fall damage is doubled and lethal.</style>" },
-            { "ARTIFACT_ELITEONLY_DESCRIPTION","<style=cWorldEvent>Enemies can only spawn as elites.</style>" },
-            { "ARTIFACT_WISPONDEATH_DESCRIPTION","<style=cWorldEvent>Wisps emerge from defeated monsters.</style>" },
-            { "ARTIFACT_BOMB_DESCRIPTION","<style=cWorldEvent>Enemies drop multiple exploding bombs on death.</style>" },
-            { "ARTIFACT_SHADOWCLONE_DESCRIPTION","<style=cWorldEvent>Your relentless doppelganger will invade on every 10th minute.</style>" },
-            { "ARTIFACT_FRIENDLYFIRE_DESCRIPTION","<style=cWorldEvent>Friendly fire is enabled for both survivors and monsters alike.</style>" },
-        };
+        private static bool ArtifactListCreated = false;
 
         public ArtifactModifier()
         {
-            currentArtifact = ArtifactCatalog.FindArtifactDef(GetRandomArtifactName());
-            Log.Info("1");
+            if (!ArtifactListCreated) CreateArtifactDictionary();
+            currentArtifact = RoR2.RoR2Content.Artifacts.MixEnemy;
+            if (currentArtifact == null)
+            {
+                Log.Error("WTF");
+            }
             //здесь исключение
-            activeText = ArtifactDesc[currentArtifact.descriptionToken];
+            activeText = currentArtifact.descriptionToken;
             if (activeText == null)
             {
                 Log.Error($"{currentArtifact.cachedName} error with getting description");
@@ -50,6 +34,22 @@ namespace SamplePlugin.StageModifiers
             Log.Info("2");
             reservedText = activeText;
             negative = true;
+        }
+
+        private void CreateArtifactDictionary()
+        {
+            availableArtifactsAndPrices = new Dictionary<ArtifactDef, int>()
+            {
+                [RoR2.RoR2Content.Artifacts.MixEnemy] = 30,
+                [RoR2.RoR2Content.Artifacts.FriendlyFire] = 30,
+                [RoR2.RoR2Content.Artifacts.WeakAssKnees] = 30,
+                [RoR2.RoR2Content.Artifacts.EliteOnly] = 30,
+                [RoR2.RoR2Content.Artifacts.Sacrifice] = 30,
+                [RoR2.RoR2Content.Artifacts.WispOnDeath] = 30,
+                [RoR2.RoR2Content.Artifacts.Bomb] = 30,
+                [RoR2.RoR2Content.Artifacts.Swarms] = 30,
+                [RoR2.RoR2Content.Artifacts.ShadowClone] = 30,
+            };
         }
 
         public override void OnEnd()
@@ -81,19 +81,20 @@ namespace SamplePlugin.StageModifiers
             }
         }
 
-        //На время
-        private string GetRandomArtifactName()
-        {
-            if (Run.instance)
-            {
-                int index = Run.instance.stageRng.RangeInt(0, ArtifactNames.Count);
-                return ArtifactNames[index];
-            }
-            else
-            {
-                return ArtifactNames[0];
-            }
-        }
+        ////На время
+        //private string GetRandomArtifactName()
+        //{
+        //    //if (Run.instance)
+        //    //{
+        //    //    int index = Run.instance.stageRng.RangeInt(0, ArtifactNames.Count - 1);
+        //    //    Log.Info(index);
+        //    //    return ArtifactNames[index];
+        //    //}
+        //    //else
+        //    //{
+        //    //    return ArtifactNames[0];
+        //    //}
+        //}
 
     }
 

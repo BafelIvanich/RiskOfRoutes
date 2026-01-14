@@ -1,4 +1,6 @@
-﻿using RiskOfRoutes;
+﻿using HarmonyLib;
+using R2API;
+using RiskOfRoutes;
 using RoR2;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,7 +12,7 @@ namespace SamplePlugin.StageModifiers
     //карты : 
     public class LunarEnemiesModifier : StageModifier
     {
-        public List<CharacterSpawnCard> lunarEnemies;
+        public List<DirectorCard> lunarEnemies;
 
         public LunarEnemiesModifier()
         {
@@ -37,50 +39,80 @@ namespace SamplePlugin.StageModifiers
 
         public override void OnStart()
         {
-            //Log.Info("Moon modifier start");
+            int maxCost = 200;
+            int minCost = 40;
 
-            //// 1. Load Lunar DCCS
-            //var lunarDCCS = Addressables.LoadAssetAsync<DirectorCardCategorySelection>("RoR2/Base/Common/DirectorCardCategorySelections/dccsLunarFamily.asset").WaitForCompletion();
-            //if (!lunarDCCS) return;
+            if(!ClassicStageInfo.instance || ClassicStageInfo.instance.monsterSelection == null)
+            {
+                Log.Error("No monster selection found");
+                return;
+            }
 
-            //// 2. Update the "Global" info (for any future directors)
-            //if (RoR2.ClassicStageInfo.instance)
-            //{
-            //    RoR2.ClassicStageInfo.instance.monsterCategories = lunarDCCS;
-            //}
+            var selection = ClassicStageInfo.instance.monsterSelection;
+            for(int i = 0; i < selection.Count; i++)
+            {
+                var card = selection.GetChoice(i);
+                if(card.value != null && card.value.spawnCard!=null)
+                {
+                    Log.Info($"Card:{card.value.spawnCard.name}, Weight:{card.weight}, Cost:{card.value.cost}");
+                }
+            }
 
-            //// 3. Update the "Active" director (because it probably already loaded the old one)
-            //foreach (var director in UnityEngine.Object.FindObjectsOfType<RoR2.CombatDirector>())
-            //{
-            //    // Only update the main monster director (monsterCredit > 0 is a decent guess, or check properties)
-            //    // Usually we just update all of them to be safe, or check if they are handling monsters.
-            //    director.monsterCards = lunarDCCS;
+            for(int i = 0; i<selection.Count;i++)
+            {
+                var card = selection.GetChoice(i);
+                var sc = card.value.spawnCard;
+                Log.Info($"Card:{sc.name},weight:{card.weight},cost:{card.value.cost}");
+                maxCost = Mathf.Max(card.value.cost,maxCost);
+                minCost = Mathf.Min(card.value.cost,minCost);
+            }
+            //200 40 предельные значения
+            int finalMaxCost = Mathf.Min(100,maxCost);
+            int finalMinCost = Mathf.Max(40,minCost);
+            CreateLunarEnemiesSpawnCards(finalMinCost,finalMaxCost);
+            Log.Info("Moon modifier start");
+            if(ClassicStageInfo.instance && ClassicStageInfo.instance.monsterSelection != null)
+            {
+                foreach(var lunar in lunarEnemies)
+                {
+                    ClassicStageInfo.instance.monsterSelection.AddChoice(lunar, (float)(lunar.selectionWeight * (1+0.2*stack)));
+                }
+            }
 
-            //    // Optional: Reset the current spawn intent so it doesn't try to spawn a beetle from the old list
-            //    director.currentMonsterCard = null;
-            //}
+
+
+            foreach (var director in CombatDirector.instancesList)
+            {
+                if (director.monsterCards == null) director.currentMonsterCard = null;
+            }
         }
 
-        public void CreateLunarEnemiesSpawnCards()
+        public void CreateLunarEnemiesSpawnCards(int maxCost, int minCost)
         {
-            //Log.Info("Trying to create CHEF");
-            //InteractableSpawnCard card = ScriptableObject.CreateInstance<InteractableSpawnCard>();
+            lunarEnemies = new List<DirectorCard>();
 
-            //card.prefab = RiskOfRoutes.RiskOfRoutes.chefPrefab;
-            //card.directorCreditCost = 0;
-            //card.sendOverNetwork = true;
-            //card.hullSize = HullClassification.Human;
-            //card.orientToFloor = true;
-            //card.nodeGraphType = RoR2.Navigation.MapNodeGroup.GraphType.Ground;
+            List<CharacterSpawnCard> csc = new List<CharacterSpawnCard>();
+            var lunarWispOrig = Addressables.LoadAssetAsync<CharacterSpawnCard>("RoR2/Base/LunarWisp/cscLunarWisp.asset").WaitForCompletion();
+            var lunarGolemOrig = Addressables.LoadAssetAsync<CharacterSpawnCard>("RoR2/Base/LunarGolem/cscLunarGolem.asset").WaitForCompletion();
+            var lunarExploderOrig = Addressables.LoadAssetAsync<CharacterSpawnCard>("RoR2/Base/LunarExploder/cscLunarExploder.asset").WaitForCompletion();
 
-            //chefSpawnCard = card;
-
-            var c = Addressables.LoadAssetAsync<CharacterSpawnCard>("RoR2/Base/LunarWisp/cscLunarWisp.asset").WaitForCompletion();
-            var g = Addressables.LoadAssetAsync<CharacterSpawnCard>("RoR2/Base/LunarGolem/cscLunarGolem.asset").WaitForCompletion();
-            var e = Addressables.LoadAssetAsync<CharacterSpawnCard>("RoR2/Base/LunarExploder/cscLunarExploder.asset").WaitForCompletion();
-            lunarEnemies.Add(c);
-            lunarEnemies.Add(g);
-            lunarEnemies.Add(e);
+            var lunarWisp = ScriptableObject.Instantiate(lunarWispOrig);
+            var lunarGolem = ScriptableObject.Instantiate(lunarGolemOrig);
+            var lunarExploder = ScriptableObject.Instantiate(lunarExploderOrig);
+            csc.Add(lunarWisp);
+            csc.Add(lunarGolem);
+            csc.Add(lunarExploder);
+            foreach(var ca in csc)
+            {
+                var dc = new DirectorCard()
+                {
+                    spawnCard = ca,
+                    selectionWeight = 1,
+                    minimumStageCompletions = 0,
+                };
+                lunarEnemies.Add(dc);
+            }
+            
         }
     }
 
