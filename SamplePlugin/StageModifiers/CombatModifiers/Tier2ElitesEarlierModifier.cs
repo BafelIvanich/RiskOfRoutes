@@ -17,15 +17,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             activeText = "More powerful elites might appear earlier";
             reservedText = "More powerful elites might appear earlier";
             name = "Powerful elites";
-            var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("tier2elites");
-            if (ic != null)
-            {
-                icon = ic;
-            }
-            else
-            {
-                Log.Error("failed to load tier 2 elites modifier");
-            }
+            var ic = "tier2elites";
             stackable = false;
         }
 

@@ -36,7 +36,7 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
 
             Log.Info($"{self.fixedTime}:{kd}");
 
-            if (self.fixedTime>kd)
+            if (self.fixedTime > kd)
             {
                 Log.Info("Here doppel");
                 PerformInvasion();
@@ -57,7 +57,7 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
                 if (!playerCharacterMaster || !playerCharacterMaster.master) continue;
                 if (playerCharacterMaster.master.IsDeadAndOutOfLivesServer()) continue;
 
-                CreateDoppelganger(playerCharacterMaster.master,Run.instance.stageRng);
+                CreateDoppelganger(playerCharacterMaster.master, Run.instance.stageRng);
             }
         }
         private static void CreateDoppelganger(CharacterMaster srcCharacterMaster, Xoroshiro128Plus rng)

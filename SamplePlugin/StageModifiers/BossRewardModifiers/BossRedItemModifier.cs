@@ -15,16 +15,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
             name = "Red item";
             tooltipColor = new Color(228f / 255f, 196f / 255f, 21f / 255f);
             stackable = false;
-
-            var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("redBossItem");
-            if (ic != null)
-            {
-                icon = ic;
-            }
-            else
-            {
-                Log.Error("failed to load redBossItem modifier");
-            }
+            iconName = "redBossItem";
         }
 
         public override void OnEnd()

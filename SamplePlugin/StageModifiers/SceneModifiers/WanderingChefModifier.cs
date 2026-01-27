@@ -17,7 +17,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         {
             name = "Wandering CHEF";
             activeText = "<style=cIsHealth>Wandering CHEF</style> has appeared somewhere on the stage";
-            icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC3/MealPrep/texMealPrepIcon.png").WaitForCompletion();
+            iconName = "RoR2/DLC3/MealPrep/texMealPrepIcon.png";
             reservedText = "<style=cIsHealth>Wandering CHEF</style> is guaranteed to appear on next stage.";
             stackable = false;
             negative = false;

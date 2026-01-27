@@ -18,11 +18,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             name = "More elites";
             activeText = "More <style=cDeath>elite</style> enemies will appear.";
             reservedText = "More <style=cDeath>elite</style> enemies will appear on the next stage.";
-            icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveBossIcon.png").WaitForCompletion();
-            if (!icon)
-            {
-                Log.Info("GFGG");
-            }
+            iconName = "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveBossIcon.png";
             negative = true;
             this.stack = stack;
         }

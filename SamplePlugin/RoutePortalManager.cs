@@ -12,22 +12,23 @@ namespace RiskOfRoutes
     {
         public GenericInteraction genericInteraction;
         public SceneExitController sceneExitController;
-        //для seer'a
-        public PurchaseInteraction purchaseInteraction;
+        public PurchaseInteraction purchaseInteraction; //для seer'a
+
         public bool isVanillaPortal = false;
         public bool isOval = false;
 
-        public int modifierCredits;
         public bool isSeerStation;
 
-        public SceneDef destinationScene;
         public RouteMap.RouteNode routeNode;
 
         public List<StageModifier> stageModifiers = new List<StageModifier>();
+        public SyncListString stageModifierNames = new SyncListString();
 
-        [SyncVar]
+        [SyncVar(hook = nameof(UpdateSyncedText))]
         public string modifierTextSynced;
 
+        [SyncVar]
+        public int destinationSceneIndex;
 
         public void Awake()
         {
@@ -37,13 +38,12 @@ namespace RiskOfRoutes
 
             if (!genericInteraction) Log.Error("PurchaseInteraction missing!");
             if (!sceneExitController) Log.Error("SceneExitController missing!");
+            if (isSeerStation && !purchaseInteraction) Log.Error("PurchaseInteraction missing");
         }
 
         public void Start()
         {
-            UpdateText();
 
-            Log.Info("Here");
             if (isSeerStation)
             {
                 if (purchaseInteraction)
@@ -54,7 +54,7 @@ namespace RiskOfRoutes
                 else
                 {
                     Log.Error("Error with seer purchase interaction");
-
+                    return;
                 }
             }
             genericInteraction.onActivation.AddListener(OnPortalActivation);
@@ -63,12 +63,11 @@ namespace RiskOfRoutes
             {
                 sceneExitController.useRunNextStageScene = true;
             }
-            Log.Info("Attaching");
             AttachBubblesToPortal();
+            UpdateText();
 
         }
 
-        //todo почему то создаются дважды
         public void UpdateText()
         {
             Log.Info("Called method UpdateText");
@@ -98,11 +97,16 @@ namespace RiskOfRoutes
                     Log.Error("NoModifiers");
                 }
 
-
                 modifierTextSynced = $"{routeNode.portalType}:\n{positiveText}\n{negativeText}";
-                Log.Info(positiveText + negativeText);
+                //Log.Info(positiveText + negativeText);
             }
             UpdateBubbles();
+        }
+
+        private void UpdateSyncedText(string newText)
+        {
+            Log.Info($"Updating synced text with new text:{newText}");
+            modifierTextSynced = newText;
         }
 
         public void UpdateBubbles()
@@ -179,9 +183,10 @@ namespace RiskOfRoutes
                     mat.SetTextureOffset("_MainTex", new Vector2(-0.5f, -0.5f));
 
                     Texture2D tex = null;
-                    if (stageModifiers[i].icon != null)
+                    if (stageModifiers[i].iconName != null)
                     {
-                        tex = stageModifiers[i].icon.texture;
+                        var icon = IconCatalog.ModifierIconFromDef(stageModifiers[i].iconName);
+                        tex = icon.texture;
                     }
                     else
                     {
@@ -196,6 +201,7 @@ namespace RiskOfRoutes
             }
         }
 
+        //todo texture clamp
         private Texture2D SpriteToTexture(Sprite sprite)
         {
             int offsetPix = 3;
@@ -204,7 +210,6 @@ namespace RiskOfRoutes
             int newHeight = (int)sprite.rect.width + 2 * offsetPix;
 
             Color[] spritePixels = sprite.texture.GetPixels((int)sprite.rect.x, (int)sprite.rect.y, (int)sprite.rect.width, (int)sprite.rect.height);
-
 
             Texture2D newTexture = new Texture2D(newWidth, newHeight);
             Color[] pixels = new Color[newWidth * newHeight];
@@ -215,8 +220,6 @@ namespace RiskOfRoutes
 
         }
 
-
-        [Server]
         public void OnPortalActivation(Interactor interactor)
         {
             if (!NetworkServer.active)
@@ -235,15 +238,14 @@ namespace RiskOfRoutes
             if (!isVanillaPortal)
             {
                 genericInteraction.enabled = false;
-                Run.instance.nextStageScene = destinationScene;
-                Log.Info($"inside RPM: {destinationScene.cachedName}");
+                Run.instance.nextStageScene = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
+                Log.Info($"inside RPM: {Run.instance.nextStageScene.cachedName}");
                 //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("ai_test");
                 sceneExitController.Begin();
                 StageModifierDirector.instance.current = routeNode;
             }
         }
 
-        [Server]
         public void OnSeerActivation(Interactor interactor)
         {
             if (!NetworkServer.active)
@@ -259,10 +261,6 @@ namespace RiskOfRoutes
             }
         }
 
-        public void AddStageModifier(StageModifier mod)
-        {
-            stageModifiers.Add(mod);
-        }
     }
 }
 

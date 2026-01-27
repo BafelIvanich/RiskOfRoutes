@@ -1,5 +1,4 @@
 ﻿using SamplePlugin.StageModifiers;
-using System;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
@@ -14,11 +13,7 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
             reservedText = "Save all mountain shrine effects from the current stage.";
             stack = RoR2.TeleporterInteraction.instance.shrineBonusStacks;
             activeText = $"Get {stack} mountain shrine stacks";
-            icon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Shrines/ShrineBoss/texShrineBossSymbol.png").WaitForCompletion();
-            if (!icon)
-            {
-                Log.Info("GFGG");
-            }
+            iconName = "RoR2/Base/Shrines/ShrineBoss/texShrineBossSymbol.png";
         }
 
         public override void OnEnd()

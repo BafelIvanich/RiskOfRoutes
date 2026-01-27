@@ -1,5 +1,4 @@
 ﻿using RiskOfRoutes;
-using System;
 using System.Collections.Generic;
 
 
@@ -55,8 +54,8 @@ public class RouteMap
             var node = mapGrid[i, 1];
             node.portalType = RoutePortalType.Rare;
             CreateRoute(node, node.x, node.y, rng);
-            Log.Info($"Created route starting with :{mapGrid[i,1]}");
-            if (mapGrid[i,1]==null)
+            Log.Info($"Created route starting with :{mapGrid[i, 1]}");
+            if (mapGrid[i, 1] == null)
             {
                 Log.Error("\tWTF");
             }
@@ -120,7 +119,7 @@ public class RouteMap
 
     public RouteNode GetStartingNode()
     {
-        return mapGrid[0,0];
+        return mapGrid[0, 0];
     }
 
     public class RouteNode

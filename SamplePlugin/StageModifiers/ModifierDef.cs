@@ -82,7 +82,7 @@ namespace RiskOfRoutes.StageModifiers
                 ModifierTier.Tier1 => 30,
                 ModifierTier.Tier2 => 60,
                 ModifierTier.Tier3 => 120,
-                _                  => 30,
+                _ => 30,
             };
             this.selectionWeight = weight;
             this.isAvailable = isAvailable;
@@ -108,5 +108,5 @@ public enum ModifierTier
 
 public enum ModifierRarity
 {
-    Common,Rare
+    Common, Rare
 }

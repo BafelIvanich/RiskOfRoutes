@@ -26,30 +26,14 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                 reservedText = "Get <style=cDeath>random legendary drone</style> as a teleporter event reward.";
                 activeText = "Get <style=cDeath>random legendary drone</style> as a teleporter event reward.";
                 name = "Legendary drone reward";
-                var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("legendaryDroneReward");
-                if (ic != null)
-                {
-                    icon = ic;
-                }
-                else
-                {
-                    Log.Error("failed to load aurelionite modifier");
-                }
+                iconName = "legendaryDroneReward";
             }
             else
             {
                 reservedText = "Get <style=cIsHealing>random uncommon drone</style> as a teleporter event reward.";
                 activeText = "Get <style=cIsHealing>random uncommon drone</style> as a teleporter event reward.";
-                var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("uncommonDroneReward");
+                iconName = "uncommonDroneReward";
                 name = "Uncommon drone reward";
-                if (ic != null)
-                {
-                    icon = ic;
-                }
-                else
-                {
-                    Log.Error("failed to load aurelionite modifier");
-                }
             }
             this.dropLegendary = dropLegendary;
             tooltipColor = new Color(246f / 255f, 90f / 255f, 58f / 255f);

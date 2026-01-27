@@ -17,15 +17,8 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             name = "Moon invasion";
             reservedText = "<style=cLunarObjective>Enemies from the moon</style> might appear on the next stage.";
             activeText = "<style=cLunarObjective>Enemies from the moon</style> might appear on this stage.";
-            var icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveLunarIcon.png").WaitForCompletion();
-            if (!icon)
-            {
-                Log.Error($"Could not load icon for StageModifier {name}");
-            }
-            else
-            {
-                this.icon = icon;
-            }
+            iconName = "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveLunarIcon.png";
+            //var icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveLunarIcon.png").WaitForCompletion();
             negative = true;
             this.stack = stack;
         }

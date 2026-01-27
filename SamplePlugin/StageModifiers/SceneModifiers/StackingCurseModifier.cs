@@ -1,6 +1,5 @@
 ﻿using R2API;
 using RoR2;
-using RoR2.Hologram;
 using SamplePlugin.StageModifiers;
 using System;
 using UnityEngine;
@@ -9,6 +8,7 @@ using UnityEngine.AddressableAssets;
 namespace RiskOfRoutes.StageModifiers.SceneModifiers
 {
     //Каждое открытие сундука стакает на всех игроках проклятье на макс хп.
+    //todo networking UI
     public class StackingCurseModifier : StageModifier
     {
         public static float curse = 0.0f;
@@ -19,11 +19,7 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
             name = "SoulCost";
             reservedText = "Each purchase drains your max hp for an entire stage";
             activeText = reservedText;
-            icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC2/texShrineColossusAccessSymbol.jpg").WaitForCompletion();
-            if (!icon)
-            {
-                Log.Info("GFGG");
-            }
+            iconName = "RoR2/DLC2/texShrineColossusAccessSymbol.jpg";
         }
 
         public override void OnEnd()
@@ -47,7 +43,7 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
 
         private void RecalculateStatsAPI_GetStatCoefficients(CharacterBody sender, RecalculateStatsAPI.StatHookEventArgs args)
         {
-            if(sender.teamComponent && sender.teamComponent.teamIndex == TeamIndex.Player)
+            if (sender.teamComponent && sender.teamComponent.teamIndex == TeamIndex.Player)
             {
                 //todo сделать линейное уменьшение
                 float curseMin = Mathf.Min(0.99f, curse);
@@ -73,9 +69,9 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
         private void PlayerPurchase(Interactor interactor)
         {
             curse += curseAdd;
-            foreach(var player in PlayerCharacterMasterController.instances)
+            foreach (var player in PlayerCharacterMasterController.instances)
             {
-                if(player.master && player.master.GetBody())
+                if (player.master && player.master.GetBody())
                 {
                     player.master.GetBody().RecalculateStats();
                 }
@@ -84,9 +80,9 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
 
         private void CostTypeDef_BuildCostStringStyled(On.RoR2.CostTypeDef.orig_BuildCostStringStyled orig, CostTypeDef self, int cost, System.Text.StringBuilder stringBuilder, bool forWorldDisplay, bool includeColor)
         {
-            orig(self,cost,stringBuilder, forWorldDisplay, includeColor);
+            orig(self, cost, stringBuilder, forWorldDisplay, includeColor);
             if (self == RoR2.CostTypeCatalog.GetCostTypeDef(CostTypeIndex.Money))
-            stringBuilder.AppendLine($"<style=cShrine> + {3+(stack-1)}% Soul</style>");
+                stringBuilder.AppendLine($"<style=cShrine> + {3 + (stack - 1)}% Soul</style>");
         }
     }
 }

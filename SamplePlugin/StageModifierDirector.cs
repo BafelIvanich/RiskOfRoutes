@@ -2,7 +2,6 @@
 using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin.StageModifiers;
-using SamplePlugin.StageModifiers.SceneModifiers;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,15 +9,32 @@ using UnityEngine.Networking;
 
 namespace SamplePlugin
 {
-    public class StageModifierDirector : MonoBehaviour
+    [System.Serializable]
+    public struct ModifierSync : IEquatable<ModifierSync>
+    {
+        public int id;
+        public int stack;
+        public bool negative;
+        public bool isArtifact;
+
+        public bool Equals(ModifierSync other)
+        {
+            return this.id == other.id;
+        }
+    }
+
+    public class SyncListModifier : SyncListStruct<ModifierSync> { }
+
+    public class StageModifierDirector : NetworkBehaviour
     {
         public static StageModifierDirector instance;
 
         public List<StageModifier> activeModifiers { get; set; }
         public List<StageModifier> reservedModifiers { get; set; }
         public List<ModifierDef> bannedModifiers { get; set; }
-
         public List<string> runArtifactsApplied;
+
+        //public SyncListModifier modifiersSynced = new SyncListModifier();
 
         public int startingCredits = 200;
         public int routeCredits = 60;
@@ -26,6 +42,9 @@ namespace SamplePlugin
 
         public RouteMap routeMap;
         public RouteMap.RouteNode current;
+
+        [SyncVar(hook = nameof(OnStageUpdate))]
+        public int currStage = 0;
 
         private List<ItemInfo> itemsInfo =
         [
@@ -61,19 +80,49 @@ namespace SamplePlugin
 
         public List<ModifierDef> allModifiers;
 
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+
+            CreateDirector(Run.instance);
+        }
+
+
+        private void OnModifiersChanged(SyncList<ModifierSync>.Operation op, int itemIndex)
+        {
+            Log.Info("Modifiers were changed");
+        }
+
+        private void CreateDirector(Run run)
+        {
+            Log.Info("Run started");
+
+
+            runArtifactsApplied = GetArtifactsAppliedThisRun();
+
+            Log.Info("Creating route map");
+            routeMap = new RouteMap(run.runRNG);
+
+            current = routeMap.GetStartingNode();
+            Log.Info($"Current:{current.x},{current.y} that has {current.GetPaths().Count} paths");
+        }
+
         public void Awake()
         {
+            Log.Info("Called method awake in stage modifier director");
+
             instance = this;
+
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<StageModifier>();
             bannedModifiers = new List<ModifierDef>();
             allModifiers = new List<ModifierDef>();
+            DontDestroyOnLoad(gameObject);
 
             RegisterModDefs();
 
             Log.Info("StageModifierDirector created");
 
-            RoR2.Run.onRunStartGlobal += Run_onRunStartGlobal;
             RoR2.Run.onRunDestroyGlobal += Run_onRunDestroyGlobal;
 
             RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
@@ -83,7 +132,6 @@ namespace SamplePlugin
 
         public void OnDestroy()
         {
-            RoR2.Run.onRunStartGlobal -= Run_onRunStartGlobal;
             RoR2.Run.onRunDestroyGlobal -= Run_onRunDestroyGlobal;
 
             RoR2.SceneDirector.onPrePopulateSceneServer -= SceneDirector_onPrePopulateSceneServer;
@@ -116,7 +164,7 @@ namespace SamplePlugin
             if (RiskOfRoutes.RiskOfRoutes.allowDelusionArtifact.Value) allModifiers.Add(new ModifierDef("Delusion", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Delusion"), true));
             if (RiskOfRoutes.RiskOfRoutes.allowDevotionArtifact.Value) allModifiers.Add(new ModifierDef("Devotion", ModifierTier.Tier2, 1f, () => CheckArtifactAvailable("Devotion"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowDissonanceArtifact.Value) allModifiers.Add(new ModifierDef("MixEnemy", ModifierTier.Tier2, 1f, () => CheckArtifactAvailable("MixEnemy"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowEnigmaArtifact.Value) allModifiers.Add(new ModifierDef("Enigma",ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Enigma"), false));
+            if (RiskOfRoutes.RiskOfRoutes.allowEnigmaArtifact.Value) allModifiers.Add(new ModifierDef("Enigma", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Enigma"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowEvolutionArtifact.Value) allModifiers.Add(new ModifierDef("MonsterTeamGainsItems", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("MonsterTeamGainsItems"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowFrailtyArtifact.Value) allModifiers.Add(new ModifierDef("WeakAssKnees", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("WeakAssKnees"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowGlassArtifact.Value) allModifiers.Add(new ModifierDef("Glass", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Glass"), false));
@@ -150,18 +198,6 @@ namespace SamplePlugin
 
 
 
-        private void Run_onRunStartGlobal(Run obj)
-        {
-            Log.Info("Run started");
-            activeModifiers.Clear();
-            reservedModifiers.Clear();
-            runArtifactsApplied = GetArtifactsAppliedThisRun();
-            Log.Info("Creating route map");
-            routeMap = new RouteMap(obj.runRNG);
-            //todo placeholder
-            current = routeMap.GetStartingNode();
-            Log.Info($"Current:{current.x},{current.y} that has {current.GetPaths().Count} paths");
-        }
         private void Run_onRunDestroyGlobal(Run obj)
         {
             Log.Info("On run ended");
@@ -173,6 +209,11 @@ namespace SamplePlugin
             }
             reservedModifiers.Clear();
             runArtifactsApplied.Clear();
+            if (this.gameObject)
+            {
+                Destroy(this.gameObject);
+                Log.Info("StageModifierDirector destroyed");
+            }
 
         }
 
@@ -187,19 +228,29 @@ namespace SamplePlugin
             return res;
         }
 
-        //TODO ПРАВКИ В ПОРЯДОК ВЫПОЛНЕНИЯ
         private void SceneDirector_onPrePopulateSceneServer(SceneDirector obj)
         {
             Log.Info($"Stage started, applying {reservedModifiers.Count} modifiers");
             if (reservedModifiers.Count == 0) return;
             Log.Info(reservedModifiers.Count);
             activeModifiers = new List<StageModifier>(reservedModifiers);
+            foreach (var mod in reservedModifiers)
+            {
+                //modifiersSynced.Add(1);
+            }
             reservedModifiers.Clear();
 
             foreach (StageModifier modifier in activeModifiers)
             {
                 modifier.OnStart();
             }
+            OnStageUpdate(currStage);
+        }
+
+        private void OnStageUpdate(int newValue)
+        {
+            currStage = Run.instance.stageClearCount + 1;
+            Log.Info("Method updating syncvar was called");
         }
 
         private void Stage_onServerStageComplete(RoR2.Stage obj)
@@ -209,6 +260,7 @@ namespace SamplePlugin
             foreach (StageModifier modifier in activeModifiers) modifier.OnEnd();
 
             activeModifiers.Clear();
+
         }
 
         public List<StageModifier> GetNextStageModifiers(GameObject portal)
@@ -216,19 +268,20 @@ namespace SamplePlugin
             WeightedSelection<ModifierDef> weightedSelection = CreateAvailableModifierSelection(portal);
             var mg = portal.GetComponent<RoutePortalManager>();
             HashSet<string> bannedFromSelection = new HashSet<string>();
-            Dictionary<string,int> modifiers = new Dictionary<string, int>();
+            Dictionary<string, int> modifiers = new Dictionary<string, int>();
 
             if (mg)
             {
-                if ((mg.destinationScene.baseSceneName == "lemuriantemple" || mg.destinationScene.baseSceneName == "habitat"))
+                //lemurian temple, habitat
+                if ((mg.destinationSceneIndex == 35 || mg.destinationSceneIndex == 21))
                 {
-                    modifiers.Add("Aurelionite",1);
+                    modifiers.Add("Aurelionite", 1);
                 }
 
-                if ((mg.destinationScene.baseSceneName == "conduitcanyon" || mg.destinationScene.baseSceneName == "repurposedcrater"))
-                {
-                    modifiers.Add("DroneBossRed", 1);
-                }
+                //if ((mg.destinationScene.baseSceneName == "conduitcanyon" || mg.destinationScene.baseSceneName == "repurposedcrater"))
+                //{
+                //    modifiers.Add("DroneBossRed", 1);
+                //}
             }
 
             int routePortalCredits = routeCredits;
@@ -243,8 +296,8 @@ namespace SamplePlugin
                 {
                     bannedFromSelection.Add(name);
                 }
-                    
-                if(modifiers.ContainsKey(currentModifier.name))
+
+                if (modifiers.ContainsKey(currentModifier.name))
                 {
                     modifiers[currentModifier.name]++;
                 }
@@ -259,7 +312,7 @@ namespace SamplePlugin
             List<StageModifier> res = new List<StageModifier>();
             foreach (var mod in modifiers)
             {
-                res.Add(StageModifierCatalog.StageModifierFromDef(mod.Key,mod.Value));
+                res.Add(StageModifierCatalog.StageModifierFromDef(mod.Key, mod.Value));
             }
             return res;
         }
@@ -387,9 +440,9 @@ namespace SamplePlugin
         [Server]
         private bool CheckMountainShrine()
         {
-            if(RoR2.TeleporterInteraction.instance)
+            if (RoR2.TeleporterInteraction.instance)
             {
-            return RoR2.TeleporterInteraction.instance.shrineBonusStacks > 0;
+                return RoR2.TeleporterInteraction.instance.shrineBonusStacks > 0;
             }
             return false;
         }
@@ -442,7 +495,13 @@ namespace SamplePlugin
 
         public List<RouteMap.RouteNode> GetAvailableNodes()
         {
-            return current.GetPaths();
+            if (current != null)
+                return current.GetPaths();
+            else
+            {
+                Log.Error("Current is null");
+                return null;
+            }
         }
     }
 

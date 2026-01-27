@@ -15,7 +15,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             name = "More drones";
             activeText = "More <style=cIsUtility>drones</style> will appear on this stage.";
             reservedText = "More <style=cIsUtility>drones</style> will appear on the next stage.";
-            icon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texDroneIconOutlined.png").WaitForCompletion();
+            iconName = "RoR2/Base/Common/MiscIcons/texDroneIconOutlined.png";
             negative = false;
             this.stack = stack;
         }

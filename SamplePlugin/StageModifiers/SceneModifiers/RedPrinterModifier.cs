@@ -16,15 +16,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             reservedText = "<style=cDeath>Red printer</style> is guaranteed to appear somewhere on the next stage.";
             activeText = "<style=cDeath>Red printer</style> has appeared somewhere on the stage.";
             negative = false;
-            var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("redPrinter");
-            if (ic != null)
-            {
-                icon = ic;
-            }
-            else
-            {
-                Log.Error("failed to load red printer modifier");
-            }
+            iconName = "redPrinter";
             this.stack = stack;
         }
         public override void OnEnd()

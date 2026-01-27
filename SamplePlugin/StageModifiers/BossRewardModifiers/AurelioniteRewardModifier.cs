@@ -19,16 +19,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
             name = "Aurelionite Fragment";
             tooltipColor = new Color(228f / 255f, 196f / 255f, 21f / 255f);
             stackable = false;
-
-            var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("texBuffAurelioniteBlessingIcon");
-            if (ic != null)
-            {
-                icon = ic;
-            }
-            else
-            {
-                Log.Error("failed to load aurelionite modifier");
-            }
+            iconName = "texBuffAurelioniteBlessingIcon";
         }
 
 

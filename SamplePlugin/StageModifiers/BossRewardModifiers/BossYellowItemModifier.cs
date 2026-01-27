@@ -21,15 +21,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
             reservedText = "Boss is guaranteed to drop <style=cShrine>Yellow Item.</style>";
             stackable = false;
             negative = false;
-            var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("yellowBossItem");
-            if (ic != null)
-            {
-                icon = ic;
-            }
-            else
-            {
-                Log.Error("failed to load yyellowBossItem modifier");
-            }
+            iconName = "yellowBossItem";
 
         }
         public override void OnEnd()

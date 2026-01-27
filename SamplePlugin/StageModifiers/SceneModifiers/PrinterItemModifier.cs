@@ -2,7 +2,6 @@
 using RoR2;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using UnityEngine.Networking;
 
 
 namespace SamplePlugin.StageModifiers.SceneModifiers
@@ -10,9 +9,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
     //возможно весь модифаер будет опциональным в конфиге
     public class PrinterItemModifier : StageModifier
     {
-
-
-
         public ItemDef selectedItem;
         public static InteractableSpawnCard printerSpawnCard;
 
@@ -22,11 +18,13 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             if (selectedItem == null) return;
             negative = false;
 
-            string name = Language.GetString(selectedItem.nameToken);
-            reservedText = $"Printer with <style=cIsUtility>{name}</style> will appear on the next stage";
-            activeText = $"Printer with <style=cIsUtility>{name}</style> has appeared somewhere on the stage.";
-            icon = selectedItem.pickupIconSprite;
+            string name = internalName;
+            string displayName = selectedItem.name;
+            reservedText = $"Printer with <style=cIsUtility>{displayName}</style> will appear on the next stage";
+            activeText = $"Printer with <style=cIsUtility>{displayName}</style> has appeared somewhere on the stage.";
+            iconName = internalName;
             this.name = name + " Printer";
+            Log.Info($"PrinterMod:{this.name}");
             stackable = false;
             CreatePrinterSpawnCard();
         }

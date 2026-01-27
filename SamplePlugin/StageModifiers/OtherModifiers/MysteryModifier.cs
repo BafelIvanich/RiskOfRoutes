@@ -4,6 +4,7 @@ using UnityEngine;
 namespace SamplePlugin.StageModifiers.OtherModifiers
 {
     //test one
+    //todo networking
     public class MysteryModifier : StageModifier
     {
         public MysteryModifier()
@@ -13,15 +14,7 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
             activeText = "You cannot see items";
             negative = true;
             stackable = false;
-            var ic = RiskOfRoutes.RiskOfRoutes.bundle.LoadAsset<Sprite>("mystery");
-            if (ic != null)
-            {
-                icon = ic;
-            }
-            else
-            {
-                Log.Error("failed to load aurelionite modifier");
-            }
+            iconName = "mystery";
         }
 
         public override void OnEnd()

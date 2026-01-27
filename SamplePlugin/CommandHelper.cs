@@ -96,6 +96,8 @@ namespace SamplePlugin
             }
         }
 
+
+
         [ConCommand(commandName = "activeModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get currently active modifiers")]
         private static void GetActiveModifiersCommand(ConCommandArgs args)
         {
@@ -108,7 +110,7 @@ namespace SamplePlugin
                     {
                         foreach (var modifier in mods)
                         {
-                            Log.Info($"{modifier.activeText}:{modifier.stack}");
+                            Log.Info($"{modifier}:");
                         }
                     }
                     else
@@ -150,6 +152,10 @@ namespace SamplePlugin
                 {
                     Log.Error("Modifiers list is null");
                 }
+            }
+            else
+            {
+                Log.Error("It is null");
             }
 
         }
@@ -255,7 +261,7 @@ namespace SamplePlugin
             Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
             SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscColossusPortal");
             spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/Base/ShrineBoss/iscShrineBoss.asset").WaitForCompletion();
-            
+
 
             if (!spawnCard)
             {
