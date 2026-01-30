@@ -138,6 +138,18 @@ namespace RiskOfRoutes.StageModifiers
             }
         }
 
+        public static List<string> GetPortalTypeModifiers(RoutePortalType routePortalType)
+        {
+            switch (routePortalType)
+            {
+                case RoutePortalType.ItemType: return new List<string>();
+                case RoutePortalType.DroneType: return new List<string>();
+                case RoutePortalType.ChefType: return new List<string>();
+                case RoutePortalType.Rare: return new List<string>();
+                default: return new List<string>();
+            }
+        }
+
 
 
     }
