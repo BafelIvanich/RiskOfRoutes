@@ -11,7 +11,10 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
         {
             name = "Save mountain effect";
             reservedText = "Save all mountain shrine effects from the current stage.";
-            stack = RoR2.TeleporterInteraction.instance.shrineBonusStacks;
+            if(RoR2.TeleporterInteraction.instance)
+            {
+                stack = RoR2.TeleporterInteraction.instance.shrineBonusStacks;
+            }
             activeText = $"Get {stack} mountain shrine stacks";
             iconName = "RoR2/Base/Shrines/ShrineBoss/texShrineBossSymbol.png";
         }

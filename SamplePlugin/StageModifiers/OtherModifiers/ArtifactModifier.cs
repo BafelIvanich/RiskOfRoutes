@@ -13,7 +13,7 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
             activeText = $"<style=cWorldEvent>{Language.GetString(currentArtifact.descriptionToken)}</style>";
             reservedText = $"<style=cWorldEvent>{Language.GetString(currentArtifact.descriptionToken)}</style>";
             name = artifact.cachedName;
-            iconName = currentArtifact.nameToken;
+            iconName = currentArtifact.cachedName;
             negative = !isPositive;
             stackable = false;
         }
@@ -29,7 +29,7 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
             activeText = $"<style=cWorldEvent>{Language.GetString(currentArtifact.descriptionToken)}</style>";
             reservedText = $"<style=cWorldEvent>{Language.GetString(currentArtifact.descriptionToken)}</style>";
             name = currentArtifact.cachedName;
-            iconName = currentArtifact.nameToken;
+            iconName = currentArtifact.cachedName;
             negative = !isPositive;
             stackable = false;
         }

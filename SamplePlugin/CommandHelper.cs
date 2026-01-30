@@ -101,16 +101,17 @@ namespace SamplePlugin
         [ConCommand(commandName = "activeModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get currently active modifiers")]
         private static void GetActiveModifiersCommand(ConCommandArgs args)
         {
+            Log.Info("Getting synced modifiers");
             if (StageModifierDirector.instance != null)
             {
-                var mods = StageModifierDirector.instance.activeModifiers;
+                var mods = StageModifierDirector.instance.modifiersSynced;
                 if (mods != null)
                 {
                     if (mods.Count > 0)
                     {
                         foreach (var modifier in mods)
                         {
-                            Log.Info($"{modifier}:");
+                            Log.Info($"{modifier.name}:{modifier.stack}");
                         }
                     }
                     else

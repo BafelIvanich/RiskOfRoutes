@@ -45,7 +45,6 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
         {
             if (sender.teamComponent && sender.teamComponent.teamIndex == TeamIndex.Player)
             {
-                //todo сделать линейное уменьшение
                 float curseMin = Mathf.Min(0.99f, curse);
                 float rem = 1.0f - curseMin;
                 float curseFinal = (1.0f / rem) - 1.0f;

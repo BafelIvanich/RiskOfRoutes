@@ -11,9 +11,10 @@ namespace RiskOfRoutes.StageModifiers
         public float selectionWeight;
         public Func<bool> isAvailable = () => true;
         public List<string> conflictList = new List<string>();
+        public int maxStack = -1;
 
 
-        public ModifierDef(string name, int cost, float weight, bool stackable, string[] conflicts = null)
+        public ModifierDef(string name, int cost, float weight, bool stackable, string[] conflicts = null, int maxStack = -1)
         {
             this.name = name;
             this.cost = cost;
@@ -29,9 +30,11 @@ namespace RiskOfRoutes.StageModifiers
                     conflictList.Add(c);
                 }
             }
+
+            this.maxStack = maxStack;
         }
 
-        public ModifierDef(string name, int cost, float weight, Func<bool> isAvailable, bool stackable, string[] conflicts = null)
+        public ModifierDef(string name, int cost, float weight, Func<bool> isAvailable, bool stackable, string[] conflicts = null, int maxStack = -1)
         {
             this.name = name;
             this.cost = cost;
@@ -50,7 +53,7 @@ namespace RiskOfRoutes.StageModifiers
             }
         }
 
-        public ModifierDef(string name, ModifierTier tier, float weight, bool stackable, string[] conflicts = null)
+        public ModifierDef(string name, ModifierTier tier, float weight, bool stackable, string[] conflicts = null, int maxStack = -1)
         {
             this.name = name;
             this.cost = tier switch
@@ -74,7 +77,7 @@ namespace RiskOfRoutes.StageModifiers
             }
         }
 
-        public ModifierDef(string name, ModifierTier tier, float weight, Func<bool> isAvailable, bool stackable, string[] conflicts = null)
+        public ModifierDef(string name, ModifierTier tier, float weight, Func<bool> isAvailable, bool stackable, string[] conflicts = null, int maxStack = -1)
         {
             this.name = name;
             this.cost = tier switch

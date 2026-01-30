@@ -7,6 +7,7 @@ using SamplePlugin.StageModifiers.BossRewardModifiers;
 using SamplePlugin.StageModifiers.CombatModifiers;
 using SamplePlugin.StageModifiers.OtherModifiers;
 using SamplePlugin.StageModifiers.SceneModifiers;
+using System.Collections.Generic;
 using UnityEngine;
 
 //Rare: random tier 3 positive, more credits on negative?
@@ -23,6 +24,51 @@ namespace RiskOfRoutes.StageModifiers
 {
     public static class StageModifierCatalog
     {
+
+        public static readonly List<string> AllDefs = new List<string>
+    {
+        "Aurelionite",
+        "BossRedItem",
+        "BossYellowItem",
+        "DroneBossGreen",
+        "DroneBossRed",
+        "MoreElites",
+        "MoreDrones",
+        "LunarEnemies",
+        "VoidEnemies",
+        "YellowPrinter",
+        "RedPrinter",
+        "OnlyFlying",
+        "PowerfulElites",
+        "Mystery",
+        "Repair",
+        "WanderingChef",
+        "Mountain",
+        "SoulCost",
+        "Doppelganger",
+        
+        "FriendlyFire",
+        "Command",
+        "Delusion",
+        "Devotion",
+        "MixEnemy",
+        "Enigma",
+        "MonsterTeamGainsItems",
+        "WeakAssKnees",
+        "Glass",
+        "EliteOnly",
+        "SingleMonsterType",
+        "RandomSurvivorOnRespawn",
+        "Rebirth",
+        "Sacrifice",
+        "WispOnDeath",
+        "Bomb",
+        "Swarms",
+        "ShadowClone",
+        "TeamDeath"
+        
+        };
+
         public static StageModifier StageModifierFromDef(string def, int stack = 1)
         {
             switch (def)

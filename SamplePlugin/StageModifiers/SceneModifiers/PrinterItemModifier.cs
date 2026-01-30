@@ -23,7 +23,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             reservedText = $"Printer with <style=cIsUtility>{displayName}</style> will appear on the next stage";
             activeText = $"Printer with <style=cIsUtility>{displayName}</style> has appeared somewhere on the stage.";
             iconName = internalName;
-            this.name = name + " Printer";
+            this.name = displayName + " Printer";
             Log.Info($"PrinterMod:{this.name}");
             stackable = false;
             CreatePrinterSpawnCard();
@@ -65,6 +65,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
                 ShopTerminalBehavior shop = printer.GetComponent<ShopTerminalBehavior>();
                 shop.dropTable = null;
                 shop.selfGeneratePickup = false;
+                shop.itemTier = selectedItem.tier;
                 PickupIndex currentPickupIndex = PickupCatalog.FindPickupIndex(selectedItem.itemIndex);
                 UniquePickup pickup = new UniquePickup { pickupIndex = currentPickupIndex };
 

@@ -2,6 +2,7 @@
 using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin.StageModifiers;
+using SamplePlugin.StageModifiers.OtherModifiers;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -12,14 +13,22 @@ namespace SamplePlugin
     [System.Serializable]
     public struct ModifierSync : IEquatable<ModifierSync>
     {
-        public int id;
+        public string name;
+        public string description;
         public int stack;
-        public bool negative;
         public bool isArtifact;
+
+        public ModifierSync(StageModifier mod)
+        {
+            name = mod.name;
+            description = mod.activeText;
+            stack = mod.stack;
+            isArtifact = mod is ArtifactModifier ? true : false;
+        }
 
         public bool Equals(ModifierSync other)
         {
-            return this.id == other.id;
+            return this.name == other.name;
         }
     }
 
@@ -29,16 +38,28 @@ namespace SamplePlugin
     {
         public static StageModifierDirector instance;
 
+        public static List<GameObject> activePortalInstances;
+
         public List<StageModifier> activeModifiers { get; set; }
         public List<StageModifier> reservedModifiers { get; set; }
         public List<ModifierDef> bannedModifiers { get; set; }
         public List<string> runArtifactsApplied;
+
+        [SyncVar(hook = nameof(OnModifiersSyncedUpdate))]
+        public SyncListModifier modifiersSynced = new SyncListModifier();
+
+        private static void OnModifiersSyncedUpdate()
+        {
+            Log.Info("SyncedModifiers were updated");
+        }
 
         //public SyncListModifier modifiersSynced = new SyncListModifier();
 
         public int startingCredits = 200;
         public int routeCredits = 60;
         public int negativeCredits = 30;
+        public int uniqueModifierLimit = 5;
+        public int printerItemModifierLimit = 3;
 
         public RouteMap routeMap;
         public RouteMap.RouteNode current;
@@ -46,7 +67,7 @@ namespace SamplePlugin
         [SyncVar(hook = nameof(OnStageUpdate))]
         public int currStage = 0;
 
-        private List<ItemInfo> itemsInfo =
+        public static List<ItemInfo> itemsInfo =
         [
             //сильные
             new ItemInfo("Syringe", ModifierTier.Tier3, 1f),
@@ -87,11 +108,10 @@ namespace SamplePlugin
             CreateDirector(Run.instance);
         }
 
-
-        private void OnModifiersChanged(SyncList<ModifierSync>.Operation op, int itemIndex)
-        {
-            Log.Info("Modifiers were changed");
-        }
+        //private void OnModifiersChanged(SyncList<ModifierSync>.Operation op, int itemIndex)
+        //{
+        //    Log.Info("Modifiers were changed");
+        //}
 
         private void CreateDirector(Run run)
         {
@@ -117,6 +137,7 @@ namespace SamplePlugin
             reservedModifiers = new List<StageModifier>();
             bannedModifiers = new List<ModifierDef>();
             allModifiers = new List<ModifierDef>();
+            activePortalInstances = new List<GameObject>();
             DontDestroyOnLoad(gameObject);
 
             RegisterModDefs();
@@ -200,7 +221,6 @@ namespace SamplePlugin
 
         private void Run_onRunDestroyGlobal(Run obj)
         {
-            Log.Info("On run ended");
             Log.Info($"Run ended, clearing {activeModifiers.Count} modifiers");
 
             foreach (StageModifier modifier in activeModifiers)
@@ -209,10 +229,11 @@ namespace SamplePlugin
             }
             reservedModifiers.Clear();
             runArtifactsApplied.Clear();
+            modifiersSynced.Clear();
             if (this.gameObject)
             {
                 Destroy(this.gameObject);
-                Log.Info("StageModifierDirector destroyed");
+                Log.Info("\tStageModifierDirector destroyed");
             }
 
         }
@@ -236,7 +257,7 @@ namespace SamplePlugin
             activeModifiers = new List<StageModifier>(reservedModifiers);
             foreach (var mod in reservedModifiers)
             {
-                //modifiersSynced.Add(1);
+                modifiersSynced.Add(new ModifierSync(mod));
             }
             reservedModifiers.Clear();
 
@@ -245,6 +266,7 @@ namespace SamplePlugin
                 modifier.OnStart();
             }
             OnStageUpdate(currStage);
+            activePortalInstances.Clear();
         }
 
         private void OnStageUpdate(int newValue)
@@ -260,6 +282,7 @@ namespace SamplePlugin
             foreach (StageModifier modifier in activeModifiers) modifier.OnEnd();
 
             activeModifiers.Clear();
+            modifiersSynced.Clear();
 
         }
 
@@ -278,6 +301,7 @@ namespace SamplePlugin
                     modifiers.Add("Aurelionite", 1);
                 }
 
+                //todo посмотреть их id
                 //if ((mg.destinationScene.baseSceneName == "conduitcanyon" || mg.destinationScene.baseSceneName == "repurposedcrater"))
                 //{
                 //    modifiers.Add("DroneBossRed", 1);
@@ -356,7 +380,55 @@ namespace SamplePlugin
             }
 
             return res;
+        }
 
+        public void AddRoutePortalInstance(GameObject portal)
+        {
+            if (portal != null)
+            {
+                var mg = portal.GetComponent<RoutePortalManager>();
+                if(mg != null)
+                {
+                    activePortalInstances.Add(portal);
+                    Log.Info($"StageModifierDirector: Added portal instance type {mg.routeNode.portalType}");
+
+                }
+                else
+                {
+                    Log.Error("No route manager for added portal");
+                }
+            }
+            else
+            {
+                Log.Error("Portal is null");
+            }
+        }
+
+        public void GetModifiersFromRandomPortal()
+        {
+            if(activePortalInstances == null || activePortalInstances.Count == 0)
+            {
+                Log.Error("There are no portal instances to get modifiers from");
+                return;
+            }
+            var portal = Run.instance.stageRng.NextElementUniform(activePortalInstances);
+            var mg = portal.GetComponent<RoutePortalManager>();
+            if (mg != null)
+            {
+                reservedModifiers = mg.stageModifiers;
+                foreach(var p in activePortalInstances)
+                {
+                    var gi = p.GetComponent<GenericInteraction>();
+                    if(gi!=null)
+                    {
+                        gi.enabled = false;
+                    }
+                }
+            }
+            else
+            {
+                Log.Error("RoutePortalManager wasn available for random portal");
+            }
         }
 
 

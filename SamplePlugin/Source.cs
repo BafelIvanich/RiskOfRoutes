@@ -47,9 +47,7 @@ using UnityHotReloadNS;
 //(Возможно) Меньше сундуков, но больше магазинов
 //(Возможно) Портал, очищающий лунные предметы
 //(Возможно) категории порталов?
-//Доппельгангер
 //Утилити урон хил
-//Награда зел дрон
 //Категории порталов
 //Двойник каждыенесколько минут
 //Эклипсовые
@@ -165,7 +163,6 @@ namespace RiskOfRoutes
             iconBubblePrefab = CreateIconBubblePrefab();
             routePortalPrefab = CreateRoutePortalPrefab();
             //routePortalPanelPrefab = CreateRoutePortalPanelPrefab();
-            IconCatalog.Init(path);
 
 
 
@@ -189,6 +186,7 @@ namespace RiskOfRoutes
             On.RoR2.UI.CurrentRunArtifactDisplayDataDriver.Refresh += CurrentRunArtifactDisplayDataDriver_Refresh;
 
             TeleporterInteraction.onTeleporterChargedGlobal += TeleporterEventSpawnRoutePortals;
+            On.RoR2.TeleporterInteraction.OnInteractionBegin += TeleporterInteraction_OnInteractionBegin;
             //On.RoR2.PortalSpawner.AttemptSpawnPortalServer += PortalSpawner_AttemptSpawnPortalServer;
 
             On.RoR2.DirectorCore.TrySpawnObject += OnVanillaPortalSpawn;
@@ -198,6 +196,18 @@ namespace RiskOfRoutes
             On.RoR2.SeerStationController.SetRunNextStageToTarget += SeerStationController_SetRunNextStageToTarget;
             On.RoR2.SeerStationController.OnStartClient += AddRouteManagerToSeerStation;
 
+            RoR2.RoR2Application.onLoad += () =>
+            {
+                IconCatalog.Init(bundle);
+            };
+
+        }
+
+        private void TeleporterInteraction_OnInteractionBegin(On.RoR2.TeleporterInteraction.orig_OnInteractionBegin orig, TeleporterInteraction self, Interactor activator)
+        {
+            orig(self,activator);
+            if(teleporterUseRandomMods.Value)
+                StageModifierDirector.instance.GetModifiersFromRandomPortal();
         }
 
         private GameObject CreateRoutePortalPrefab()
@@ -241,6 +251,27 @@ namespace RiskOfRoutes
             else
             {
                 Log.Info("Not found center");
+            }
+
+            var renderers = routePortal.GetComponentsInChildren<Renderer>();
+
+            //Material mat = SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex).portalMaterial;
+
+            var edge = bundle.LoadAsset<Texture2D>("darkerBlueEdge");
+            var center = bundle.LoadAsset<Texture2D>("darkerBlueCenter");
+            foreach (var renderer in renderers)
+            {
+                if (renderer.material.name.Contains("Center"))
+                {
+                    if (usePortalMaterial.Value)
+                    {
+                        //renderer.material = mat;
+                    }
+                    else
+                    {
+                        renderer.material.SetTexture("_RemapTex", center);
+                    }
+                }
             }
 
             //создаем интеракцию
@@ -611,6 +642,7 @@ namespace RiskOfRoutes
 
 
 
+        //todo переписать, добавить ванильным префабам mg сразу
         private GameObject OnVanillaPortalSpawn(On.RoR2.DirectorCore.orig_TrySpawnObject orig, DirectorCore self, DirectorSpawnRequest directorSpawnRequest)
         {
             return orig(self, directorSpawnRequest);
@@ -738,7 +770,7 @@ namespace RiskOfRoutes
             }
             if (self.artifactDisplayPanelController && self.artifactDisplayPanelController.iconContainer)
             {
-                if (StageModifierDirector.instance && StageModifierDirector.instance.activeModifiers.Count == 0)
+                if (StageModifierDirector.instance && StageModifierDirector.instance.modifiersSynced.Count == 0)
                 {
                     orig(self);
                     //Log.Info("There are no modifiers");
@@ -759,11 +791,11 @@ namespace RiskOfRoutes
         private void AddCustomIcon(ArtifactDisplayPanelController controller)
         {
             //Log.Info($"For icons there are {StageModifierDirector.instance.activeModifiers.Count}");
-            foreach (var mod in StageModifierDirector.instance.activeModifiers)
+            foreach (var mod in StageModifierDirector.instance.modifiersSynced)
             {
-                if (mod is ArtifactModifier) continue;
+                if (mod.isArtifact) continue;
 
-                Sprite icon = IconCatalog.ModifierIconFromDef(mod.iconName);
+                Sprite icon = IconCatalog.ModifierIconFromDef(mod.name);
                 if (icon == null)
                 {
                     icon = placeholderIcon;
@@ -796,7 +828,7 @@ namespace RiskOfRoutes
 
                 RoR2.UI.TooltipProvider tooltip = iconObj.AddComponent<RoR2.UI.TooltipProvider>();
                 tooltip.titleToken = mod.name;
-                tooltip.bodyToken = mod.activeText;
+                tooltip.bodyToken = mod.description;
                 //tooltip.titleColor = mod.tooltipColor;
                 tooltip.titleColor = new Color(246f / 255f, 90f / 255f, 58f / 255f);
 
@@ -872,91 +904,6 @@ namespace RiskOfRoutes
         }
 
 
-        //private void RoutePortalPanelUpdateText(GameObject routePortalPanel, RoutePortalManager mg)
-        //{
-        //    var withText = routePortalPanel.GetComponentsInChildren<TextMeshProUGUI>();
-        //    TextMeshProUGUI text = null;
-        //    foreach (var t in withText)
-        //    {
-        //        if (t.name == "BodyLabel")
-        //        {
-        //            text = t;
-        //            break;
-        //        }
-        //    }
-        //    var withImage = routePortalPanel.GetComponentsInChildren<RawImage>();
-        //    RawImage sceneImage = null;
-        //    foreach (var t in withImage)
-        //    {
-        //        if (t.name == "ActualImage")
-        //        {
-        //            sceneImage = t;
-        //            break;
-        //        }
-        //    }
-        //    if (text == null) return;
-        //    if (sceneImage == null) return;
-        //    var tex = mg.destinationScene.previewTexture;
-        //    sceneImage.texture = tex;
-        //    text.text = mg.modifierTextSynced;
-        //    var grid = routePortalPanel.GetComponentInChildren<GridLayoutGroup>();
-        //    for (int i = grid.transform.childCount - 1; i >= 0; i--)
-        //    {
-        //        Object.DestroyImmediate(grid.transform.GetChild(i).gameObject);
-        //    }
-        //    foreach (var mod in mg.stageModifiers)
-        //    {
-        //        if (!mod.negative)
-        //        {
-        //            GameObject obj = new GameObject("ModifierIcon");
-        //            Image img = obj.AddComponent<Image>();
-        //            if (mod.iconName != null)
-        //            {
-        //                img.sprite = mod.iconName;
-        //            }
-        //            else
-        //            {
-        //                img.sprite = placeholderIcon;
-        //            }
-        //            img.transform.SetParent(grid.transform, false);
-        //            obj.AddComponent<LayoutElement>();
-        //            var layout = obj.GetComponent<LayoutElement>();
-        //            layout.minWidth = 16f;
-        //            layout.minHeight = 16f;
-        //            layout.preferredWidth = 64f;
-        //            layout.preferredHeight = 64;
-
-        //            SetupStackText(mod, img);
-
-        //        }
-        //    }
-        //    foreach (var mod in mg.stageModifiers)
-        //    {
-        //        if (mod.negative)
-        //        {
-        //            GameObject obj = new GameObject("ModifierIcon");
-        //            Image img = obj.AddComponent<Image>();
-        //            if (mod.iconName != null)
-        //            {
-        //                img.sprite = mod.iconName;
-        //            }
-        //            else
-        //            {
-        //                img.sprite = placeholderIcon;
-        //            }
-        //            img.transform.SetParent(grid.transform, false);
-
-        //            obj.AddComponent<LayoutElement>();
-        //            var layout = obj.GetComponent<LayoutElement>();
-        //            layout.minWidth = 16f;
-        //            layout.minHeight = 16f;
-        //            layout.preferredWidth = 64f;
-        //            layout.preferredHeight = 64;
-
-        //            SetupStackText(mod, img);
-        //        }
-        //    }
-        //}
 
         private void RoutePortalPanelUpdateText(GameObject routePortalPanel, RoutePortalManager mg)
         {
@@ -1005,43 +952,39 @@ namespace RiskOfRoutes
             }
 
             routePortalPanel.gameObject.SetActive(true);
-            //foreach (var modName in mg.modifiersSynced)
+
+            foreach (var iconName in mg.iconNames)
+            {
+                    GameObject obj = new GameObject("ModifierIcon");
+                    Image img = obj.AddComponent<Image>();
+                    if (iconName != "")
+                    {
+                        img.sprite = IconCatalog.ModifierIconFromDef(iconName);
+                    }
+                    else
+                    {
+                        img.sprite = placeholderIcon;
+                    }
+                    img.transform.SetParent(grid.transform, false);
+                    obj.AddComponent<LayoutElement>();
+                    var layout = obj.GetComponent<LayoutElement>();
+                    layout.minWidth = 16f;
+                    layout.minHeight = 16f;
+                    layout.preferredWidth = 64f;
+                    layout.preferredHeight = 64;
+
+                //todo отображение стаков
+                    AddStackTextToImage(1, img);
+            }
+            //foreach (var mod in mg.modifiersSynced)
             //{
-            //    if (!modName.negative)
+            //    if (!mod.negative)
             //    {
-            //        var mod = new VoidEnemiesModifier(1);
             //        GameObject obj = new GameObject("ModifierIcon");
             //        Image img = obj.AddComponent<Image>();
             //        if (mod.iconName != null)
             //        {
-            //            img.sprite = mod.iconName;
-            //        }
-            //        else
-            //        {
-            //            img.sprite = placeholderIcon;
-            //        }
-            //        img.transform.SetParent(grid.transform, false);
-            //        obj.AddComponent<LayoutElement>();
-            //        var layout = obj.GetComponent<LayoutElement>();
-            //        layout.minWidth = 16f;
-            //        layout.minHeight = 16f;
-            //        layout.preferredWidth = 64f;
-            //        layout.preferredHeight = 64;
-
-            //        AddStackTextToImage(mod.stack, img);
-
-            //    }
-            //}
-            //foreach (var modName in mg.modifiersSynced)
-            //{
-            //    if (!modName.negative)
-            //    {
-            //        var mod = StageModifierCatalog.StageModifierFromDef(modName.name, modName.stack);
-            //        GameObject obj = new GameObject("ModifierIcon");
-            //        Image img = obj.AddComponent<Image>();
-            //        if (mod.iconName != null)
-            //        {
-            //            img.sprite = mod.iconName;
+            //            img.sprite = IconCatalog.ModifierIconFromDef(mod.iconName);
             //        }
             //        else
             //        {
@@ -1137,6 +1080,7 @@ namespace RiskOfRoutes
                     }
 
 
+
                     var mg = portalObject.GetComponent<RoutePortalManager>();
 
 
@@ -1151,26 +1095,8 @@ namespace RiskOfRoutes
                     }
                     Vector3 rdir = portalObject.transform.right;
 
-                    var renderers = portalObject.GetComponentsInChildren<Renderer>();
+                    StageModifierDirector.instance.AddRoutePortalInstance(portalObject);
 
-                    Material mat = SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex).portalMaterial;
-
-                    var edge = bundle.LoadAsset<Texture2D>("darkerBlueEdge");
-                    var center = bundle.LoadAsset<Texture2D>("darkerBlueCenter");
-                    foreach (var renderer in renderers)
-                    {
-                        if (renderer.material.name.Contains("Center"))
-                        {
-                            if (usePortalMaterial.Value)
-                            {
-                                renderer.material = mat;
-                            }
-                            else
-                            {
-                                renderer.material.SetTexture("_RemapTex", center);
-                            }
-                        }
-                    }
 
                 }
 
@@ -1314,7 +1240,7 @@ namespace RiskOfRoutes
                     else
                     {
 
-                        routePortalPanel.SetActive(true);
+                        routePortalPanel.SetActive(false);
 
                     }
                 }

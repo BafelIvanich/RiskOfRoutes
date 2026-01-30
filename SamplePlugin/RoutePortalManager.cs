@@ -1,4 +1,5 @@
-﻿using RoR2;
+﻿using Newtonsoft.Json.Utilities;
+using RoR2;
 using SamplePlugin;
 using SamplePlugin.StageModifiers;
 using System.Collections.Generic;
@@ -22,7 +23,8 @@ namespace RiskOfRoutes
         public RouteMap.RouteNode routeNode;
 
         public List<StageModifier> stageModifiers = new List<StageModifier>();
-        public SyncListString stageModifierNames = new SyncListString();
+
+        public SyncListString iconNames = new SyncListString();
 
         [SyncVar(hook = nameof(UpdateSyncedText))]
         public string modifierTextSynced;
@@ -64,15 +66,35 @@ namespace RiskOfRoutes
                 sceneExitController.useRunNextStageScene = true;
             }
             AttachBubblesToPortal();
-            UpdateText();
+            if (NetworkServer.active)
+                UpdateText(); 
+        }
 
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+            Log.Info("Called method onStartClient");
+            iconNames.Callback += OnIconsChanged;
+
+            UpdateBubbles();
+        }
+
+        private void OnIconsChanged(SyncListString.Operation op, int itemIndex)
+        {
+            UpdateBubbles();
         }
 
         public void UpdateText()
         {
+
             Log.Info("Called method UpdateText");
             if (NetworkServer.active && Run.instance)
             {
+                iconNames.Clear();
+
+                List<string> positiveNames = new List<string>();
+                List<string> negativeNames = new List<string>();
+
                 string positiveText = $"Positive:\n";
                 string negativeText = "Negative:\n";
 
@@ -85,12 +107,16 @@ namespace RiskOfRoutes
                         if (stageModifier.negative)
                         {
                             negativeText += $"{stageModifier.reservedText} - x{stageModifier.stack}" + '\n';
+                            negativeNames.Add(stageModifier.name);
                         }
                         else
                         {
                             positiveText += $"{stageModifier.reservedText} - x{stageModifier.stack}" + '\n';
+                            positiveNames.Add(stageModifier.name);
                         }
                     }
+                        iconNames.AddRange(positiveNames);
+                        iconNames.AddRange(negativeNames);
                 }
                 else
                 {
@@ -99,8 +125,8 @@ namespace RiskOfRoutes
 
                 modifierTextSynced = $"{routeNode.portalType}:\n{positiveText}\n{negativeText}";
                 //Log.Info(positiveText + negativeText);
+                UpdateBubbles();
             }
-            UpdateBubbles();
         }
 
         private void UpdateSyncedText(string newText)
@@ -140,9 +166,9 @@ namespace RiskOfRoutes
             float offsetAngle = 0;
             float radius = 5f;
 
-            for (int i = 0; i < stageModifiers.Count; i++)
+            for (int i = 0; i < iconNames.Count; i++)
             {
-                Log.Info("act");
+                Log.Info($"act {iconNames.Count}");
                 if (RiskOfRoutes.iconBubblePrefab == null)
                 {
                     RiskOfRoutes.iconBubblePrefab = RiskOfRoutes.CreateIconBubblePrefab();
@@ -183,10 +209,16 @@ namespace RiskOfRoutes
                     mat.SetTextureOffset("_MainTex", new Vector2(-0.5f, -0.5f));
 
                     Texture2D tex = null;
-                    if (stageModifiers[i].iconName != null)
+                    if (iconNames[i] != "")
                     {
-                        var icon = IconCatalog.ModifierIconFromDef(stageModifiers[i].iconName);
-                        tex = icon.texture;
+                        var icon = IconCatalog.ModifierIconFromDef(iconNames[i]);
+                        if (icon == null)
+                        {
+                            Log.Info("Uing placehdolde");
+                            tex = RiskOfRoutes.placeholderIcon.texture;
+                        }
+                        else
+                            tex = icon.texture;
                     }
                     else
                     {
@@ -196,7 +228,7 @@ namespace RiskOfRoutes
 
                     mat.SetTexture("_MainTex", tex);
                     rend.materials = new Material[] { mat, mat };
-
+                    Log.Info("Bubble was set up");
                 }
             }
         }
