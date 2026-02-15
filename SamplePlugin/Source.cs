@@ -17,6 +17,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 using UnityHotReloadNS;
 
 //TODO
@@ -201,6 +202,28 @@ namespace RiskOfRoutes
                 IconCatalog.Init(bundle);
             };
 
+            AddRouteManagersToPortals();
+
+        }
+
+        private void AddRouteManagersToPortals()
+        {
+           var shopPortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/PortalShop/PortalShop.prefab").WaitForCompletion();
+           var colossusPortalPrefab =  Addressables.LoadAssetAsync<GameObject>("RoR2/DLC2/Collossus").WaitForCompletion();
+           var goldshoresPortalPrefab =  Addressables.LoadAssetAsync<GameObject>("RoR2/DLC2/Collossus").WaitForCompletion();
+           var hardwareProgPortalPrefab =  Addressables.LoadAssetAsync<GameObject>("RoR2/DLC2/Collossus").WaitForCompletion();
+
+           List<GameObject> vanillaPortals = new List<GameObject>(){shopPortalPrefab, colossusPortalPrefab, goldshoresPortalPrefab, hardwareProgPortalPrefab};
+           foreach(var portal in vanillaPortals)
+            {
+                var mg = portal.GetComponent<RoutePortalManager>();
+                if(mg == null)
+                {
+                    portal.AddComponent<RoutePortalManager>();
+                }
+                Log.Info($"Added route portal manager to {portal.name} prefab");
+                mg.enabled = false;
+            }
         }
 
         private void TeleporterInteraction_OnInteractionBegin(On.RoR2.TeleporterInteraction.orig_OnInteractionBegin orig, TeleporterInteraction self, Interactor activator)
@@ -645,119 +668,70 @@ namespace RiskOfRoutes
         //todo переписать, добавить ванильным префабам mg сразу
         private GameObject OnVanillaPortalSpawn(On.RoR2.DirectorCore.orig_TrySpawnObject orig, DirectorCore self, DirectorSpawnRequest directorSpawnRequest)
         {
-            return orig(self, directorSpawnRequest);
-            //var obj = orig(self, directorSpawnRequest);
+            //return orig(self, directorSpawnRequest);
 
-            //if (obj)
-            //{
-            //    if (directorSpawnRequest.spawnCard)
-            //    {
-            //        if (directorSpawnRequest.spawnCard.name == "iscColossusPortal")
-            //        {
-            //            Log.Info("Director spawned green portal");
-            //            var mgr = obj.GetComponent<RoutePortalManager>();
 
-            //            if (!mgr)
-            //            {
-            //                mgr = obj.AddComponent<RoutePortalManager>();
-            //                Log.Info("Route portal manager Added succesfully");
-            //            }
-            //            Log.Info($"Mgr:{mgr.name}");
-            //            mgr.destinationScene = GetGreenPortalScene();
-            //            mgr.isVanillaPortal = true;
-            //            mgr.isOval = true;
-            //            Log.Info(mgr.destinationScene);
+            var obj = orig(self, directorSpawnRequest);
 
-            //            mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
-            //            Log.Info($"Wjat: {mgr.stageModifiers.Count}");
+            if (!NetworkServer.active)
+            {
+                return obj;
+            }
 
-            //        }
-            //        else if (directorSpawnRequest.spawnCard.name == "iscGoldshoresPortal")
-            //        {
-            //            if (SceneManager.GetActiveScene().name == "goldshores")
-            //            {
-            //                Log.Info("Director spawned goldshores exit portal");
-            //                var mgr = obj.GetComponent<RoutePortalManager>();
+            if (obj)
+            {
+               if (directorSpawnRequest.spawnCard && directorSpawnRequest.spawnCard.name != null)
+               {
+                var name = directorSpawnRequest.spawnCard.name;
+                    if (name.Contains("Portal"))
+                    {
+                        Log.Info($"Director spawned {name} portal");
+                        var mgr = obj.GetComponent<RoutePortalManager>();
+                        if(!mgr)
+                        {
+                            Log.Error($"RoutePortalManager is missing for portal {name}");
+                        }
+                        var exMgr = obj.GetComponent<SceneExitController>();
+                        if(exMgr && !exMgr.useRunNextStageScene)
+                        {
+                            Log.Info("Portal is not leading to the next stage, no routes");
+                            return obj;
+                        }
 
-            //                if (!mgr)
-            //                {
-            //                    mgr = obj.AddComponent<RoutePortalManager>();
-            //                    Log.Info("Added succesfully");
-            //                }
-            //                mgr.enabled = true;
-            //                Log.Info($"Mgr:{mgr.name}");
-            //                mgr.destinationScene = Run.instance.nextStageScene;
-            //                mgr.isVanillaPortal = true;
-            //                mgr.isOval = true;
-            //                Log.Info(mgr.destinationScene);
 
-            //                mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
-            //                Log.Info($"Wjat: {mgr.stageModifiers.Count}");
-            //            }
-            //            else
-            //            {
-            //                Log.Info($"Director spawned portal leading to goldshores");
-            //                return obj;
-            //            }
-            //        }
-            //        else if (directorSpawnRequest.spawnCard.name == "iscShopPortal")
-            //        {
-            //            Log.Info("Director spawned blue portal");
-            //            var exMgr = obj.GetComponent<SceneExitController>();
-            //            if (!exMgr.useRunNextStageScene)
-            //            {
-            //                Log.Info("Portal is not leading to the next stage.");
-            //                return obj;
-            //            }
+                        if(name == "iscColossusPortal")
+                        {
+                            mgr.destinationSceneIndex = GetGreenPortalSceneIndex();
+                            mgr.isOval = true;
+                        }
+                        else if (name == "iscGoldshoresPortal")
+                        {
+                            if (SceneManager.GetActiveScene().name != "goldshores") return obj;
+                            mgr.destinationSceneIndex = (int) Run.instance.nextStageScene.sceneDefIndex;
+                            mgr.isOval = true;
+                        }
+                        else if (name == "iscShopPortal")
+                        {
+                            mgr.destinationSceneIndex = (int) Run.instance.nextStageScene.sceneDefIndex;
+                            mgr.isOval = true;
+                         }
+                        else if (name == "iscHardwareProgPortal")
+                        {
+                            mgr.destinationSceneIndex = (int) Run.instance.nextStageScene.sceneDefIndex;
+                            mgr.isOval = false;
+                        }
 
-            //            var mgr = obj.GetComponent<RoutePortalManager>();
+                        mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
+                        mgr.isVanillaPortal = true;
+                        mgr.enabled = true;
+                        
 
-            //            if (!mgr)
-            //            {
-            //                mgr = obj.AddComponent<RoutePortalManager>();
-            //                Log.Info("Added succesfully");
-            //            }
-            //            mgr.enabled = true;
-            //            Log.Info($"Mgr:{mgr.name}");
-            //            mgr.destinationScene = GetGreenPortalScene();
-            //            mgr.isVanillaPortal = true;
-            //            mgr.isOval = true;
-            //            Log.Info(mgr.destinationScene);
+                    }
 
-            //            mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
-            //            Log.Info($"Wjat: {mgr.stageModifiers.Count}");
-            //        }
-            //        else if (directorSpawnRequest.spawnCard.name == "iscHardwareProgPortal")
-            //        {
-            //            //если текущий стейдж 3 то есть manager
-            //            if (Stage.instance.sceneDef.stageOrder == 3)
-            //            {
-            //                Log.Info("Director spawned drone portal");
-            //                var mgr = obj.GetComponent<RoutePortalManager>();
+               }
+            }
 
-            //                if (!mgr)
-            //                {
-            //                    mgr = obj.AddComponent<RoutePortalManager>();
-            //                    Log.Info("Added succesfully");
-            //                }
-            //                mgr.enabled = true;
-            //                Log.Info($"Mgr:{mgr.name}");
-            //                var scene = SceneCatalog.GetSceneDefFromSceneName("conduitcanyon");
-            //                if (scene == null) scene = Run.instance.nextStageScene;
-            //                mgr.destinationScene = scene;
-            //                mgr.isVanillaPortal = true;
-            //                mgr.isOval = false;
-            //                Log.Info(mgr.destinationScene);
-
-            //                mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
-            //                Log.Info($"Wjat: {mgr.stageModifiers.Count}");
-            //            }
-            //        }
-
-            //    }
-            //}
-
-            //return obj;
+            return obj;
 
         }
 
@@ -854,7 +828,7 @@ namespace RiskOfRoutes
             textComp.font = bomb;
             textComp.fontSize = 12f;
 
-            textComp.alignment = TextAlignmentOptions.TopRight;
+           textComp.alignment = TextAlignmentOptions.TopRight;
             if (modStack > 1) textComp.text = $"x{modStack}";
         }
 
@@ -1135,9 +1109,9 @@ namespace RiskOfRoutes
 
         }
 
-        public static SceneDef GetGreenPortalScene()
+        public static int GetGreenPortalSceneIndex()
         {
-            SceneDef sceneDef = null;
+            SceneIndex sceneIndex = SceneIndex.Invalid;
             int stageOrder = Stage.instance.sceneDef.stageOrder;
             int num = Run.instance.nextStageScene.stageOrder;
             if (num != stageOrder + 1 && stageOrder <= 5)
@@ -1148,24 +1122,24 @@ namespace RiskOfRoutes
             switch (num)
             {
                 case 1:
-                    sceneDef = SceneCatalog.GetSceneDefFromSceneName("lemuriantemple");
+                    sceneIndex = SceneCatalog.FindSceneIndex("lemuriantemple");
                     break;
                 case 2:
-                    sceneDef = SceneCatalog.GetSceneDefFromSceneName("lemurianTemple");
+                    sceneIndex = SceneCatalog.FindSceneIndex("lemurianTemple");
                     break;
                 case 3:
-                    sceneDef = SceneCatalog.GetSceneDefFromSceneName("habitat");
+                    sceneIndex = SceneCatalog.FindSceneIndex("habitat");
                     break;
                 case 4:
-                    sceneDef = SceneCatalog.GetSceneDefFromSceneName("meridian");
+                    sceneIndex = SceneCatalog.FindSceneIndex("meridian");
                     break;
                 case 5:
-                    sceneDef = SceneCatalog.GetSceneDefFromSceneName("lemuriantemple");
+                    sceneIndex = SceneCatalog.FindSceneIndex("lemuriantemple");
 
                     break;
             }
-            Log.Info($"SELECTED SCENE: {sceneDef.cachedName}");
-            return sceneDef;
+            Log.Info($"SELECTED SCENE: {sceneIndex}");
+            return (int) sceneIndex;
         }
 
         static bool IsValidNextStage(SceneDef sceneDef)
