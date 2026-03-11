@@ -6,7 +6,7 @@ using System.Collections.Generic;
 public class RouteMap
 {
     public int width = 6;
-    public int height = 5;
+    public const int height = 5;
     public RouteNode[,] mapGrid = new RouteNode[6, 5];
 
     public RouteMap(Xoroshiro128Plus rng)
@@ -28,6 +28,7 @@ public class RouteMap
         if (mapGrid[2, 1] != null) mapGrid[0, 0].right = mapGrid[2, 1];
         Log.Info($"Children:{mapGrid[0, 0].GetPaths().Count}");
         SetupRewards();
+
     }
 
     public void SetupRewards()
@@ -35,9 +36,9 @@ public class RouteMap
         Log.Error("Setup rewards");
         for (int i = 0; i < width; i++)
         {
-            if (mapGrid[i, 2].portalType != RoutePortalType.None)
+            if (mapGrid[i, 3].portalType != RoutePortalType.None)
             {
-                mapGrid[i, 2].portalType = RoutePortalType.ChefType;
+                mapGrid[i, 3].portalType = RoutePortalType.ChefType;
                 Log.Info("Reward set");
             }
             else
@@ -121,6 +122,7 @@ public class RouteMap
     {
         return mapGrid[0, 0];
     }
+
 
     public class RouteNode
     {
