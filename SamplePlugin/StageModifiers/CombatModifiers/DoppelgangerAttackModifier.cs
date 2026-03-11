@@ -34,7 +34,7 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
             orig(self);
             if (!NetworkServer.active || self.isGameOverServer) return;
 
-            Log.Info($"{self.fixedTime}:{kd}");
+            //Log.Info($"{self.fixedTime}:{kd}");
 
             if (self.fixedTime > kd)
             {
