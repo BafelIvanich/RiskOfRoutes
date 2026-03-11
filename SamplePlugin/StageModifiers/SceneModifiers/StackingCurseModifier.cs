@@ -3,7 +3,6 @@ using RoR2;
 using SamplePlugin.StageModifiers;
 using System;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 namespace RiskOfRoutes.StageModifiers.SceneModifiers
 {

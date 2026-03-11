@@ -2,7 +2,6 @@
 using RoR2;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 
 namespace SamplePlugin.StageModifiers.SceneModifiers
