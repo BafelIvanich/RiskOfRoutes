@@ -8,7 +8,6 @@ using SamplePlugin.StageModifiers.CombatModifiers;
 using SamplePlugin.StageModifiers.OtherModifiers;
 using SamplePlugin.StageModifiers.SceneModifiers;
 using System.Collections.Generic;
-using UnityEngine;
 
 //Rare: random tier 3 positive, more credits on negative?
 //Chef: guaranteed chef, food printers more likely?
@@ -46,7 +45,7 @@ namespace RiskOfRoutes.StageModifiers
         "Mountain",
         "SoulCost",
         "Doppelganger",
-        
+
         "FriendlyFire",
         "Command",
         "Delusion",
@@ -66,7 +65,7 @@ namespace RiskOfRoutes.StageModifiers
         "Swarms",
         "ShadowClone",
         "TeamDeath"
-        
+
         };
 
         public static StageModifier StageModifierFromDef(string def, int stack = 1)
