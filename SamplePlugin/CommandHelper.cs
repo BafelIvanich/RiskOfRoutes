@@ -25,8 +25,10 @@ namespace SamplePlugin
         [ConCommand(commandName = "green", flags = ConVarFlags.ExecuteOnServer, helpText = "Get nexeet stages")]
         private static void GetNextGreenStage(ConCommandArgs args)
         {
-            var scene = RiskOfRoutes.RiskOfRoutes.GetGreenPortalScene();
-            Log.Info($"{scene.cachedName}");
+            //var scene = RiskOfRoutes.RiskOfRoutes.GetGreenPortalScene();
+            //Log.Info($"{scene.cachedName}");
+            Log.Info($"Modul:{Stage.instance.sceneDef.stageOrder}");
+
         }
 
         [ConCommand(commandName = "dccs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all cards for enemies that can spawn on current stage")]
@@ -42,8 +44,20 @@ namespace SamplePlugin
                     Log.Info($"DirectorCard {ch.spawnCard.name}, cost: {ch.cost}, weight: {ch.selectionWeight}");
                 }
             }
+        }
 
-
+        [ConCommand(commandName = "node", flags = ConVarFlags.ExecuteOnServer, helpText = "node")]
+        private static void GetCurrentNode(ConCommandArgs args)
+        {
+            var node = StageModifierDirector.instance.currentNode;
+            if(node == null)
+            {
+                Log.Error("Current node is null");
+            }
+            else
+            {
+                Log.Info($"Current node is {node.x},{node.y} with {node.GetPaths().Count} children");
+            }
         }
 
         [ConCommand(commandName = "availableElites", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
