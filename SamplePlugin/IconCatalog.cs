@@ -2,10 +2,7 @@
 using RoR2;
 using SamplePlugin;
 using SamplePlugin.StageModifiers.OtherModifiers;
-using SamplePlugin.StageModifiers.SceneModifiers;
-using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
@@ -22,7 +19,7 @@ namespace RiskOfRoutes
             Log.Info("Icon catalog init called");
             iconBundle = bundle;
 
-            foreach(var modDef in StageModifierCatalog.AllDefs)
+            foreach (var modDef in StageModifierCatalog.AllDefs)
             {
                 var mod = StageModifierCatalog.StageModifierFromDef(modDef);
 
@@ -31,13 +28,13 @@ namespace RiskOfRoutes
                 if (spriteNames.ContainsKey(mod.iconName)) continue;
 
                 Sprite sprite;
-                if(mod.iconName.Contains("RoR2"))
+                if (mod.iconName.Contains("RoR2"))
                 {
                     sprite = Addressables.LoadAssetAsync<Sprite>(mod.iconName).WaitForCompletion();
                 }
                 else
                 {
-                    if(mod is ArtifactModifier)
+                    if (mod is ArtifactModifier)
                     {
                         Log.Info("Loading artifact icon");
                         ArtifactDef art = RoR2.ArtifactCatalog.FindArtifactDef(mod.iconName);
@@ -55,7 +52,7 @@ namespace RiskOfRoutes
                     }
                 }
 
-                if(sprite!=null)
+                if (sprite != null)
                 {
                     spriteNames.Add(mod.name, sprite);
                 }
@@ -69,11 +66,11 @@ namespace RiskOfRoutes
             {
                 var name = itemInfo.internalName;
                 ItemIndex itemIndex = RoR2.ItemCatalog.FindItemIndex(name);
-                if(itemIndex!=ItemIndex.None)
+                if (itemIndex != ItemIndex.None)
                 {
                     var itemDef = RoR2.ItemCatalog.GetItemDef(itemIndex);
                     Sprite sprite = itemDef.pickupIconSprite;
-                    if(sprite!=null)
+                    if (sprite != null)
                     {
                         spriteNames.Add(name, sprite);
                     }
@@ -98,7 +95,7 @@ namespace RiskOfRoutes
             }
             else
             {
-                Log.Error($"Icon not found for modifier with name {def}");
+                //Log.Error($"Icon not found for modifier with name {def}");
                 return RiskOfRoutes.placeholderIcon;
             }
         }
