@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json.Utilities;
-using RoR2;
+﻿using RoR2;
 using SamplePlugin;
 using SamplePlugin.StageModifiers;
 using System.Collections.Generic;
@@ -15,13 +14,16 @@ namespace RiskOfRoutes
         public SceneExitController sceneExitController;
         public PurchaseInteraction purchaseInteraction; //для seer'a
 
+        [SyncVar(hook = nameof(OnManagerEnabled))]
+        public bool isManagerEnabled = false;
+        [SyncVar]
         public bool isVanillaPortal = false;
+        [SyncVar]
         public bool isOval = false;
-
+        [SyncVar]
         public bool isSeerStation;
 
         public RouteMap.RouteNode routeNode;
-
         public List<StageModifier> stageModifiers = new List<StageModifier>();
 
         public SyncListString iconNames = new SyncListString();
@@ -51,6 +53,8 @@ namespace RiskOfRoutes
                 if (purchaseInteraction)
                 {
                     purchaseInteraction.onPurchase.AddListener(OnSeerActivation);
+                    if (NetworkServer.active)
+                        UpdateText();
                     return;
                 }
                 else
@@ -65,18 +69,35 @@ namespace RiskOfRoutes
             {
                 sceneExitController.useRunNextStageScene = true;
             }
-            AttachBubblesToPortal();
-            if (NetworkServer.active)
-                UpdateText(); 
+        }
+
+        private void OnManagerEnabled(bool val)
+        {
+            isManagerEnabled = val;
+            this.enabled = val;
+
+            if (val && !NetworkServer.active)
+            {
+                UpdateBubbles();
+            }
         }
 
         public override void OnStartClient()
         {
             base.OnStartClient();
             Log.Info("Called method onStartClient");
+
+            this.enabled = isManagerEnabled;
+
+            iconNames.Callback -= OnIconsChanged;
             iconNames.Callback += OnIconsChanged;
 
-            UpdateBubbles();
+            if (this.enabled)
+            {
+                UpdateBubbles();
+
+            }
+
         }
 
         private void OnIconsChanged(SyncListString.Operation op, int itemIndex)
@@ -86,7 +107,6 @@ namespace RiskOfRoutes
 
         public void UpdateText()
         {
-
             Log.Info("Called method UpdateText");
             if (NetworkServer.active && Run.instance)
             {
@@ -115,15 +135,27 @@ namespace RiskOfRoutes
                             positiveNames.Add(stageModifier.name);
                         }
                     }
-                        iconNames.AddRange(positiveNames);
-                        iconNames.AddRange(negativeNames);
+                    foreach (var name in positiveNames)
+                        iconNames.Add(name);
+                    foreach (var name in negativeNames)
+                        iconNames.Add(name);
                 }
                 else
                 {
                     Log.Error("NoModifiers");
                 }
 
-                modifierTextSynced = $"{routeNode.portalType}:\n{positiveText}\n{negativeText}";
+                if (routeNode != null)
+                {
+                    modifierTextSynced = $"{routeNode.portalType}:{routeNode.x}.{routeNode.y}:\n{positiveText}\n{negativeText}";
+                }
+                else
+                {
+                    //TODO
+                    //Log.Error("Route node is null");
+                    modifierTextSynced = $"{positiveText}\n{negativeText}";
+                }
+
                 //Log.Info(positiveText + negativeText);
                 UpdateBubbles();
             }
@@ -137,7 +169,14 @@ namespace RiskOfRoutes
 
         public void UpdateBubbles()
         {
+            if (isSeerStation) return;
             var portalCenter = transform.Find("PortalCenter");
+            if (portalCenter == null)
+            {
+                Log.Error("Portal center is null");
+                return;
+            }
+
             for (int i = portalCenter.childCount - 1; i >= 0; i--)
             {
                 var child = portalCenter.GetChild(i);
@@ -154,13 +193,16 @@ namespace RiskOfRoutes
         {
             if (isSeerStation) return;
             Log.Info("Really attaching");
+
             float portalScaleX = 1f;
             float portalScaleY = 1f;
+
             if (isOval)
             {
                 portalScaleX = 0.7f;
                 portalScaleY = 1.26f;
             }
+
             float arcAngle = 60f;
             float startAngle = 90f;
             float offsetAngle = 0;
@@ -274,7 +316,7 @@ namespace RiskOfRoutes
                 Log.Info($"inside RPM: {Run.instance.nextStageScene.cachedName}");
                 //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("ai_test");
                 sceneExitController.Begin();
-                StageModifierDirector.instance.current = routeNode;
+                StageModifierDirector.instance.currentNode = routeNode;
             }
         }
 
@@ -289,6 +331,7 @@ namespace RiskOfRoutes
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
                 StageModifierDirector.instance.reservedModifiers = stageModifiers;
+                Run.instance.nextStageScene = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
                 Log.Info("Seer got modifiers");
             }
         }
@@ -298,5 +341,5 @@ namespace RiskOfRoutes
 
 public enum RoutePortalType
 {
-    Rare, ItemType, DroneType, ChefType, None
+    None, Rare, ItemType, DroneType, ChefType, Colossus, Hardware, Goldshores, Shop
 }
