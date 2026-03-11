@@ -2,7 +2,6 @@
 using RoR2;
 using System;
 using System.Reflection;
-using UnityEngine;
 
 namespace SamplePlugin.StageModifiers.CombatModifiers
 {
@@ -14,8 +13,8 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public Tier2ElitesEarlierModifier()
         {
-            activeText = "More powerful elites might appear earlier";
-            reservedText = "More powerful elites might appear earlier";
+            activeText = "Post loop elites might appear earlier";
+            reservedText = "Post loop elites might appear earlier";
             name = "Powerful elites";
             var ic = "tier2elites";
             stackable = false;
