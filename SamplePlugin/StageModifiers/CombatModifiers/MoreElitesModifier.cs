@@ -3,7 +3,6 @@ using RoR2;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 
 namespace SamplePlugin.StageModifiers.CombatModifiers
