@@ -1,6 +1,4 @@
 ﻿using SamplePlugin.StageModifiers;
-using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 namespace RiskOfRoutes.StageModifiers.OtherModifiers
 {
@@ -11,7 +9,7 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
         {
             name = "Save mountain effect";
             reservedText = "Save all mountain shrine effects from the current stage.";
-            if(RoR2.TeleporterInteraction.instance)
+            if (RoR2.TeleporterInteraction.instance)
             {
                 stack = RoR2.TeleporterInteraction.instance.shrineBonusStacks;
             }
