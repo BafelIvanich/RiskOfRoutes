@@ -62,7 +62,7 @@ namespace SamplePlugin
         public int printerItemModifierLimit = 3;
 
         public RouteMap routeMap;
-        public RouteMap.RouteNode current;
+        public RouteMap.RouteNode currentNode;
 
         [SyncVar(hook = nameof(OnStageUpdate))]
         public int currStage = 0;
@@ -100,6 +100,10 @@ namespace SamplePlugin
         ];
 
         public List<ModifierDef> allModifiers;
+        public List<ModifierDef> itemModifiersPool;
+        public List<ModifierDef> droneModifiersPool;
+        public List<ModifierDef> rareModifiersPool;
+        public List<ModifierDef> chefModifiersPool;
 
         public override void OnStartServer()
         {
@@ -123,8 +127,8 @@ namespace SamplePlugin
             Log.Info("Creating route map");
             routeMap = new RouteMap(run.runRNG);
 
-            current = routeMap.GetStartingNode();
-            Log.Info($"Current:{current.x},{current.y} that has {current.GetPaths().Count} paths");
+            currentNode = routeMap.GetStartingNode();
+            Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
         }
 
         public void Awake()
@@ -136,7 +140,13 @@ namespace SamplePlugin
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<StageModifier>();
             bannedModifiers = new List<ModifierDef>();
+
             allModifiers = new List<ModifierDef>();
+            itemModifiersPool = new List<ModifierDef>();
+            droneModifiersPool = new List<ModifierDef>();
+            rareModifiersPool = new List<ModifierDef>();
+            chefModifiersPool = new List<ModifierDef>();
+
             activePortalInstances = new List<GameObject>();
             DontDestroyOnLoad(gameObject);
 
@@ -202,8 +212,25 @@ namespace SamplePlugin
 
             foreach (var item in itemsInfo)
             {
-                allModifiers.Add(new ModifierDef(item.internalName + " Printer", item.cost, item.weight, false));
+                itemModifiersPool.Add(new ModifierDef(item.internalName + " Printer", item.cost, item.weight, false));
             }
+            droneModifiersPool.Add(new ModifierDef("DroneBossGreen", ModifierTier.Tier1, 1f, false));
+            droneModifiersPool.Add(new ModifierDef("MoreDrones", ModifierTier.Tier1, 1f, true));
+
+
+
+            var modifierPools = new List<List<ModifierDef>>() { rareModifiersPool, droneModifiersPool, itemModifiersPool };
+            //дефолтные
+            foreach (var modifierPool in modifierPools)
+            {
+                allModifiers.Add(new ModifierDef("MoreElites", ModifierTier.Tier1, 1f, true));
+                allModifiers.Add(new ModifierDef("LunarEnemies", ModifierTier.Tier3, 1f, true));
+                allModifiers.Add(new ModifierDef("VoidEnemies", ModifierTier.Tier3, 1f, true));
+            }
+
+
+            rareModifiersPool.Add(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false));
+            rareModifiersPool.Add(new ModifierDef("BossRedItem", ModifierTier.Tier3, 1f, false, new string[] { "BossYellowItem", "DroneBossGreen" }));
 
 
         }
@@ -267,12 +294,14 @@ namespace SamplePlugin
             }
             OnStageUpdate(currStage);
             activePortalInstances.Clear();
+
         }
 
         private void OnStageUpdate(int newValue)
         {
             currStage = Run.instance.stageClearCount + 1;
             Log.Info("Method updating syncvar was called");
+
         }
 
         private void Stage_onServerStageComplete(RoR2.Stage obj)
@@ -280,6 +309,15 @@ namespace SamplePlugin
             Log.Info($"Stage completed, clearing {activeModifiers.Count} modifiers");
 
             foreach (StageModifier modifier in activeModifiers) modifier.OnEnd();
+
+            Log.Info($"Modul:{Stage.instance.sceneDef.stageOrder}");
+            if (Stage.instance.sceneDef.stageOrder == 5)
+            {
+                routeMap = new RouteMap(Run.instance.runRNG);
+                Log.Info("Created new map");
+                currentNode = routeMap.GetStartingNode();
+                Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
+            }
 
             activeModifiers.Clear();
             modifiersSynced.Clear();
@@ -296,23 +334,28 @@ namespace SamplePlugin
             if (mg)
             {
                 //lemurian temple, habitat
-                if ((mg.destinationSceneIndex == 35 || mg.destinationSceneIndex == 21))
+                if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("lemurianTemple") || mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("habitat")))
                 {
                     modifiers.Add("Aurelionite", 1);
+                    Log.Info("Added aurelionite");
+                }
+                else
+                {
+                    Log.Info("UIndex:" + mg.destinationSceneIndex + $"{SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex)}");
                 }
 
                 //todo посмотреть их id
-                //if ((mg.destinationScene.baseSceneName == "conduitcanyon" || mg.destinationScene.baseSceneName == "repurposedcrater"))
-                //{
-                //    modifiers.Add("DroneBossRed", 1);
-                //}
+                if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("conduitcanyon") || mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("repurposedcrater")))
+                {
+                    modifiers.Add("DroneBossRed", 1);
+                }
             }
 
             int routePortalCredits = routeCredits;
-            int limit = 100;
-            while (routePortalCredits > 0 && limit > 0)
+            int attempts = 100;
+            while (routePortalCredits > 0 && attempts > 0 && modifiers.Count < 5)
             {
-                limit--;
+                attempts--;
                 ModifierDef currentModifier = SelectModifier(weightedSelection, routePortalCredits, bannedFromSelection);
                 if (currentModifier == null) break;
 
@@ -370,6 +413,17 @@ namespace SamplePlugin
         {
             WeightedSelection<ModifierDef> res = new WeightedSelection<ModifierDef>();
 
+            //var mgr = portal.GetComponent<RoutePortalManager>();
+            //if(mgr == null)
+            //{
+            //    Log.Error("Mgr is null");
+            //}
+            //if(mgr.routeNode == null)
+            //{
+            //    Log.Error("error");
+            //    return res;
+            //}
+
             foreach (var modDef in allModifiers)
             {
                 if (modDef.isAvailable())
@@ -382,12 +436,24 @@ namespace SamplePlugin
             return res;
         }
 
+        public List<ModifierDef> GetModifiersFromCategory(RoutePortalType type)
+        {
+            switch (type)
+            {
+                case RoutePortalType.None: return allModifiers;
+                case RoutePortalType.ItemType: return itemModifiersPool;
+                case RoutePortalType.DroneType: return droneModifiersPool;
+                case RoutePortalType.Rare: return rareModifiersPool;
+                default: return allModifiers;
+            }
+        }
+
         public void AddRoutePortalInstance(GameObject portal)
         {
             if (portal != null)
             {
                 var mg = portal.GetComponent<RoutePortalManager>();
-                if(mg != null)
+                if (mg != null)
                 {
                     activePortalInstances.Add(portal);
                     Log.Info($"StageModifierDirector: Added portal instance type {mg.routeNode.portalType}");
@@ -406,7 +472,7 @@ namespace SamplePlugin
 
         public void GetModifiersFromRandomPortal()
         {
-            if(activePortalInstances == null || activePortalInstances.Count == 0)
+            if (activePortalInstances == null || activePortalInstances.Count == 0)
             {
                 Log.Error("There are no portal instances to get modifiers from");
                 return;
@@ -416,10 +482,10 @@ namespace SamplePlugin
             if (mg != null)
             {
                 reservedModifiers = mg.stageModifiers;
-                foreach(var p in activePortalInstances)
+                foreach (var p in activePortalInstances)
                 {
                     var gi = p.GetComponent<GenericInteraction>();
-                    if(gi!=null)
+                    if (gi != null)
                     {
                         gi.enabled = false;
                     }
@@ -567,8 +633,8 @@ namespace SamplePlugin
 
         public List<RouteMap.RouteNode> GetAvailableNodes()
         {
-            if (current != null)
-                return current.GetPaths();
+            if (currentNode != null)
+                return currentNode.GetPaths();
             else
             {
                 Log.Error("Current is null");
