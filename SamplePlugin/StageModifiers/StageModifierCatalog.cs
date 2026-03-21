@@ -33,13 +33,13 @@ namespace RiskOfRoutes.StageModifiers
         "DroneBossRed",
         "MoreElites",
         "MoreDrones",
+        "UpgradeDrones",
         "LunarEnemies",
         "VoidEnemies",
         "YellowPrinter",
         "RedPrinter",
         "OnlyFlying",
         "PowerfulElites",
-        "Mystery",
         "Repair",
         "WanderingChef",
         "Mountain",
@@ -64,7 +64,8 @@ namespace RiskOfRoutes.StageModifiers
         "Bomb",
         "Swarms",
         "ShadowClone",
-        "TeamDeath"
+        "TeamDeath",
+        "Mystery",
 
         };
 
@@ -85,12 +86,12 @@ namespace RiskOfRoutes.StageModifiers
                 case "RedPrinter": return new RedPrinterModifier(stack);
                 case "OnlyFlying": return new OnlyFlyingEnemiesModifier();
                 case "PowerfulElites": return new Tier2ElitesEarlierModifier();
-                case "Mystery": return new MysteryModifier();
                 case "Repair": return new RepairConsumedItemsModifier();
                 case "WanderingChef": return new WanderingChefModifier();
                 case "Mountain": return new SaveMountainEffectModifier();
-                case "SoulCost": return new StackingCurseModifier(stack);
+                case "SoulCost": return new SoulCostModifier(stack);
                 case "Doppelganger": return new DoppelgangerAttackModifier();
+                case "UpgradeDrones": return new UpgradeDronesModifier(stack);
 
                 //артефакты
                 case "FriendlyFire": return new ArtifactModifier(RoR2.RoR2Content.Artifacts.FriendlyFire, false);
@@ -112,6 +113,8 @@ namespace RiskOfRoutes.StageModifiers
                 case "Swarms": return new ArtifactModifier(RoR2.RoR2Content.Artifacts.Swarms, false);
                 case "ShadowClone": return new ArtifactModifier(RoR2.RoR2Content.Artifacts.ShadowClone, false);
                 case "TeamDeath": return new ArtifactModifier(RoR2.RoR2Content.Artifacts.TeamDeath, false);
+                //
+                case "Mystery": return new ArtifactModifier(Artifact.Mystery, false);
 
 
 
