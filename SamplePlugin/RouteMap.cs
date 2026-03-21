@@ -5,67 +5,89 @@ using System.Collections.Generic;
 
 public class RouteMap
 {
-    public int width = 6;
-    public const int height = 5;
-    public RouteNode[,] mapGrid = new RouteNode[6, 5];
+    public int width;
+    public int height;
+    public int startingRoutes = 3;
+
+    public bool isMoonVisited = false;
+
+    public RouteNode[,] mapGrid;
+    public RouteNode root;
 
     public RouteMap(Xoroshiro128Plus rng)
     {
-        mapGrid = new RouteNode[width, height];
+        width = 3;
+        height = 5;
+        //+1 к ширине под порталы длс2 длс3
+        mapGrid = new RouteNode[width + 1, height];
         //старт нод
         mapGrid[0, 0] = new RouteNode(0, 0);
+        root = mapGrid[0, 0];
+        root.visited = true;
+        root.portalType = RoutePortalType.Starting;
+
+
         for (int i = 0; i < width; i++)
-        {
             for (int j = 1; j < height; j++)
-            {
                 mapGrid[i, j] = new RouteNode(i, j);
-            }
-        }
-        Log.Info("Geeeet");
-        SetupPaths(rng);
-        if (mapGrid[0, 1] != null) mapGrid[0, 0].left = mapGrid[0, 1];
-        if (mapGrid[1, 1] != null) mapGrid[0, 0].front = mapGrid[1, 1];
-        if (mapGrid[2, 1] != null) mapGrid[0, 0].right = mapGrid[2, 1];
-        Log.Info($"Children:{mapGrid[0, 0].GetPaths().Count}");
-        SetupRewards();
+
+        List<RouteNode> availablePaths = SetupPaths(rng);
+        availablePaths.Sort((a, b) => a.x.CompareTo(b.x));
+
+        if (availablePaths.Count >= 1) root.left = availablePaths[0];
+        if (availablePaths.Count >= 2) root.front = availablePaths[1];
+        if (availablePaths.Count >= 3) root.right = availablePaths[2];
+        SetupRewards(rng);
 
     }
 
-    public void SetupRewards()
+    public void SetupRewards(Xoroshiro128Plus rng)
     {
-        Log.Error("Setup rewards");
+        //TODO PLACEHOLDER
         for (int i = 0; i < width; i++)
         {
             if (mapGrid[i, 3].portalType != RoutePortalType.None)
             {
                 mapGrid[i, 3].portalType = RoutePortalType.ChefType;
-                Log.Info("Reward set");
             }
-            else
+            if (mapGrid[i, 2].portalType != RoutePortalType.None)
             {
-                Log.Error(mapGrid[i, 2].portalType);
+                mapGrid[i, 2].portalType = rng.NextElementUniform(new List<RoutePortalType>() { RoutePortalType.ItemType, RoutePortalType.DroneType, RoutePortalType.Rare });
+            }
+            if (mapGrid[i, 1].portalType != RoutePortalType.None)
+            {
+                mapGrid[i, 1].portalType = rng.NextElementUniform(new List<RoutePortalType>() { RoutePortalType.ItemType, RoutePortalType.DroneType, RoutePortalType.Rare });
+            }
+            if (mapGrid[i, 4].portalType != RoutePortalType.None)
+            {
+                mapGrid[i, 4].portalType = rng.NextElementUniform(new List<RoutePortalType>() { RoutePortalType.ItemType, RoutePortalType.DroneType, RoutePortalType.Rare });
             }
         }
     }
 
-    public void SetupPaths(Xoroshiro128Plus rng)
+    public List<RouteNode> SetupPaths(Xoroshiro128Plus rng)
     {
+        List<RouteNode> pathNodes = new List<RouteNode>();
+        List<int> nums = new List<int>();
         for (int i = 0; i < width; i++)
         {
-            var node = mapGrid[i, 1];
+            nums.Add(i);
+        }
+        for (int i = 0; i < startingRoutes; i++)
+        {
+            if (nums.Count == 0) break;
+            Log.Info("Nums" + nums.Count);
+            int num = rng.NextElementUniform(nums);
+            nums.Remove(num);
+
+            var node = mapGrid[num, 1];
+            if (node == null) continue;
+
             node.portalType = RoutePortalType.Rare;
             CreateRoute(node, node.x, node.y, rng);
-            Log.Info($"Created route starting with :{mapGrid[i, 1]}");
-            if (mapGrid[i, 1] == null)
-            {
-                Log.Error("\tWTF");
-            }
-            else
-            {
-                Log.Info("\tGood");
-            }
-            //PrintRoute(node);
+            pathNodes.Add(node);
         }
+        return pathNodes;
     }
 
     private void PrintRoute(RouteNode node)
@@ -102,7 +124,184 @@ public class RouteMap
         }
         if (available.Count == 0) return;
         var next = rng.NextElementUniform(available);
+
+        if (available.Count > 1 && rng.nextNormalizedFloat < 0.2f)
+        {
+            available.Remove(next);
+            var branchNext = rng.NextElementUniform(available);
+            branchNext.portalType = RoutePortalType.Rare;
+            Connect(curr, branchNext);
+            CreateRoute(branchNext, branchNext.x, branchNext.y, rng);
+        }
+
         next.portalType = RoutePortalType.Rare;
+        Connect(curr, next);
+        CreateRoute(next, next.x, next.y, rng);
+    }
+
+    //currentLayer для случаев: goldshores/shop в colossus
+    public RouteNode CreateColossusNode(RouteNode current, bool currentLayer = false)
+    {
+        if (current.y == height - 1 || current.y >= 3) return null;
+        int y = currentLayer ? current.y : current.y + 1;
+
+        Log.Info("Creating colossus node");
+        //проверка есть ли
+        RouteNode colossusNode = null;
+        for (int i = 0; i < width + 1; i++)
+        {
+            if (mapGrid[i, y] != null && (mapGrid[i, y].portalType == RoutePortalType.Colossus || mapGrid[i, y].portalType == RoutePortalType.FalseSon))
+            {
+                colossusNode = mapGrid[i, y];
+                Log.Info("Floor already has colossus node");
+                return colossusNode;
+            }
+        }
+        Log.Info("Has no colossus nodes");
+
+        //в пустое место
+        for (int offset = 0; offset < width; offset++)
+        {
+            int[] closest = { current.x + offset, current.x - offset };
+            foreach (int x in closest)
+            {
+                if (x >= 0 && x < width && mapGrid[x, y].portalType == RoutePortalType.None)
+                {
+                    colossusNode = mapGrid[x, y];
+                    break;
+                }
+            }
+            if (colossusNode != null) break;
+        }
+
+        //места нет
+        if (colossusNode == null)
+        {
+            Log.Warning("No place for colossus node, placing on extra");
+            mapGrid[width, y] = new RouteNode(width, y);
+            colossusNode = mapGrid[width, y];
+            //colossusNode = mapGrid[6,y];
+        }
+
+        if (colossusNode != null)
+        {
+            colossusNode.portalType = y != 3 ? RoutePortalType.Colossus : RoutePortalType.FalseSon;
+            current.portalNode = colossusNode;
+
+            ConnectToRandomNodeNextFloor(colossusNode);
+
+            return colossusNode;
+        }
+        else
+        {
+            Log.Error("Still null");
+        }
+        return null;
+    }
+
+
+
+    public RouteNode CreateHardwareNode(RouteNode current)
+    {
+        //if (current.y == height - 1) return null;
+        int y = current.y + 1;
+
+        Log.Info("Creating hardware node");
+
+        RouteNode hardwareNode = null;
+        for (int i = 0; i < width + 1; i++)
+        {
+            if (mapGrid[i, y] != null && (mapGrid[i, y].portalType == RoutePortalType.Hardware || mapGrid[i, y].portalType == RoutePortalType.SolusWing))
+            {
+                hardwareNode = mapGrid[i, y];
+                Log.Info("Floor already has hardware node");
+                return hardwareNode;
+            }
+        }
+        Log.Info("Has no hardware nodes");
+
+        //в пустое место
+        for (int offset = 0; offset < width; offset++)
+        {
+            int[] closest = { current.x + offset, current.x - offset };
+            foreach (int x in closest)
+            {
+                if (x >= 0 && x < width && mapGrid[x, y].portalType == RoutePortalType.None)
+                {
+                    hardwareNode = mapGrid[x, y];
+                    break;
+                }
+            }
+            if (hardwareNode != null) break;
+        }
+        //места нет
+        if (hardwareNode == null)
+        {
+            Log.Warning("No place for hardware node, placing on extra");
+            mapGrid[width, y] = new RouteNode(width, y);
+            hardwareNode = mapGrid[width, y];
+        }
+
+
+        if (hardwareNode != null)
+        {
+            hardwareNode.portalType = y != 4 ? RoutePortalType.Hardware : RoutePortalType.SolusWing;
+            current.portalNode = hardwareNode;
+
+            return hardwareNode;
+        }
+        else
+        {
+            Log.Error("Still null");
+        }
+        return null;
+    }
+
+    public int GetEffectiveWidth(RouteNode selectedNode = null)
+    {
+        //максимум width+1
+        int res = 0;
+        for (int x = 0; x < width + 1; x++)
+        {
+            bool flag = false;
+            for (int y = 0; y < height; y++)
+            {
+                var node = mapGrid[x, y];
+
+                if (node == null || node.portalType == RoutePortalType.None) continue;
+
+                bool isSpecialHidden = (node.portalType == RoutePortalType.Colossus ||
+                                        node.portalType == RoutePortalType.FalseSon ||
+                                        node.portalType == RoutePortalType.Hardware ||
+                                        node.portalType == RoutePortalType.SolusWing);
+
+                if (!isSpecialHidden || node.visited || node == selectedNode)
+                {
+                    flag = true;
+                    break;
+                }
+            }
+
+            if (flag) res++;
+        }
+        return res;
+
+    }
+
+    private void ConnectToRandomNodeNextFloor(RouteNode node)
+    {
+        int y = node.y;
+        for (int x = 0; x < width; x++)
+        {
+            if (mapGrid[x, y + 1] != null && mapGrid[x, y + 1].portalType != RoutePortalType.None)
+            {
+                node.front = mapGrid[x, y + 1];
+            }
+        }
+    }
+
+    private void Connect(RouteNode curr, RouteNode next)
+    {
         if (curr.x - next.x == -1)
         {
             curr.right = next;
@@ -115,7 +314,6 @@ public class RouteMap
         {
             curr.left = next;
         }
-        CreateRoute(next, next.x, next.y, rng);
     }
 
     public RouteNode GetStartingNode()
@@ -131,9 +329,13 @@ public class RouteMap
         public int x;
         public int y;
 
+        public bool visited;
+
         public RouteNode left;
         public RouteNode front;
         public RouteNode right;
+
+        public RouteNode portalNode;
 
         public RouteNode(int x, int y)
         {
@@ -142,12 +344,13 @@ public class RouteMap
             this.y = y;
         }
 
-        public List<RouteNode> GetPaths()
+        public List<RouteNode> GetPaths(bool usePortalNode = false)
         {
             List<RouteMap.RouteNode> res = new List<RouteMap.RouteNode>();
             if (left != null) res.Add(left);
             if (front != null) res.Add(front);
             if (right != null) res.Add(right);
+            if (portalNode != null && usePortalNode) res.Add(portalNode);
             return res;
         }
 
