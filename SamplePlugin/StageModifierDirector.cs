@@ -32,7 +32,31 @@ namespace SamplePlugin
         }
     }
 
+    [System.Serializable]
+    public struct RouteNodeSync : IEquatable<RouteNodeSync>
+    {
+        public RoutePortalType portalType;
+
+        public int x;
+        public int y;
+
+        public bool visited;
+
+        public RouteNodeSync(RouteMap.RouteNode node)
+        {
+            x = node.x;
+            y = node.y;
+            visited = node.visited;
+        }
+
+        public bool Equals(RouteNodeSync other)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     public class SyncListModifier : SyncListStruct<ModifierSync> { }
+    public class SyncListRouteNode : SyncListStruct<RouteNodeSync> { }
 
     public class StageModifierDirector : NetworkBehaviour
     {
@@ -48,7 +72,16 @@ namespace SamplePlugin
         [SyncVar(hook = nameof(OnModifiersSyncedUpdate))]
         public SyncListModifier modifiersSynced = new SyncListModifier();
 
+        //TODO
+        [SyncVar(hook = nameof(OnRouteNodesSyncedUpdate))]
+        public SyncListRouteNode routeNodesSynced = new SyncListRouteNode();
+
         private static void OnModifiersSyncedUpdate()
+        {
+            Log.Info("SyncedModifiers were updated");
+        }
+
+        private static void OnRouteNodesSyncedUpdate()
         {
             Log.Info("SyncedModifiers were updated");
         }
@@ -63,6 +96,25 @@ namespace SamplePlugin
 
         public RouteMap routeMap;
         public RouteMap.RouteNode currentNode;
+
+        [SyncVar(hook = nameof(OnBaseCurseSyncedUpdate))]
+        public float syncedBaseCurse = 0.0f;
+        [SyncVar]
+        public int soulCostStack = 0;
+
+        private void OnBaseCurseSyncedUpdate(float newValue)
+        {
+            syncedBaseCurse = newValue;
+
+            foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
+            {
+                if (cm.playerCharacterMasterController == null) continue;
+                if (cm && cm.GetBody())
+                {
+                    cm.GetBody().RecalculateStats();
+                }
+            }
+        }
 
         [SyncVar(hook = nameof(OnStageUpdate))]
         public int currStage = 0;
@@ -117,6 +169,7 @@ namespace SamplePlugin
         //    Log.Info("Modifiers were changed");
         //}
 
+        //TODO обработка случая когда произошел переход на след стейдж но не поменялся нод
         private void CreateDirector(Run run)
         {
             Log.Info("Run started");
@@ -128,6 +181,7 @@ namespace SamplePlugin
             routeMap = new RouteMap(run.runRNG);
 
             currentNode = routeMap.GetStartingNode();
+            currentNode.visited = true;
             Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
         }
 
@@ -182,13 +236,15 @@ namespace SamplePlugin
             allModifiers.Add(new ModifierDef("RedPrinter", ModifierTier.Tier1, 1f, CheckPlayersRedItem, true));
             allModifiers.Add(new ModifierDef("OnlyFlying", ModifierTier.Tier2, 1f, false));
             allModifiers.Add(new ModifierDef("PowerfulElites", ModifierTier.Tier3, 1f, true));
-            allModifiers.Add(new ModifierDef("Mystery", ModifierTier.Tier2, 1f, false));
             allModifiers.Add(new ModifierDef("Repair", ModifierTier.Tier3, 1f, CheckPlayersHaveConsumedItems, false));
             allModifiers.Add(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false));
             allModifiers.Add(new ModifierDef("Mountain", ModifierTier.Tier1, 1f, CheckMountainShrine, false));
             allModifiers.Add(new ModifierDef("SoulCost", ModifierTier.Tier2, 1f, true));
             allModifiers.Add(new ModifierDef("Doppelganger", ModifierTier.Tier2, 1f, true));
+            allModifiers.Add(new ModifierDef("UpgradeDrones", ModifierTier.Tier3, 1f, true));
 
+            //артефакты мода
+            if (RiskOfRoutes.RiskOfRoutes.allowMysteryArtifact.Value) allModifiers.Add(new ModifierDef("Mystery", ModifierTier.Tier2, 1f, () => CheckArtifactAvailable("Mystery"), false));
             //артефакты
             if (RiskOfRoutes.RiskOfRoutes.allowChaosArtifact.Value) allModifiers.Add(new ModifierDef("FriendlyFire", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("FriendlyFire"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowCommandArtifact.Value) allModifiers.Add(new ModifierDef("Command", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Command"), true));
@@ -210,12 +266,14 @@ namespace SamplePlugin
             if (RiskOfRoutes.RiskOfRoutes.allowVengeanceArtifact.Value) allModifiers.Add(new ModifierDef("ShadowClone", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("ShadowClone"), false));
             if (RiskOfRoutes.RiskOfRoutes.allowDeathArtifact.Value) allModifiers.Add(new ModifierDef("TeamDeath", ModifierTier.Tier2, 1f, CheckArtifactOfDeathAvailable, false));
 
+
             foreach (var item in itemsInfo)
             {
                 itemModifiersPool.Add(new ModifierDef(item.internalName + " Printer", item.cost, item.weight, false));
             }
             droneModifiersPool.Add(new ModifierDef("DroneBossGreen", ModifierTier.Tier1, 1f, false));
             droneModifiersPool.Add(new ModifierDef("MoreDrones", ModifierTier.Tier1, 1f, true));
+            droneModifiersPool.Add(new ModifierDef("UpgradeDrones", ModifierTier.Tier1, 1f, true));
 
 
 
@@ -226,6 +284,7 @@ namespace SamplePlugin
                 allModifiers.Add(new ModifierDef("MoreElites", ModifierTier.Tier1, 1f, true));
                 allModifiers.Add(new ModifierDef("LunarEnemies", ModifierTier.Tier3, 1f, true));
                 allModifiers.Add(new ModifierDef("VoidEnemies", ModifierTier.Tier3, 1f, true));
+                allModifiers.Add(new ModifierDef("UpgradeDrones", ModifierTier.Tier1, 1f, true));
             }
 
 
@@ -285,6 +344,11 @@ namespace SamplePlugin
             foreach (var mod in reservedModifiers)
             {
                 modifiersSynced.Add(new ModifierSync(mod));
+                if (mod.name == "SoulCost")
+                {
+                    Log.Info("Found soulcost");
+                    soulCostStack = mod.stack;
+                }
             }
             reservedModifiers.Clear();
 
@@ -295,6 +359,20 @@ namespace SamplePlugin
             OnStageUpdate(currStage);
             activePortalInstances.Clear();
 
+            SceneDef currentScene = RoR2.SceneCatalog.GetSceneDefForCurrentScene();
+            //if (currentScene.sceneType != SceneType.Intermission)
+            //    currentNode.visited = true;
+
+        }
+
+        public bool IsModifierActive(string name)
+        {
+            foreach (var modifier in modifiersSynced)
+            {
+                //Log.Info($"Name to compare{name}");
+                if (modifier.name == name) return true;
+            }
+            return false;
         }
 
         private void OnStageUpdate(int newValue)
@@ -310,17 +388,38 @@ namespace SamplePlugin
 
             foreach (StageModifier modifier in activeModifiers) modifier.OnEnd();
 
-            Log.Info($"Modul:{Stage.instance.sceneDef.stageOrder}");
-            if (Stage.instance.sceneDef.stageOrder == 5)
-            {
-                routeMap = new RouteMap(Run.instance.runRNG);
-                Log.Info("Created new map");
-                currentNode = routeMap.GetStartingNode();
-                Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
-            }
-
             activeModifiers.Clear();
             modifiersSynced.Clear();
+
+            Log.Info($"Modul:{Stage.instance.sceneDef.stageOrder}");
+            //todo пиздец нагромождение, логика создания новой карты 5 стейд -> базар -> 1 стейдж 
+            if (Stage.instance.sceneDef.stageOrder == 5 || (currentNode.x == 0 && currentNode.y == 0 && Stage.instance.sceneDef.baseSceneName != "bazaar"))
+            {
+                Log.Info("Trying to create new map");
+                if (TeleporterInteraction.instance.sceneExitController.destinationScene.baseSceneName == "moon2" && TeleporterInteraction.instance.isCharged)
+                {
+                    routeMap.isMoonVisited = true;
+                }
+                else
+                {
+                    routeMap = new RouteMap(Run.instance.runRNG);
+                    Log.Info("Created new map");
+                    currentNode = routeMap.GetStartingNode();
+                    Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
+                    Log.Info($"Teleporter:{TeleporterInteraction.instance.sceneExitController.useRunNextStageScene}");
+
+                }
+            }
+            else
+            {
+                Log.Info("Not creating new map yet");
+                Log.Info($"\t{currentNode.x}:{currentNode.y}");
+                Log.Info($"\t{Stage.instance.sceneDef.stageOrder}");
+            }
+
+
+            //TODO возможно стоит поменять порядок
+            currentNode.visited = true;
 
         }
 
@@ -345,10 +444,16 @@ namespace SamplePlugin
                 }
 
                 //todo посмотреть их id
-                if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("conduitcanyon") || mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("repurposedcrater")))
+                if (mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("repurposedcrater"))
                 {
                     modifiers.Add("DroneBossRed", 1);
                 }
+
+                if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("conduitcanyon")))
+                {
+                    modifiers.Add("UpgradeDrones", 1);
+                }
+
             }
 
             int routePortalCredits = routeCredits;
@@ -429,7 +534,7 @@ namespace SamplePlugin
                 if (modDef.isAvailable())
                 {
                     res.AddChoice(modDef, modDef.selectionWeight);
-                    Log.Info($"Added {modDef.name}");
+                    //Log.Info($"Added {modDef.name}");
                 }
             }
 
@@ -493,7 +598,35 @@ namespace SamplePlugin
             }
             else
             {
-                Log.Error("RoutePortalManager wasn available for random portal");
+                Log.Error("RoutePortalManager wasn available for random portal to get Modifiers");
+            }
+        }
+
+        public void GetRouteNodeFromRandomPortal()
+        {
+            if (activePortalInstances == null || activePortalInstances.Count == 0)
+            {
+                Log.Error("There are no portal instances to get routeNode from");
+                //TODO взять рандомный
+                return;
+            }
+            var portal = Run.instance.stageRng.NextElementUniform(activePortalInstances);
+            var mg = portal.GetComponent<RoutePortalManager>();
+            if (mg != null)
+            {
+                currentNode = mg.routeNode;
+                foreach (var p in activePortalInstances)
+                {
+                    var gi = p.GetComponent<GenericInteraction>();
+                    if (gi != null)
+                    {
+                        gi.enabled = false;
+                    }
+                }
+            }
+            else
+            {
+                Log.Error("RoutePortalManager wasn available for random portal to get Node");
             }
         }
 
@@ -594,6 +727,10 @@ namespace SamplePlugin
         [Server]
         private bool CheckArtifactAvailable(string name)
         {
+            if (name == "Mystery")
+            {
+                Log.Info("Mystery:" + !runArtifactsApplied.Contains(name));
+            }
             return (!runArtifactsApplied.Contains(name));
         }
 
@@ -641,6 +778,8 @@ namespace SamplePlugin
                 return null;
             }
         }
+
+
     }
 
     public struct ItemInfo
