@@ -16,7 +16,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             name = "Void invasion";
             reservedText = "<style=cIsVoid>Enemies from the void</style> might appear on the next stage.";
             activeText = "<style=cIsVoid>Enemies from the void</style> might appear on this stage.";
-            var icon = "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveVoidIcon.png";
+            iconName = "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveVoidIcon.png";
             negative = true;
             this.stack = stack;
         }
