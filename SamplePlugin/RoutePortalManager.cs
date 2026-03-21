@@ -14,14 +14,14 @@ namespace RiskOfRoutes
         public SceneExitController sceneExitController;
         public PurchaseInteraction purchaseInteraction; //для seer'a
 
-        [SyncVar(hook = nameof(OnManagerEnabled))]
-        public bool isManagerEnabled = false;
         [SyncVar]
-        public bool isVanillaPortal = false;
+        public bool isUsingModifiers = false;
         [SyncVar]
         public bool isOval = false;
         [SyncVar]
-        public bool isSeerStation;
+        public bool isSeerStation = false;
+        [SyncVar]
+        public bool isUsingSceneExit = false;
 
         public RouteMap.RouteNode routeNode;
         public List<StageModifier> stageModifiers = new List<StageModifier>();
@@ -65,29 +65,18 @@ namespace RiskOfRoutes
             }
             genericInteraction.onActivation.AddListener(OnPortalActivation);
 
-            if (!isVanillaPortal)
+            if (isUsingSceneExit)
             {
                 sceneExitController.useRunNextStageScene = true;
             }
         }
 
-        private void OnManagerEnabled(bool val)
-        {
-            isManagerEnabled = val;
-            this.enabled = val;
 
-            if (val && !NetworkServer.active)
-            {
-                UpdateBubbles();
-            }
-        }
 
         public override void OnStartClient()
         {
             base.OnStartClient();
             Log.Info("Called method onStartClient");
-
-            this.enabled = isManagerEnabled;
 
             iconNames.Callback -= OnIconsChanged;
             iconNames.Callback += OnIconsChanged;
@@ -95,7 +84,6 @@ namespace RiskOfRoutes
             if (this.enabled)
             {
                 UpdateBubbles();
-
             }
 
         }
@@ -153,7 +141,7 @@ namespace RiskOfRoutes
                 {
                     //TODO
                     //Log.Error("Route node is null");
-                    modifierTextSynced = $"{positiveText}\n{negativeText}";
+                    modifierTextSynced = $"Null node {positiveText}\n{negativeText}";
                 }
 
                 //Log.Info(positiveText + negativeText);
@@ -170,6 +158,7 @@ namespace RiskOfRoutes
         public void UpdateBubbles()
         {
             if (isSeerStation) return;
+
             var portalCenter = transform.Find("PortalCenter");
             if (portalCenter == null)
             {
@@ -182,6 +171,15 @@ namespace RiskOfRoutes
                 var child = portalCenter.GetChild(i);
                 if (child.name.Contains("Bubble"))
                 {
+                    var renderers = child.GetComponentsInChildren<Renderer>(true);
+                    foreach (var rend in renderers)
+                    {
+                        foreach (var m in rend.materials)
+                        {
+                            if (m != null) Destroy(m);
+                        }
+                    }
+
                     Destroy(child.gameObject);
                 }
             }
@@ -192,7 +190,7 @@ namespace RiskOfRoutes
         private void AttachBubblesToPortal()
         {
             if (isSeerStation) return;
-            Log.Info("Really attaching");
+            //Log.Info("Really attaching");
 
             float portalScaleX = 1f;
             float portalScaleY = 1f;
@@ -210,7 +208,7 @@ namespace RiskOfRoutes
 
             for (int i = 0; i < iconNames.Count; i++)
             {
-                Log.Info($"act {iconNames.Count}");
+                //Log.Info($"act {iconNames.Count}");
                 if (RiskOfRoutes.iconBubblePrefab == null)
                 {
                     RiskOfRoutes.iconBubblePrefab = RiskOfRoutes.CreateIconBubblePrefab();
@@ -270,7 +268,7 @@ namespace RiskOfRoutes
 
                     mat.SetTexture("_MainTex", tex);
                     rend.materials = new Material[] { mat, mat };
-                    Log.Info("Bubble was set up");
+                    //Log.Info("Bubble was set up");
                 }
             }
         }
@@ -294,8 +292,10 @@ namespace RiskOfRoutes
 
         }
 
+        //TODO смена портала после активации телепортаци
         public void OnPortalActivation(Interactor interactor)
         {
+            genericInteraction.interactability = Interactability.Disabled;
             if (!NetworkServer.active)
             {
                 Log.Warning("[Server] function 'RoutePortalManager::OnPurchase(RoR2.Interactor)' called on client");
@@ -309,14 +309,35 @@ namespace RiskOfRoutes
 
             Log.Info($"Trying {StageModifierDirector.instance.activeModifiers.Count}");
 
-            if (!isVanillaPortal)
+            if (routeNode != null)
+            {
+                StageModifierDirector.instance.currentNode = routeNode;
+
+                if (isUsingSceneExit)
+                {
+                    Run.instance.nextStageScene = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
+                    Log.Info($"inside RPM: {Run.instance.nextStageScene.cachedName}");
+
+                    //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("ai_test");
+                    foreach (SceneExitController exitController in InstanceTracker.GetInstancesList<SceneExitController>())
+                    {
+                        exitController.destinationScene = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
+                    }
+
+                    sceneExitController.Begin();
+                }
+
+
+            }
+            else
             {
                 genericInteraction.enabled = false;
-                Run.instance.nextStageScene = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
-                Log.Info($"inside RPM: {Run.instance.nextStageScene.cachedName}");
-                //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("ai_test");
-                sceneExitController.Begin();
-                StageModifierDirector.instance.currentNode = routeNode;
+                Log.Info("Interacting with vanilla portal");
+                var mg = StageModifierDirector.activePortalInstances[0].GetComponent<RoutePortalManager>();
+                if (mg != null)
+                {
+                    StageModifierDirector.instance.currentNode = mg.routeNode;
+                }
             }
         }
 
@@ -341,5 +362,5 @@ namespace RiskOfRoutes
 
 public enum RoutePortalType
 {
-    None, Rare, ItemType, DroneType, ChefType, Colossus, Hardware, Goldshores, Shop
+    None, Rare, ItemType, DroneType, ChefType, Colossus, Hardware, SolusWing, Goldshores, Shop, FalseSon, Starting
 }
