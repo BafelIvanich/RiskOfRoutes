@@ -3,8 +3,8 @@ using BepInEx.Configuration;
 using LeTai.Asset.TranslucentImage;
 using R2API;
 using RiskOfOptions;
-using RiskOfOptions.OptionConfigs;
 using RiskOfOptions.Options;
+using RiskOfRoutes.StageModifiers.SceneModifiers;
 using RoR2;
 using RoR2.UI;
 using SamplePlugin;
@@ -20,6 +20,7 @@ using UnityHotReloadNS;
 using Image = UnityEngine.UI.Image;
 
 //TODO
+//!Утечка памяти
 //Core:
 //Заменить seerStationController на базаре
 //SyncList не работает как надо
@@ -40,6 +41,7 @@ using Image = UnityEngine.UI.Image;
 //на улучшение дронов
 //artifact of fallacy
 //проверить появление шефа
+//more drones с плюсиком
 
 
 //Визуал:
@@ -79,6 +81,8 @@ namespace RiskOfRoutes
     [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
     [BepInDependency(RecalculateStatsAPI.PluginGUID)]
     [BepInDependency("com.rune580.riskofoptions")]
+    [BepInDependency(R2API.LanguageAPI.PluginGUID)]
+    [BepInDependency(R2API.PrefabAPI.PluginGUID)]
 
     public class RiskOfRoutes : BaseUnityPlugin
     {
@@ -88,13 +92,13 @@ namespace RiskOfRoutes
         public const string PluginVersion = "1.0.0";
 
         //tweaks
-        public static ConfigEntry<int> routeCount { get; set; }
         public static ConfigEntry<bool> usePortalMaterial { get; set; }
         public static ConfigEntry<bool> uniqueDestinations { get; set; }
         public static ConfigEntry<bool> showPortalDestination { get; set; }
         public static ConfigEntry<bool> teleporterUseRandomMods { get; set; }
         public static ConfigEntry<bool> modifiersCanBeBanned { get; set; }
         //artifacts
+        public static ConfigEntry<bool> allowMysteryArtifact;
         public static ConfigEntry<bool> allowChaosArtifact;
         public static ConfigEntry<bool> allowCommandArtifact;
         public static ConfigEntry<bool> allowDeathArtifact;
@@ -117,12 +121,18 @@ namespace RiskOfRoutes
         //other modifiers
         public static ConfigEntry<int> droneStackPercent;
 
+        private RoutePortalManager lastViewedManager = null;
+        private RouteMap.RouteNode lastViewedNode = null;
 
         public static GameObject routePortalPrefab;
         public static GameObject iconBubblePrefab;
         public static GameObject chefPrefab;
         public static GameObject routePortalPanelPrefab;
         public static GameObject routeMapPanelPrefab;
+
+        public static Texture2D droneSymbolTexture;
+        public static Texture2D rewardSymbolTexture;
+        public static Texture2D aurelioniteSymbolTexture;
 
         public static GameObject routePortalPanel;
         public static GameObject routeMapPanel;
@@ -168,6 +178,9 @@ namespace RiskOfRoutes
             iconBubblePrefab = CreateIconBubblePrefab();
             routePortalPrefab = CreateRoutePortalPrefab();
             //routePortalPanelPrefab = CreateRoutePortalPanelPrefab();
+            droneSymbolTexture = bundle.LoadAsset<Texture2D>("teleporterDrone");
+            rewardSymbolTexture = bundle.LoadAsset<Texture2D>("teleporterReward");
+            aurelioniteSymbolTexture = bundle.LoadAsset<Texture2D>("teleporterAurelionite");
 
 
 
@@ -190,6 +203,7 @@ namespace RiskOfRoutes
             On.RoR2.UI.HUD.Awake += HUD_Awake;
             On.RoR2.UI.CurrentRunArtifactDisplayDataDriver.Refresh += CurrentRunArtifactDisplayDataDriver_Refresh;
 
+            //TODO портал в магазин может не успеть взять модификаторы
             TeleporterInteraction.onTeleporterChargedGlobal += TeleporterEventSpawnRoutePortals;
             On.RoR2.TeleporterInteraction.OnInteractionBegin += TeleporterInteraction_OnInteractionBegin;
             //On.RoR2.PortalSpawner.AttemptSpawnPortalServer += PortalSpawner_AttemptSpawnPortalServer;
@@ -200,7 +214,6 @@ namespace RiskOfRoutes
             //On.RoR2.SceneDirector.Start += SceneDirector_Start;
             On.RoR2.BazaarController.Start += BazaarController_Start;
             On.RoR2.SeerStationController.SetRunNextStageToTarget += SeerStationController_SetRunNextStageToTarget;
-            On.RoR2.SeerStationController.OnStartClient += GetModifiersForSeerStation;
 
             RoR2.RoR2Application.onLoad += () =>
             {
@@ -209,6 +222,24 @@ namespace RiskOfRoutes
 
             AddRouteManagersToPortalPrefabs();
 
+            Artifact.InitializeArtifact();
+            SoulCostController.Initialize();
+
+            AddHologramToTeleporter();
+        }
+
+        private void AddHologramToTeleporter()
+        {
+            var teleporterPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Teleporters/Teleporter1.prefab").WaitForCompletion();
+
+            if (teleporterPrefab != null)
+            {
+                var hologramController = teleporterPrefab.AddComponent<ModifierHologramController>();
+
+                hologramController.droneTex = droneSymbolTexture;
+                hologramController.rewardTex = rewardSymbolTexture;
+                hologramController.aurelioniteTex = aurelioniteSymbolTexture;
+            }
         }
 
         private void BazaarController_Start(On.RoR2.BazaarController.orig_Start orig, BazaarController self)
@@ -245,11 +276,13 @@ namespace RiskOfRoutes
                     if (mg != null)
                     {
                         mg.enabled = true;
-                        mg.isManagerEnabled = true;
-
+                        //mg.isManagerEnabled = true;
                         mg.destinationSceneIndex = (int)(RoR2.Run.instance.nextStageScene.sceneDefIndex);
                         mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopRoutePortal);
                         mg.isOval = true;
+                        mg.isUsingModifiers = true;
+                        mg.isUsingSceneExit = true;
+                        mg.routeNode = StageModifierDirector.instance.currentNode;
                         mg.UpdateText();
                         Log.Info("Portal was replaced");
                     }
@@ -275,7 +308,7 @@ namespace RiskOfRoutes
                                 Vector3 seerPos = oldSeer.transform.position;
                                 Quaternion seerRot = oldSeer.transform.rotation;
                                 int oldTargetSceneIndex = oldSeerStationController.targetSceneDefIndex;
-                                
+
                                 NetworkServer.Destroy(oldSeer);
 
                                 GameObject seerStationPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/bazaar/SeerStation.prefab").WaitForCompletion();
@@ -293,14 +326,30 @@ namespace RiskOfRoutes
                                 }
 
                                 var seerRouteManager = newSeer.GetComponent<RoutePortalManager>();
-                                if(seerRouteManager != null)
+                                if (seerRouteManager != null)
                                 {
                                     seerRouteManager.isSeerStation = true;
                                     seerRouteManager.destinationSceneIndex = oldTargetSceneIndex;
-                                    seerRouteManager.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(newSeer);
+                                    if (!IsSceneIntermission((SceneIndex)oldTargetSceneIndex))
+                                    {
+                                        seerRouteManager.isUsingModifiers = true;
+                                        seerRouteManager.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(newSeer);
+                                    }
+                                    else
+                                    {
+                                        seerRouteManager.isUsingModifiers = false;
+                                    }
+                                    if (IsSceneColossus((SceneIndex)oldTargetSceneIndex))
+                                    {
+                                        seerRouteManager.routeNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode, currentLayer: true);
+                                    }
+                                    else
+                                    {
+                                        seerRouteManager.routeNode = StageModifierDirector.instance.currentNode;
+                                    }
 
                                     seerRouteManager.enabled = true;
-                                    seerRouteManager.isManagerEnabled = true;
+                                    //seerRouteManager.isManagerEnabled = true;
                                     seerRouteManager.UpdateText();
                                 }
 
@@ -327,9 +376,12 @@ namespace RiskOfRoutes
             var goldshoresPortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/PortalGoldshores/PortalGoldshores.prefab").WaitForCompletion();
             var colossusPortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC2/PortalColossus.prefab").WaitForCompletion();
             var hardwareProgPortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/HardwareProgPortal.prefab").WaitForCompletion();
+            var hardwareProgHauntPortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/HardwareProgPortal_Haunt.prefab").WaitForCompletion();
+            var destinationPortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC2/PM DestinationPortal.prefab").WaitForCompletion();
             var seerPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/bazaar/SeerStation.prefab").WaitForCompletion();
 
-            List<GameObject> vanillaPortals = new List<GameObject>() { shopPortalPrefab, colossusPortalPrefab, goldshoresPortalPrefab, hardwareProgPortalPrefab };
+            List<GameObject> vanillaPortals = new List<GameObject>() { shopPortalPrefab, colossusPortalPrefab, goldshoresPortalPrefab, hardwareProgPortalPrefab, hardwareProgHauntPortalPrefab, destinationPortalPrefab };
+            //порталы
             foreach (var portal in vanillaPortals)
             {
                 Log.Info($"Adding route portal manager to portal {portal.name}");
@@ -339,38 +391,52 @@ namespace RiskOfRoutes
                     portal.AddComponent<RoutePortalManager>();
                 }
                 Log.Info($"Added route portal manager to {portal.name} prefab");
-                mg = portal.GetComponent<RoutePortalManager>();
-                if (mg != null)
-                {
-                    mg.enabled = false;
-                    Log.Info($"Disabled manager for {portal}");
-                }
-                else
-                {
-                    Log.Info("Null for some reason");
-                }
             }
-            var seerMg = seerPrefab.GetComponent<RoutePortalManager>();
-            if (seerMg == null)
+            //сиеры
+            var seerRouteMg = seerPrefab.GetComponent<RoutePortalManager>();
+            if (seerRouteMg == null)
             {
                 seerPrefab.AddComponent<RoutePortalManager>();
                 Log.Info($"Added route portal manager to seer prefab");
             }
-            seerMg = seerPrefab.GetComponent<RoutePortalManager>();
-            if (seerMg != null)
-            {
-                seerMg.enabled = true;
-                seerMg.isManagerEnabled = true;
-                seerMg.isSeerStation = true;
-            }
+            seerRouteMg = seerPrefab.GetComponent<RoutePortalManager>();
 
         }
 
         private void TeleporterInteraction_OnInteractionBegin(On.RoR2.TeleporterInteraction.orig_OnInteractionBegin orig, TeleporterInteraction self, Interactor activator)
         {
             orig(self, activator);
-            if (teleporterUseRandomMods.Value)
-                StageModifierDirector.instance.GetModifiersFromRandomPortal();
+            if (Stage.instance.sceneDef.baseSceneName == "conduitcanyon")
+            {
+                Log.Info("Conduit canyon");
+                StageModifierDirector.instance.currentNode = StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
+            }
+            else
+            {
+                StageModifierDirector.instance.GetRouteNodeFromRandomPortal();
+                if (teleporterUseRandomMods.Value)
+                    StageModifierDirector.instance.GetModifiersFromRandomPortal();
+
+            }
+            var teleporterPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Teleporters/Teleporter1.prefab").WaitForCompletion();
+            var baseMesh = teleporterPrefab.transform.Find("TeleporterBaseMesh").Find("HologramPivot").Find("ShrineBossIndicator");
+
+            var bossSymbol = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/ShrineBoss/ShrineBossSymbol.prefab").WaitForCompletion();
+            if (baseMesh != null)
+            {
+
+                var bossSymbolRectPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/ShrineBoss/ShrineBossSymbolRectTransform.prefab").WaitForCompletion();
+
+
+                if (bossSymbolRectPrefab == null)
+                {
+                    Log.Error("Failed to load ShrineBossSymbolRectTransform via Addressables");
+                }
+                else
+                {
+                    Log.Info("Loaded!!!");
+                }
+            }
         }
 
         private GameObject CreateRoutePortalPrefab()
@@ -590,10 +656,6 @@ namespace RiskOfRoutes
 
         private void BindConfig()
         {
-            //tweaks
-            routeCount = Config.Bind<int>(
-                "Tweaks", "Route Count", 3, "How much route portals would appear after stage completion.");
-            ModSettingsManager.AddOption(new IntSliderOption(routeCount, new IntSliderConfig() { min = 1, max = 10 }));
 
             usePortalMaterial = Config.Bind<bool>(
                 "Tweaks", "Use Scene Material", false, "[WIP] Sets destination scene portrait as a portal texture");
@@ -612,10 +674,14 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new CheckBoxOption(teleporterUseRandomMods));
             //todo
             modifiersCanBeBanned = Config.Bind<bool>(
-                "Tweaks", "Modifiers can be banned after being used", true, "Prevents some of stage modifiers appearing on the next stage, if they were active on a current stage");
+                "Tweaks", "Modifiers can be banned after being used", true, "Prevents some of stage modifiers appearing on the next stage, if they were active on the current stage");
             ModSettingsManager.AddOption(new CheckBoxOption(modifiersCanBeBanned));
 
             //artifacts
+            allowMysteryArtifact = Config.Bind<bool>(
+                "Artifacts", "Mystery", true, "Mystery artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowMysteryArtifact));
+
             allowChaosArtifact = Config.Bind<bool>(
                "Artifacts", "Chaos", true, "Chaos artifact available as artifact stage modifier");
             ModSettingsManager.AddOption(new CheckBoxOption(allowChaosArtifact));
@@ -696,37 +762,6 @@ namespace RiskOfRoutes
 
         }
 
-        ////todo проверить несколько раз за забег
-        private void GetModifiersForSeerStation(On.RoR2.SeerStationController.orig_OnStartClient orig, SeerStationController self)
-        {
-            orig(self);
-
-            if (NetworkServer.active)
-            {
-                var mg = self.gameObject.GetComponent<RoutePortalManager>();
-                if (mg != null)
-                {
-                    SceneIndex targetScene = (SceneIndex)self.targetSceneDefIndex;
-                    if (targetScene != SceneIndex.Invalid)
-                    {
-                        mg.destinationSceneIndex = (int)targetScene;
-                    }
-                    else
-                    {
-                        Log.Error("Seer does not have scene");
-                    }
-                    Log.Info($"Seer destination:{mg.destinationSceneIndex}");
-                    mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(self.gameObject);
-                }
-                else
-                {
-                    Log.Error("Seer doesnt have manaeger");
-                }
-
-
-            }
-
-        }
 
         private void SeerStationController_SetRunNextStageToTarget(On.RoR2.SeerStationController.orig_SetRunNextStageToTarget orig, SeerStationController self)
         {
@@ -747,6 +782,7 @@ namespace RiskOfRoutes
                         {
                             shopPortal = exit.gameObject;
                             exitController = exit;
+                            exitController.useRunNextStageScene = true;
                             Log.Info($"Shop portal with name {exit.gameObject.name}");
                             break;
                         }
@@ -756,13 +792,11 @@ namespace RiskOfRoutes
                     {
                         Log.Error("Could not find shopportal on bazaar scene");
                     }
+
                     if (!shopPortal.GetComponent<RoutePortalManager>())
                     {
-                        //todo sync после смены destination
-                        var mg = shopPortal.AddComponent<RoutePortalManager>();
-                        mg.destinationSceneIndex = (int)targetScene;
-                        mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopPortal);
-                        Log.Info("Succesfully attached route portal manager to shop exit portal");
+                        //TODO удалить после теста
+                        Log.Error("Shop portal doesn't have manager");
                     }
                     else
                     {
@@ -775,6 +809,11 @@ namespace RiskOfRoutes
                             mg.stageModifiers = seerRouteManager.stageModifiers;
                         else
                             mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopPortal);
+
+                        if (IsSceneColossus((SceneIndex)targetScene))
+                        {
+                            mg.routeNode = seerRouteManager.routeNode;
+                        }
                         mg.UpdateText();
                         Log.Info($"Updated exit destination:{previous}->{mg.destinationSceneIndex}");
                     }
@@ -786,41 +825,6 @@ namespace RiskOfRoutes
                 }
             }
         }
-
-        //private void SceneDirector_Start(On.RoR2.SceneDirector.orig_Start orig, SceneDirector self)
-        //{
-        //    if (NetworkServer.active)
-        //    {
-        //        Log.Info($"Current scene: {SceneManager.GetActiveScene().name}");
-
-        //        if (SceneManager.GetActiveScene().name == "bazaar")
-        //        {
-        //            GameObject shopPortal = GameObject.Find("PortalShop");
-        //            if (!shopPortal)
-        //            {
-        //                Log.Error("Could not find shopportal");
-        //            }
-        //            var mg = shopPortal.GetComponent<RoutePortalManager>();
-        //            if (mg == null)
-        //            {
-        //                Log.Info("Shop portal on bazaar doesnt have manager");
-        //            }
-        //            mg.enabled = true;
-        //            mg.destinationSceneIndex = (int)(Run.instance.nextStageScene.sceneDefIndex);
-        //            mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopPortal);
-        //            mg.isOval = true;
-        //            Log.Info("Succesfully attached");
-
-        //        }
-        //        else
-        //        {
-        //            Log.Debug("Not bazaar");
-        //        }
-        //    }
-        //    orig(self);
-
-        //}
-
 
 
         //todo переписать, добавить ванильным префабам mg сразу
@@ -841,61 +845,105 @@ namespace RiskOfRoutes
                 if (directorSpawnRequest.spawnCard && directorSpawnRequest.spawnCard.name != null)
                 {
                     var name = directorSpawnRequest.spawnCard.name;
+                    SceneDef currentScene = RoR2.SceneCatalog.GetSceneDefForCurrentScene();
                     if (name.Contains("Portal"))
                     {
+                        Log.Info("Some vanilla portal spawned");
                         Log.Info($"Director spawned {name} portal");
                         var mgr = obj.GetComponent<RoutePortalManager>();
                         if (!mgr)
                         {
                             Log.Error($"RoutePortalManager is missing for portal {name}");
+                            return obj;
                         }
 
 
                         if (name == "iscColossusPortal")
                         {
-
+                            //useRunNext у него false
                             mgr.destinationSceneIndex = GetGreenPortalSceneIndex();
                             mgr.isOval = true;
-                            mgr.isVanillaPortal = true;
+                            mgr.isUsingModifiers = Stage.instance.sceneDef.stageOrder != 3;
+                            if (currentScene != null && currentScene.sceneType == SceneType.Intermission)
+                            {
+                                StageModifierDirector.instance.currentNode.visited = false;
+                                mgr.routeNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode, currentLayer: true);
+                            }
+                            else
+                            {
+                                mgr.routeNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode);
+                            }
+                            Log.Info("Succesfuly set node to colossus");
                         }
                         else if (name == "iscGoldshoresPortal")
                         {
-                            var exMgr = obj.GetComponent<SceneExitController>();
-                            //if (exMgr && !exMgr.useRunNextStageScene)
-                            //{
-                            //    Log.Info("Goldshores Portal is not leading to the next stage, no routes");
-                            //    return obj;
-                            //}
-                            if (SceneManager.GetActiveScene().name != "goldshores") return obj;
-                            mgr.destinationSceneIndex = (int)Run.instance.nextStageScene.sceneDefIndex;
                             mgr.isOval = true;
-                            mgr.isVanillaPortal = true;
+                            if (SceneManager.GetActiveScene().name != "goldshores")
+                            {
+                                mgr.isUsingModifiers = false;
+                                mgr.routeNode = StageModifierDirector.instance.GetAvailableNodes()[0];
+                            }
+                            else
+                            {
+                                mgr.destinationSceneIndex = (int)Run.instance.nextStageScene.sceneDefIndex;
+                                mgr.isUsingModifiers = true;
+                                mgr.isUsingSceneExit = false;
+                                mgr.routeNode = StageModifierDirector.instance.currentNode;
+                            }
 
                         }
                         else if (name == "iscShopPortal")
                         {
+                            mgr.isOval = true;
                             var exMgr = obj.GetComponent<SceneExitController>();
                             if (exMgr && !exMgr.useRunNextStageScene)
                             {
-                                Log.Info("Portal is not leading to the next stage, no routes");
-                                return obj;
+                                Log.Info("Portal is leading to shop");
+
+                                var routes = StageModifierDirector.instance.GetAvailableNodes();
+                                if (routes == null || routes.Count == 0)
+                                {
+                                    Log.Info("node zero");
+                                    mgr.routeNode = StageModifierDirector.instance.routeMap.root;
+                                }
+                                else
+                                {
+                                    mgr.routeNode = StageModifierDirector.instance.GetAvailableNodes()[0]; //todo рандом метод
+                                }
+                                mgr.isUsingSceneExit = false;
                             }
-                            mgr.destinationSceneIndex = (int)Run.instance.nextStageScene.sceneDefIndex;
-                            mgr.isOval = true;
-                            mgr.isVanillaPortal = true;
+                            //else обрабатывается в методе BazaarOnStart 
 
                         }
-                        else if (name == "iscHardwareProgPortal")
+                        else if (name == "iscHardwareProgPortal" || name == "iscHardwareProgPortal_Haunt")
                         {
-                            if (Stage.instance.sceneDef.stageOrder != 3) return obj;
-                            mgr.destinationSceneIndex = (int)SceneCatalog.FindSceneIndex("conduitcanyon");
+                            //
                             mgr.isOval = false;
-                            mgr.isVanillaPortal = true;
+                            if (Stage.instance.sceneDef.stageOrder != 3)
+                            {
+                                mgr.isUsingModifiers = false;
+                            }
+                            else
+                            {
+                                mgr.destinationSceneIndex = (int)SceneCatalog.FindSceneIndex("conduitcanyon");
+                                mgr.isUsingModifiers = true;
+
+                            }
+                            mgr.routeNode = StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
                         }
-                        mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
+                        else if (name == "iscDestinationPortal")
+                        {
+                            mgr.isOval = false;
+                            mgr.isUsingModifiers = false;
+                            mgr.routeNode = StageModifierDirector.instance.GetAvailableNodes()[0]; //TODO
+                        }
+
+                        if (mgr.isUsingModifiers)
+                            mgr.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(obj);
                         Log.Info($"Enabled manager for portal:{name}");
                         mgr.enabled = true;
-                        mgr.isManagerEnabled = true;
+                        mgr.UpdateText();
+                        //mgr.isManagerEnabled = true;
 
 
                     }
@@ -1008,6 +1056,21 @@ namespace RiskOfRoutes
         {
             orig(self);
             var hud = self;
+
+            if (routePortalPanel != null)
+            {
+                var oldBlur = routePortalPanel.GetComponent<TranslucentImage>();
+                if (oldBlur != null && oldBlur.material != null) Destroy(oldBlur.material);
+                Destroy(routePortalPanel);
+            }
+
+            if (routeMapPanel != null)
+            {
+                var oldBlur = routeMapPanel.GetComponent<TranslucentImage>();
+                if (oldBlur != null && oldBlur.material != null) Destroy(oldBlur.material);
+                Destroy(routeMapPanel);
+            }
+
             SetupRoutePortalPanel();
             SetupRouteMapPanel();
 
@@ -1018,10 +1081,45 @@ namespace RiskOfRoutes
             else
                 Log.Error("Route portal panel is null");
 
-            if(routeMapPanel != null)
+            if (routeMapPanel != null)
             {
-                routeMapPanel.transform.SetParent(hud.mainContainer.transform,false);
-                routeMapPanel.transform.SetParent(hud.scoreboardPanel.transform, true);
+
+                var mapCanvasGroup = routeMapPanel.GetComponent<CanvasGroup>();
+                if (mapCanvasGroup == null)
+                {
+                    Log.Info("Map canvas group is null");
+                    mapCanvasGroup = routeMapPanel.AddComponent<CanvasGroup>();
+                }
+
+                mapCanvasGroup.alpha = 1.0f;
+                routeMapPanel.SetActive(false);
+
+
+                var scoreboardJuice = hud.scoreboardPanel.GetComponent<UIJuice>();
+                var panelUiJuice = routeMapPanel.AddComponent<UIJuice>();
+                //TODO
+                var mapScript = routeMapPanel.GetComponent<RouteMapUI>();
+                if (scoreboardJuice != null)
+                {
+                    Log.Info("Juice not null");
+                    panelUiJuice.transitionDuration = 0.2f;
+                    panelUiJuice.panningMagnitude = scoreboardJuice.panningMagnitude;
+
+                    panelUiJuice.panningRect = mapScript.mainContainer;
+                    panelUiJuice.canvasGroup = mapCanvasGroup;
+                }
+
+                routeMapPanel.transform.SetParent(hud.mainContainer.transform, false); //к objective panel
+                //routeMapPanel.transform.SetParent(hud.scoreboardPanel.transform, true);
+                if (mapScript != null)
+                {
+                    mapScript.DrawMap();
+                }
+                else
+                {
+                    Log.Error("Script is not available");
+                }
+
             }
 
             if (bundle == null)
@@ -1073,14 +1171,18 @@ namespace RiskOfRoutes
             Shader blurShader = Shader.Find("UI/TranslucentImage");
             blur.material = new Material(blurShader);
             blur.color = new Color(0, 0, 0, 0.7f);
-
         }
-
-
 
         private void RoutePortalPanelUpdateText(GameObject routePortalPanel, RoutePortalManager mg)
         {
+            //if (!mg.isUsingModifiers)
+            //{
+            //    Log.Info("Vanilla portal");
+            //    return;
+            //}
             //Log.Info("Trying to update text");
+            //Log.Info($"i{mg.iconNames.Count}");
+            //Log.Info($"{mg.stageModifiers.Count}");
             var textComponents = routePortalPanel.GetComponentsInChildren<TextMeshProUGUI>();
             TextMeshProUGUI panelText = null;
             foreach (var text in textComponents)
@@ -1193,7 +1295,6 @@ namespace RiskOfRoutes
 
             Util.ShuffleList(scenes, Run.instance.stageRng);
 
-            var count = routeCount.Value;
             //int lim = count > scenes.Count ? scenes.Count : count;
             //if (uniqueDestinations.Value)
             //{
@@ -1255,7 +1356,7 @@ namespace RiskOfRoutes
                     var mg = portalObject.GetComponent<RoutePortalManager>();
 
                     mg.enabled = true;
-                    mg.isManagerEnabled = true;
+                    //mg.isManagerEnabled = true;
 
                     if (node == null)
                     {
@@ -1263,6 +1364,8 @@ namespace RiskOfRoutes
                         continue;
                     }
                     mg.routeNode = node;
+                    mg.isUsingModifiers = true;
+                    mg.isUsingSceneExit = true;
                     mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(portalObject);
                     mg.UpdateText();
 
@@ -1312,6 +1415,18 @@ namespace RiskOfRoutes
 
             return list;
 
+        }
+
+        public bool IsSceneColossus(SceneIndex index)
+        {
+            return ((index == SceneCatalog.FindSceneIndex("lemuriantemple")) || (index == SceneCatalog.FindSceneIndex("habitat")) || (index == SceneCatalog.FindSceneIndex("meridian")));
+        }
+
+        public bool IsSceneIntermission(SceneIndex index)
+        {
+            var scene = SceneCatalog.GetSceneDef(index);
+            if (scene == null) return false;
+            return scene.sceneType == SceneType.Intermission;
         }
 
         public static int GetGreenPortalSceneIndex()
@@ -1365,6 +1480,8 @@ namespace RiskOfRoutes
 
         private void Update()
         {
+            //if (Time.timeScale == 0f) return;
+
             if (Input.GetKeyDown(KeyCode.F2))
             {
                 var transform = PlayerCharacterMasterController.instances[0].master.GetBodyObject().transform;
@@ -1381,55 +1498,87 @@ namespace RiskOfRoutes
                 );
                 Log.Info("Done");
             }
+            /////
+
             var localUser = LocalUserManager.GetFirstLocalUser();
-            //TODO: Сделать смену при смене интерактбла, не чекать каждый кадр
             if (localUser != null && localUser.cachedBody != null)
             {
+                bool isHoldingTab = localUser.inputPlayer != null && localUser.inputPlayer.GetButton("info");
+                bool isLookingAtPortal = false;
+                RoutePortalManager currentManager = null;
+
+
                 var dr = localUser.cachedBody.GetComponent<InteractionDriver>();
-                if (dr != null)
+                if (dr != null && dr.currentInteractable != null)
                 {
-                    if (dr.currentInteractable != null)
-                    {
-                        if (dr.currentInteractable.name.Contains("RoutePortal") || dr.currentInteractable.name.Contains("Portal") || dr.currentInteractable.name.Contains("SeerStation"))
-                        {
-                            var manager = dr.currentInteractable.GetComponentInChildren<RoutePortalManager>();
+                    currentManager = dr.currentInteractable.GetComponentInChildren<RoutePortalManager>();
 
-                            if (!manager) manager = dr.currentInteractable.GetComponentInParent<RoutePortalManager>();
-                            if (manager != null && manager.isManagerEnabled)
-                            {
-                                //Log.Info("Looking at route portal");
-                                //Log.Info(manager.destinationScene.cachedName);
-                                //TODO: вроде можно переделать через TooltipProvider
-                                if (manager.modifierTextSynced != null)
-                                {
-                                    RoutePortalPanelUpdateText(routePortalPanel, manager);
-                                }
-                                else
-                                {
-                                    Log.Error("Could not set text to panel");
-                                }
-                                routePortalPanel.SetActive(true);
-                            }
-                            else
-                            {
-                                if (manager == null)
-                                    Log.Error("Does not have manager");
-                                else
-                                    Log.Error("Manager is disabled");
-                            }
-                        }
-                    }
-                    else
-                    {
+                    if (!currentManager) currentManager = dr.currentInteractable.GetComponentInParent<RoutePortalManager>();
 
-                        routePortalPanel.SetActive(false);
-
-                    }
+                    if (currentManager != null && currentManager.isUsingModifiers)
+                        isLookingAtPortal = true;
                 }
 
+                //панель
+                if (isLookingAtPortal)
+                {
+                    if (lastViewedManager != currentManager)
+                    {
+                        lastViewedManager = currentManager;
+                        if (currentManager.modifierTextSynced != null)
+                        {
+                            RoutePortalPanelUpdateText(routePortalPanel, currentManager);
+                        }
+                    }
+
+                    if (!routePortalPanel.activeSelf) routePortalPanel.SetActive(true);
+                }
+                else
+                {
+                    if (routePortalPanel.activeSelf) routePortalPanel.SetActive(false);
+                    lastViewedManager = null;
+                }
+
+                //TODO оптимизация тут карта перерисовывается слишком много раз
+                //карта
+                bool shouldShowMap = isHoldingTab || isLookingAtPortal;
+
+                if (shouldShowMap)
+                {
+                    RouteMap.RouteNode targetNode = isLookingAtPortal ? currentManager.routeNode : StageModifierDirector.instance.currentNode;
+
+                    var mapScript = routeMapPanel.GetComponent<RouteMapUI>();
+
+                    bool highlightChanged = targetNode != lastViewedNode;
+
+                    if (highlightChanged || !routeMapPanel.activeSelf)
+                    {
+                        mapScript.DrawMap(targetNode);
+                        lastViewedNode = targetNode;
+                    }
+
+                    if (!routeMapPanel.activeSelf)
+                    {
+                        routeMapPanel.SetActive(true);
+                        var juice = routeMapPanel.GetComponent<UIJuice>();
+                        if (juice != null)
+                        {
+                            juice.TransitionPanFromTop();
+                            juice.TransitionAlphaFadeIn();
+                        }
+                    }
+
+                }
+                else if (routeMapPanel.activeSelf)
+                {
+                    routeMapPanel.SetActive(false);
+                    lastViewedNode = null;
+                }
             }
 
+
         }
+
 
         [ConCommand(commandName = "debuglog_on_all", flags = ConVarFlags.ExecuteOnServer, helpText = "Logs a network message to all connected people.")]
         private static void CCNetworkLog(ConCommandArgs args)
