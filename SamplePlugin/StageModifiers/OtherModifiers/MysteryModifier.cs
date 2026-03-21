@@ -5,6 +5,7 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
 {
     //test one
     //todo networking
+    //пока что убран
     public class MysteryModifier : StageModifier
     {
         public MysteryModifier()
