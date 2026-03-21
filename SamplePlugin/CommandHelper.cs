@@ -1,5 +1,6 @@
 ﻿using RiskOfRoutes;
 using RoR2;
+using RoR2.UI;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -31,6 +32,63 @@ namespace SamplePlugin
 
         }
 
+        [ConCommand(commandName = "enemyitems", flags = ConVarFlags.ExecuteOnServer, helpText = "Give enemies items")]
+        private static void GiveEnemiesItems(ConCommandArgs args)
+        {
+            TeamManager.instance.GiveTeamItem(TeamIndex.Monster, RoR2.RoR2Content.Items.Hoof.itemIndex, 5);
+        }
+
+        [ConCommand(commandName = "mapon", flags = ConVarFlags.ExecuteOnServer, helpText = "Give enemies items")]
+        private static void MapOn(ConCommandArgs args)
+        {
+            var panel = RiskOfRoutes.RiskOfRoutes.routeMapPanel;
+
+            var mapScript = panel.GetComponent<RouteMapUI>();
+            mapScript.DrawMap();
+            var canvasGroup = panel.GetComponent<CanvasGroup>();
+            var juice = panel.GetComponent<UIJuice>();
+
+            panel.SetActive(true);
+            if (canvasGroup != null && juice != null)
+            {
+                juice.TransitionPanFromTop();
+                juice.TransitionAlphaFadeIn();
+            }
+        }
+
+        [ConCommand(commandName = "upgradeDrones", flags = ConVarFlags.ExecuteOnServer, helpText = "Upgrade drones")]
+        private static void UpgradePlayerDrones(ConCommandArgs args)
+        {
+            if (args.senderMaster)
+            {
+                CharacterBody cb = args.senderMaster.GetBody();
+                MinionOwnership.MinionGroup minionGroup = MinionOwnership.MinionGroup.FindGroup(cb.master.netId);
+                if (minionGroup == null)
+                {
+                    return;
+                }
+                MinionOwnership[] members = minionGroup.members;
+                foreach (MinionOwnership minionOwnership in members)
+                {
+                    if (!minionOwnership)
+                    {
+                        continue;
+                    }
+                    CharacterMaster master = minionOwnership.GetComponent<CharacterMaster>();
+                    if (master && master.inventory)
+                    {
+                        master.inventory.GiveItemPermanent(DLC3Content.Items.DroneUpgradeHidden);
+                    }
+                }
+            }
+        }
+
+        [ConCommand(commandName = "mapoff", flags = ConVarFlags.ExecuteOnServer, helpText = "Give enemies items")]
+        private static void MapOff(ConCommandArgs args)
+        {
+            RiskOfRoutes.RiskOfRoutes.routeMapPanel.SetActive(false);
+        }
+
         [ConCommand(commandName = "dccs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all cards for enemies that can spawn on current stage")]
         private static void GetDccs(ConCommandArgs args)
         {
@@ -50,13 +108,16 @@ namespace SamplePlugin
         private static void GetCurrentNode(ConCommandArgs args)
         {
             var node = StageModifierDirector.instance.currentNode;
-            if(node == null)
+            if (node == null)
             {
                 Log.Error("Current node is null");
             }
             else
             {
-                Log.Info($"Current node is {node.x},{node.y} with {node.GetPaths().Count} children");
+                Log.Info($"Current node is {node.x},{node.y} with {node.GetPaths().Count} children, visited {node.visited}");
+                Log.Info($"\tNext scene:{Run.instance.nextStageScene.cachedName}");
+                Log.Info($"\tCurr scene:{Stage.instance.sceneDef.cachedName}");
+                Log.Info($"\tLoop clear count:{Run.instance.loopClearCount}");
             }
         }
 
@@ -85,11 +146,10 @@ namespace SamplePlugin
         [ConCommand(commandName = "numbers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
         private static void GetCoeff(ConCommandArgs args)
         {
-            Log.Info($"\tComp Diff coef:{Run.instance.compensatedDifficultyCoefficient}");
-            Log.Info($"\tDiff coef:{Run.instance.difficultyCoefficient}");
-            Log.Info($"\tStages completed:{Run.instance.stageClearCount}");
-            Log.Info($"\tRoute credits:{StageModifierDirector.instance.routeCredits}");
-
+            if (args.senderMaster)
+            {
+                args.senderMaster.GetBody().inventory.GiveItemPermanent(DLC3Content.Items.DroneUpgradeHidden);
+            }
 
         }
 
@@ -330,11 +390,11 @@ namespace SamplePlugin
             CharacterBody body = args.senderMaster.GetBody();
             Vector3 position = body.transform.position + body.transform.forward * 5f;
             Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
-            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscHardwareProgPortal");
+            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscHardwareProgPortal_Haunt");
 
             if (!spawnCard)
             {
-                spawnCard = Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC3/iscHardwareProgPortal.asset").WaitForCompletion();
+                spawnCard = Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC3/iscHardwareProgPortal_Haunt.asset").WaitForCompletion();
             }
 
             if (!spawnCard)
@@ -384,7 +444,7 @@ namespace SamplePlugin
         [ConCommand(commandName = "fing", flags = ConVarFlags.ExecuteOnServer)]
         private static void FindShopPortal(ConCommandArgs args)
         {
-            GameObject obj = GameObject.Find("PortalGoldshores(Clone)");
+            GameObject obj = GameObject.Find("Node");
             if (obj == null)
             {
                 Log.Error("Could not find it");
