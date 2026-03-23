@@ -32,6 +32,9 @@ namespace RiskOfRoutes
         public string modifierTextSynced;
 
         [SyncVar]
+        public Vector2 nodeSync = new Vector2(-1,-1);
+
+        [SyncVar]
         public int destinationSceneIndex;
 
         public void Awake()
@@ -136,11 +139,12 @@ namespace RiskOfRoutes
                 if (routeNode != null)
                 {
                     modifierTextSynced = $"{routeNode.portalType}:{routeNode.x}.{routeNode.y}:\n{positiveText}\n{negativeText}";
+                    nodeSync = new Vector2(routeNode.x, routeNode.y);
                 }
                 else
                 {
                     //TODO
-                    //Log.Error("Route node is null");
+                    Log.Error("Route node is null");
                     modifierTextSynced = $"Null node {positiveText}\n{negativeText}";
                 }
 
@@ -312,6 +316,7 @@ namespace RiskOfRoutes
             if (routeNode != null)
             {
                 StageModifierDirector.instance.currentNode = routeNode;
+                StageModifierDirector.instance.currentNodeSync = nodeSync;
 
                 if (isUsingSceneExit)
                 {
@@ -337,6 +342,7 @@ namespace RiskOfRoutes
                 if (mg != null)
                 {
                     StageModifierDirector.instance.currentNode = mg.routeNode;
+                    StageModifierDirector.instance.currentNodeSync = mg.nodeSync;
                 }
             }
         }

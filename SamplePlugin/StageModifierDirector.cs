@@ -2,58 +2,12 @@
 using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin.StageModifiers;
-using SamplePlugin.StageModifiers.OtherModifiers;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
 namespace SamplePlugin
 {
-    [System.Serializable]
-    public struct ModifierSync : IEquatable<ModifierSync>
-    {
-        public string name;
-        public string description;
-        public int stack;
-        public bool isArtifact;
-
-        public ModifierSync(StageModifier mod)
-        {
-            name = mod.name;
-            description = mod.activeText;
-            stack = mod.stack;
-            isArtifact = mod is ArtifactModifier ? true : false;
-        }
-
-        public bool Equals(ModifierSync other)
-        {
-            return this.name == other.name;
-        }
-    }
-
-    [System.Serializable]
-    public struct RouteNodeSync : IEquatable<RouteNodeSync>
-    {
-        public RoutePortalType portalType;
-
-        public int x;
-        public int y;
-
-        public bool visited;
-
-        public RouteNodeSync(RouteMap.RouteNode node)
-        {
-            x = node.x;
-            y = node.y;
-            visited = node.visited;
-        }
-
-        public bool Equals(RouteNodeSync other)
-        {
-            throw new NotImplementedException();
-        }
-    }
 
     public class SyncListModifier : SyncListStruct<ModifierSync> { }
     public class SyncListRouteNode : SyncListStruct<RouteNodeSync> { }
@@ -72,9 +26,20 @@ namespace SamplePlugin
         [SyncVar(hook = nameof(OnModifiersSyncedUpdate))]
         public SyncListModifier modifiersSynced = new SyncListModifier();
 
-        //TODO
         [SyncVar(hook = nameof(OnRouteNodesSyncedUpdate))]
         public SyncListRouteNode routeNodesSynced = new SyncListRouteNode();
+
+        [SyncVar]
+        public int mapWidth;
+
+        [SyncVar]
+        public int mapHeight;
+
+        [SyncVar]
+        public bool isMoonVisited;
+
+        [SyncVar]
+        public Vector2 currentNodeSync = new Vector2(-1,-1);
 
         private static void OnModifiersSyncedUpdate()
         {
@@ -179,11 +144,38 @@ namespace SamplePlugin
 
             Log.Info("Creating route map");
             routeMap = new RouteMap(run.runRNG);
+            UpdateSyncedMap();
 
             currentNode = routeMap.GetStartingNode();
             currentNode.visited = true;
+            currentNodeSync = new Vector2(currentNode.x, currentNode.y);
             Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
         }
+
+        public void UpdateSyncedMap()
+        {
+            routeNodesSynced.Clear();
+            int width = routeMap.width;
+            int height = routeMap.height;
+            for(int x = 0; x<width+1;x++)
+            {
+                for(int y = 0; y<height;y++)
+                {
+                    if(routeMap.mapGrid[x,y]!= null)
+                    {
+                        routeNodesSynced.Add(new RouteNodeSync(routeMap.mapGrid[x,y]));
+                    }
+                    else
+                    {
+                        routeNodesSynced.Add(new RouteNodeSync(new RouteMap.RouteNode(-1,-1)));
+                    }
+                }
+            }
+            mapWidth = width;
+            mapHeight = height;
+            isMoonVisited = routeMap.isMoonVisited;
+        }
+
 
         public void Awake()
         {
@@ -316,6 +308,7 @@ namespace SamplePlugin
             reservedModifiers.Clear();
             runArtifactsApplied.Clear();
             modifiersSynced.Clear();
+            routeNodesSynced.Clear();
             if (this.gameObject)
             {
                 Destroy(this.gameObject);
@@ -405,6 +398,7 @@ namespace SamplePlugin
                     routeMap = new RouteMap(Run.instance.runRNG);
                     Log.Info("Created new map");
                     currentNode = routeMap.GetStartingNode();
+                    currentNodeSync = new Vector2(currentNode.x, currentNode.y);
                     Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
                     Log.Info($"Teleporter:{TeleporterInteraction.instance.sceneExitController.useRunNextStageScene}");
 
@@ -420,6 +414,7 @@ namespace SamplePlugin
 
             //TODO возможно стоит поменять порядок
             currentNode.visited = true;
+            UpdateSyncedMap();
 
         }
 
@@ -615,6 +610,7 @@ namespace SamplePlugin
             if (mg != null)
             {
                 currentNode = mg.routeNode;
+                currentNodeSync = new Vector2(currentNode.x, currentNode.y);
                 foreach (var p in activePortalInstances)
                 {
                     var gi = p.GetComponent<GenericInteraction>();

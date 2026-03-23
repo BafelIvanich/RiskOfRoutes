@@ -122,7 +122,7 @@ namespace RiskOfRoutes
         public static ConfigEntry<int> droneStackPercent;
 
         private RoutePortalManager lastViewedManager = null;
-        private RouteMap.RouteNode lastViewedNode = null;
+        private Vector2 lastViewedNodeCoords = new Vector2(-1,-1);
 
         public static GameObject routePortalPrefab;
         public static GameObject iconBubblePrefab;
@@ -409,7 +409,9 @@ namespace RiskOfRoutes
             if (Stage.instance.sceneDef.baseSceneName == "conduitcanyon")
             {
                 Log.Info("Conduit canyon");
-                StageModifierDirector.instance.currentNode = StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
+                var hardwareNode= StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
+                StageModifierDirector.instance.currentNode = hardwareNode;
+                StageModifierDirector.instance.currentNodeSync = new Vector2(hardwareNode.x, hardwareNode.y);
             }
             else
             {
@@ -864,14 +866,22 @@ namespace RiskOfRoutes
                             mgr.destinationSceneIndex = GetGreenPortalSceneIndex();
                             mgr.isOval = true;
                             mgr.isUsingModifiers = Stage.instance.sceneDef.stageOrder != 3;
+                            //todo здесь обновление карты захардкодено
                             if (currentScene != null && currentScene.sceneType == SceneType.Intermission)
                             {
                                 StageModifierDirector.instance.currentNode.visited = false;
-                                mgr.routeNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode, currentLayer: true);
+                                var colossusNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode, currentLayer: true);
+                                StageModifierDirector.instance.UpdateSyncedMap();
+                                mgr.routeNode = colossusNode;
+                                mgr.nodeSync = new Vector2(colossusNode.x,colossusNode.y);
+                                
                             }
                             else
                             {
-                                mgr.routeNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode);
+                                var colossusNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode);
+                                StageModifierDirector.instance.UpdateSyncedMap();
+                                mgr.routeNode = colossusNode;
+                                mgr.nodeSync = new Vector2(colossusNode.x, colossusNode.y);
                             }
                             Log.Info("Succesfuly set node to colossus");
                         }
@@ -905,6 +915,7 @@ namespace RiskOfRoutes
                                 {
                                     Log.Info("node zero");
                                     mgr.routeNode = StageModifierDirector.instance.routeMap.root;
+                                    mgr.nodeSync = new Vector2(0, 0);
                                 }
                                 else
                                 {
@@ -929,7 +940,9 @@ namespace RiskOfRoutes
                                 mgr.isUsingModifiers = true;
 
                             }
-                            mgr.routeNode = StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
+                            var hardwareNode = StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
+                            mgr.routeNode = hardwareNode;
+                            mgr.nodeSync = new Vector2(hardwareNode.x, hardwareNode.y);
                         }
                         else if (name == "iscDestinationPortal")
                         {
@@ -1113,7 +1126,7 @@ namespace RiskOfRoutes
                 //routeMapPanel.transform.SetParent(hud.scoreboardPanel.transform, true);
                 if (mapScript != null)
                 {
-                    mapScript.DrawMap();
+                    //mapScript.DrawMap();
                 }
                 else
                 {
@@ -1478,6 +1491,7 @@ namespace RiskOfRoutes
         }
 
 
+        //Можно не перерисовывать карту если игрок просто нажал таб
         private void Update()
         {
             //if (Time.timeScale == 0f) return;
@@ -1545,16 +1559,16 @@ namespace RiskOfRoutes
 
                 if (shouldShowMap)
                 {
-                    RouteMap.RouteNode targetNode = isLookingAtPortal ? currentManager.routeNode : StageModifierDirector.instance.currentNode;
+                    Vector2 targetNodeCoords = isLookingAtPortal ? currentManager.nodeSync : StageModifierDirector.instance.currentNodeSync;
 
                     var mapScript = routeMapPanel.GetComponent<RouteMapUI>();
 
-                    bool highlightChanged = targetNode != lastViewedNode;
+                    bool highlightChanged = targetNodeCoords != lastViewedNodeCoords;
 
                     if (highlightChanged || !routeMapPanel.activeSelf)
                     {
-                        mapScript.DrawMap(targetNode);
-                        lastViewedNode = targetNode;
+                        mapScript.DrawMap(targetNodeCoords);
+                        lastViewedNodeCoords = targetNodeCoords;
                     }
 
                     if (!routeMapPanel.activeSelf)
@@ -1572,7 +1586,7 @@ namespace RiskOfRoutes
                 else if (routeMapPanel.activeSelf)
                 {
                     routeMapPanel.SetActive(false);
-                    lastViewedNode = null;
+                    lastViewedNodeCoords = new Vector2(-1,-1);
                 }
             }
 
