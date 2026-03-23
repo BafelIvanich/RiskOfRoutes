@@ -1,4 +1,5 @@
 ﻿using RiskOfRoutes;
+using SamplePlugin;
 using System.Collections.Generic;
 
 
@@ -257,36 +258,7 @@ public class RouteMap
         return null;
     }
 
-    public int GetEffectiveWidth(RouteNode selectedNode = null)
-    {
-        //максимум width+1
-        int res = 0;
-        for (int x = 0; x < width + 1; x++)
-        {
-            bool flag = false;
-            for (int y = 0; y < height; y++)
-            {
-                var node = mapGrid[x, y];
 
-                if (node == null || node.portalType == RoutePortalType.None) continue;
-
-                bool isSpecialHidden = (node.portalType == RoutePortalType.Colossus ||
-                                        node.portalType == RoutePortalType.FalseSon ||
-                                        node.portalType == RoutePortalType.Hardware ||
-                                        node.portalType == RoutePortalType.SolusWing);
-
-                if (!isSpecialHidden || node.visited || node == selectedNode)
-                {
-                    flag = true;
-                    break;
-                }
-            }
-
-            if (flag) res++;
-        }
-        return res;
-
-    }
 
     private void ConnectToRandomNodeNextFloor(RouteNode node)
     {
@@ -320,7 +292,6 @@ public class RouteMap
     {
         return mapGrid[0, 0];
     }
-
 
     public class RouteNode
     {
