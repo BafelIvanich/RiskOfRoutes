@@ -5,12 +5,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.UI;
+using static RouteMap;
 
 namespace RiskOfRoutes
 {
     public class RouteMapUI : MonoBehaviour
     {
-        private Dictionary<RouteMap.RouteNode, RectTransform> MapNodes = new Dictionary<RouteMap.RouteNode, RectTransform>();
+        private Dictionary<RouteNodeSync, RectTransform> MapNodes = new Dictionary<RouteNodeSync, RectTransform>();
 
         public GameObject nodePrefab;
         public GameObject linePrefab;
@@ -36,12 +37,21 @@ namespace RiskOfRoutes
         public Sprite starting;
         public Sprite solusWing;
 
-        public void DrawMap(RouteMap.RouteNode selectedNode = null)
+        public void DrawMap()
+        { 
+            DrawMap(new Vector2(-1,-1));
+        }
+
+
+        public void DrawMap(Vector2 selectedNodeCoords)
         {
             ClearContainer();
             MapNodes.Clear();
 
             var map = StageModifierDirector.instance.routeNodesSynced;
+            int mapWidth = StageModifierDirector.instance.mapWidth;
+            int mapHeight = StageModifierDirector.instance.mapHeight;
+            bool isMoonVisited = StageModifierDirector.instance.isMoonVisited;
             if (map == null)
             {
                 Log.Error("Map is not created yet");
@@ -49,9 +59,10 @@ namespace RiskOfRoutes
             }
             else
             {
-                Log.Info($"Map is {map.width}");
+                Log.Info($"Map is {mapWidth}");
             }
 
+            var selectedNode = GetNode((int)selectedNodeCoords.x,(int)selectedNodeCoords.y, map, mapHeight);
 
             Transform linesContainer = new GameObject("Lines", typeof(RectTransform)).transform;
             linesContainer.SetParent(nodeContainer, false);
@@ -62,7 +73,8 @@ namespace RiskOfRoutes
             RectTransform objectiveRect = objectiveNode.GetComponent<RectTransform>();
             //ноды
             //ширина карты исключая пустые строки резервированные под порталы длс2 длс3
-            int effectiveWidth = map.GetEffectiveWidth(selectedNode);
+            //int effectiveWidth = map.GetEffectiveWidth(selectedNode);
+            int effectiveWidth = GetEffectiveWidth(selectedNode, mapWidth, mapHeight, map);
             Log.Info($"Effective width:{effectiveWidth}");
 
             float containerWidth = nodeContainer.rect.width;
@@ -74,8 +86,8 @@ namespace RiskOfRoutes
             float mapContainerWidth = containerWidth - (xPadding * 2);
             float mapContainerHeight = containerHeight - (yPadding * 2);
 
-            float xStep = isVertical ? (mapContainerWidth / (effectiveWidth - 1)) : (mapContainerWidth / map.height);
-            float yStep = isVertical ? (mapContainerHeight / map.height) : (mapContainerHeight / (effectiveWidth - 1));
+            float xStep = isVertical ? (mapContainerWidth / (effectiveWidth - 1)) : (mapContainerWidth / mapHeight);
+            float yStep = isVertical ? (mapContainerHeight / mapHeight) : (mapContainerHeight / (effectiveWidth - 1));
 
             objectiveRect.anchorMin = new Vector2(0.5f, 0.5f);
             objectiveRect.anchorMax = new Vector2(0.5f, 0.5f);
@@ -88,18 +100,27 @@ namespace RiskOfRoutes
 
             var img = objectiveNode.GetComponent<Image>();
             img.sprite = objective;
-            if (map.isMoonVisited)
+            if (isMoonVisited)
                 img.color = new Color(0.887f, 0.870f, 0.172f, 1f);
 
             //width+1 потому что для порталов слой
-            for (int mx = 0; mx < map.width + 1; mx++)
+            for (int mx = 0; mx < mapWidth + 1; mx++)
             {
-                for (int my = 0; my < map.height; my++)
+                for (int my = 0; my < mapHeight; my++)
                 {
-                    var currentNode = map.mapGrid[mx, my];
-                    if (currentNode == null) continue;
+
+                    var currentNode = GetNode(mx, my, map,mapHeight);
+                    bool isSpecialHidden = (currentNode.portalType == RoutePortalType.Colossus ||
+                        currentNode.portalType == RoutePortalType.FalseSon ||
+                        currentNode.portalType == RoutePortalType.Hardware ||
+                        currentNode.portalType == RoutePortalType.SolusWing);
+
+                    Log.Info($"\tIn RouteMapUI: currentNode:{currentNode.x}.{currentNode.y},{currentNode.portalType}");
+                    Log.Info($"Selected node:{selectedNode.x},{selectedNode.y}, {selectedNode.portalType}");
+
+                    if (currentNode.x == -1 || currentNode.y == -1) continue;
                     if (currentNode.portalType == RoutePortalType.None && my != 0) continue;
-                    if ((currentNode.portalType == RoutePortalType.Colossus || currentNode.portalType == RoutePortalType.FalseSon || currentNode.portalType == RoutePortalType.Hardware || currentNode.portalType == RoutePortalType.SolusWing) && (currentNode.visited == false && currentNode != selectedNode)) continue;
+                    if (isSpecialHidden && (currentNode.visited == false && !currentNode.Equals(selectedNode))) continue;
 
                     float xPos;
                     float yPos;
@@ -142,7 +163,7 @@ namespace RiskOfRoutes
                     PingIndicator pingIndicator = pingPrefab.GetComponent<PingIndicator>();
                     ObjectScaleCurve pingCurve = pingIndicator.pingObjectScaleCurve;
 
-                    if (currentNode == selectedNode && pingCurve != null)
+                    if (currentNode.Equals(selectedNode) && pingCurve != null)
                     {
                         Log.Info("Curve is not null");
                         var curve = routeNode.AddComponent<ObjectScaleCurve>();
@@ -163,10 +184,9 @@ namespace RiskOfRoutes
                     routeNodeRect.anchoredPosition = new Vector2(xPos, yPos);
                     routeNodeRect.sizeDelta = (mx == 0 && my == 0) ? new Vector2(4f, 4f) : new Vector2(48f, 48f);
 
-                    bool isHighlighted = map.mapGrid[mx, my].visited || map.mapGrid[mx, my] == selectedNode;
+                    bool isHighlighted = currentNode.visited || currentNode.Equals(selectedNode);
 
-                    SetIcon(routeNode, map.mapGrid[mx, my].portalType, mx, my, isHighlighted);
-
+                    SetIcon(routeNode, GetNode(mx, my,map, mapHeight).portalType, mx, my, isHighlighted);
 
                     MapNodes.Add(currentNode, routeNodeRect);
                 }
@@ -179,12 +199,12 @@ namespace RiskOfRoutes
 
 
                 //луна
-                if (parentNode.y == map.height - 1)
+                if (parentNode.y == mapHeight - 1)
                 {
-                    DrawLine(startRect.anchoredPosition, objectiveRect.anchoredPosition, linesContainer, parentNode.visited && map.isMoonVisited);
+                    DrawLine(startRect.anchoredPosition, objectiveRect.anchoredPosition, linesContainer, parentNode.visited && isMoonVisited);
                 }
 
-                foreach (var childNode in parentNode.GetPaths(true))
+                foreach (var childNode in GetChildren(parentNode, map, mapHeight,true))
                 {
                     if ((parentNode.portalType == RoutePortalType.Colossus || parentNode.portalType == RoutePortalType.FalseSon) && !childNode.visited) continue;
 
@@ -254,6 +274,65 @@ namespace RiskOfRoutes
             {
                 UnityEngine.Object.DestroyImmediate(nodeContainer.GetChild(i).gameObject);
             }
+        }
+
+        public int GetEffectiveWidth(RouteNodeSync selectedNode,int width, int height, SyncListRouteNode map)
+        {
+            //максимум width+1
+            int res = 0;
+            for (int x = 0; x < width + 1; x++)
+            {
+                bool flag = false;
+                for (int y = 0; y < height; y++)
+                {
+                    var node = GetNode(x, y, map, height);
+
+                    if (node.x == -1 || node.y == -1 || node.portalType == RoutePortalType.None) continue;
+
+                    bool isSpecialHidden = (node.portalType == RoutePortalType.Colossus ||
+                                            node.portalType == RoutePortalType.FalseSon ||
+                                            node.portalType == RoutePortalType.Hardware ||
+                                            node.portalType == RoutePortalType.SolusWing);
+
+                    if (!isSpecialHidden || node.visited || node.Equals(selectedNode))
+                    {
+                        flag = true;
+                        break;
+                    }
+                }
+
+                if (flag) res++;
+            }
+            return res;
+        }
+
+        public List<RouteNodeSync> GetChildren(RouteNodeSync node, SyncListRouteNode map, int height, bool usePortalNode = false)
+        {
+            var res = new List<RouteNodeSync>();    
+
+            if(node.leftX != -1 && node.leftY != -1)
+                res.Add(GetNode(node.leftX, node.leftY, map, height));
+
+            if (node.frontX != -1 && node.frontY != -1)
+                res.Add(GetNode(node.frontX, node.frontY, map, height));
+
+            if (node.rightX != -1 && node.rightY != -1)
+                res.Add(GetNode(node.rightX, node.rightY, map, height));
+
+            if (usePortalNode && (node.bonusX != -1 && node.bonusY != -1))
+                res.Add(GetNode(node.bonusX, node.bonusY, map, height));
+                
+
+
+
+            return res;
+        }
+
+        public RouteNodeSync GetNode(int x, int y, SyncListRouteNode map, int mapHeight)
+        {
+            //Log.Info($"\tMap size:{map.Count}");
+            //Log.Info($"\tTrying to access {x},{y}, index {y*mapHeight + x}");
+            return map.GetItem(x * mapHeight + y);
         }
     }
 }
