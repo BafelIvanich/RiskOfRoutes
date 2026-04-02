@@ -12,7 +12,6 @@ namespace RiskOfRoutes
             Mystery.smallIconDeselectedSprite = IconCatalog.ModifierIconFromDef("mystery");
             Mystery.smallIconSelectedSprite = IconCatalog.ModifierIconFromDef("mystery");
             Mystery.cachedName = "Mystery";
-            //ArtifactAPI.Add(Variance);
             R2API.ContentAddition.AddArtifactDef(Mystery);
 
             On.RoR2.PickupDisplay.RebuildModel += PickupDisplay_RebuildModel;

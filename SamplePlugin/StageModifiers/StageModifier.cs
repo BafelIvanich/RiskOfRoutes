@@ -9,9 +9,6 @@ namespace SamplePlugin.StageModifiers
     [System.Serializable]
     public abstract class StageModifier
     {
-        public string name;
-        public string activeText;
-        public string reservedText;
         public int stack = 1;
 
         public string iconName;
@@ -75,8 +72,3 @@ namespace SamplePlugin.StageModifiers
 
 }
 
-
-public enum ModifierType
-{
-    BossReward, EnemyModifier, SceneModifier, Other
-}

@@ -8,7 +8,6 @@ using UnityEngine.Networking;
 
 namespace SamplePlugin
 {
-
     public class SyncListModifier : SyncListStruct<ModifierSync> { }
     public class SyncListRouteNode : SyncListStruct<RouteNodeSync> { }
 

@@ -121,8 +121,6 @@ namespace RiskOfRoutes
         //other modifiers
         public static ConfigEntry<int> droneStackPercent;
 
-        private RoutePortalManager lastViewedManager = null;
-        private Vector2 lastViewedNodeCoords = new Vector2(-1,-1);
 
         public static GameObject routePortalPrefab;
         public static GameObject iconBubblePrefab;
@@ -137,8 +135,6 @@ namespace RiskOfRoutes
         public static GameObject routePortalPanel;
         public static GameObject routeMapPanel;
 
-        private HUD hud = null;
-
         private InteractableSpawnCard portalSpawnCard;
         public static AssetBundle bundle;
         private TMP_FontAsset bomb;
@@ -149,10 +145,12 @@ namespace RiskOfRoutes
 
         internal static GameObject CentralNetworkObject;
         private static GameObject _centralNetworkObjectSpawned;
-
+        private RoutePortalManager lastViewedManager = null;
+        private Vector2 lastViewedNodeCoords = new Vector2(-1, -1);
         public void Awake()
         {
             Log.Init(Logger);
+
             //networking
             var tmpGo = new GameObject("tmpGo");
             tmpGo.AddComponent<NetworkIdentity>();
@@ -162,11 +160,13 @@ namespace RiskOfRoutes
             CentralNetworkObject.AddComponent<MyNetworkComponent>();
             PrefabAPI.RegisterNetworkPrefab(CentralNetworkObject);
             RoR2.Run.onRunStartGlobal += Run_onRunStartGlobal;
+            //
 
+            // для теста мультиплеера
             On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
             //
-            BindConfig();
 
+            BindConfig();
 
             //для своих префабов
             string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "riskofroutes");
@@ -177,12 +177,10 @@ namespace RiskOfRoutes
             chefPrefab = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/MealPrep/MealPrep.prefab").WaitForCompletion(), "mealPrep");
             iconBubblePrefab = CreateIconBubblePrefab();
             routePortalPrefab = CreateRoutePortalPrefab();
-            //routePortalPanelPrefab = CreateRoutePortalPanelPrefab();
             droneSymbolTexture = bundle.LoadAsset<Texture2D>("teleporterDrone");
             rewardSymbolTexture = bundle.LoadAsset<Texture2D>("teleporterReward");
             aurelioniteSymbolTexture = bundle.LoadAsset<Texture2D>("teleporterAurelionite");
-
-
+            //
 
             //для moreelitesmodifier
             FieldInfo eliteTiersField = typeof(CombatDirector).GetField("eliteTiers", BindingFlags.NonPublic | BindingFlags.Static);
@@ -196,6 +194,7 @@ namespace RiskOfRoutes
                 Log.Error("Could not load default elite tiers");
                 defaultEliteTiers = new CombatDirector.EliteTierDef[] { };
             }
+            //
 
             //хуки
 
@@ -225,10 +224,116 @@ namespace RiskOfRoutes
             Artifact.InitializeArtifact();
             SoulCostController.Initialize();
 
-            AddHologramToTeleporter();
+            AddHologramControllerToTeleporter();
+            //
         }
 
-        private void AddHologramToTeleporter()
+        private void BindConfig()
+        {
+
+            usePortalMaterial = Config.Bind<bool>(
+                "Tweaks", "Use Scene Material", false, "[WIP] Sets destination scene portrait as a portal texture");
+            ModSettingsManager.AddOption(new CheckBoxOption(usePortalMaterial));
+
+            showPortalDestination = Config.Bind<bool>(
+                "Tweaks", "Show Portal Destination", true, "Show destination scene in hud");
+            ModSettingsManager.AddOption(new CheckBoxOption(showPortalDestination));
+
+            uniqueDestinations = Config.Bind<bool>(
+                "Tweaks", "Unique Destination", true, "Makes each route portal have unique scene as destination, limits their count to amount of scenes available");
+            ModSettingsManager.AddOption(new CheckBoxOption(uniqueDestinations));
+
+            teleporterUseRandomMods = Config.Bind<bool>(
+                "Tweaks", "Teleporter Use Random mods", true, "Makes teleporter use random modifiers of spawned route portals after interacting with it, set false if you want it not to use any stage modifiers");
+            ModSettingsManager.AddOption(new CheckBoxOption(teleporterUseRandomMods));
+            //todo
+            modifiersCanBeBanned = Config.Bind<bool>(
+                "Tweaks", "Modifiers can be banned after being used", true, "Prevents some of stage modifiers appearing on the next stage, if they were active on the current stage");
+            ModSettingsManager.AddOption(new CheckBoxOption(modifiersCanBeBanned));
+
+            //artifacts
+            allowMysteryArtifact = Config.Bind<bool>(
+                "Artifacts", "Mystery", true, "Mystery artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowMysteryArtifact));
+
+            allowChaosArtifact = Config.Bind<bool>(
+               "Artifacts", "Chaos", true, "Chaos artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowChaosArtifact));
+
+            allowDeathArtifact = Config.Bind<bool>(
+                "Artifacts", "Death", true, "Death artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowDeathArtifact));
+
+            allowDissonanceArtifact = Config.Bind<bool>(
+                "Artifacts", "Dissonance", true, "Dissonance artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowDissonanceArtifact));
+
+            allowFrailtyArtifact = Config.Bind<bool>(
+                "Artifacts", "Frailty", true, "Frailty artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowFrailtyArtifact));
+
+            allowHonorArtifact = Config.Bind<bool>(
+                "Artifacts", "Honor", true, "Honor artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowHonorArtifact));
+
+            allowSacrificeArtifact = Config.Bind<bool>(
+                "Artifacts", "Sacrifice", true, "Sacrifice artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowSacrificeArtifact));
+
+            allowSoulArtifact = Config.Bind<bool>(
+                "Artifacts", "Soul", true, "Soul artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowSoulArtifact));
+
+            allowSpiteArtifact = Config.Bind<bool>(
+                "Artifacts", "Spite", true, "Spite artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowSpiteArtifact));
+
+            allowSwarmsArtifact = Config.Bind<bool>(
+                "Artifacts", "Swarms", true, "Swarms artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowSwarmsArtifact));
+
+            allowVengeanceArtifact = Config.Bind<bool>(
+                "Artifacts", "Vengeance", true, "Vengeance artifact available as artifact stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowVengeanceArtifact));
+
+            allowCommandArtifact = Config.Bind<bool>(
+                "Artifacts", "Command", false, "Command artifact available as artifact stage modifier. Not intented to be available");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowCommandArtifact));
+
+            allowDelusionArtifact = Config.Bind<bool>(
+                "Artifacts", "Delusion", false, "Delusion artifact available as artifact stage modifier. Not intented to be available");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowDelusionArtifact));
+
+            allowDevotionArtifact = Config.Bind<bool>(
+                "Artifacts", "Devotion", false, "Devotion artifact available as artifact stage modifier. Not intented to be available");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowDevotionArtifact));
+
+            allowEnigmaArtifact = Config.Bind<bool>(
+                "Artifacts", "Enigma", false, "Enigma artifact available as artifact stage modifier. Not intented to be available");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowEnigmaArtifact));
+
+            allowEvolutionArtifact = Config.Bind<bool>(
+                "Artifacts", "Evolution", false, "Evolution artifact available as artifact stage modifier. Not intented to be available");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowEvolutionArtifact));
+
+            allowGlassArtifact = Config.Bind<bool>(
+                "Artifacts", "Glass", false, "Glass artifact available as artifact stage modifier. Not intented to be available");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowGlassArtifact));
+
+            allowKinArtifact = Config.Bind<bool>(
+                "Artifacts", "Kin", false, "Kin artifact available as artifact stage modifier. Not intented to be available");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowKinArtifact));
+
+            allowMetamorphosisArtifact = Config.Bind<bool>(
+                "Artifacts", "Metamorphosis", false, "Metamorphosis artifact available as artifact stage modifier. Not intented to be available");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowMetamorphosisArtifact));
+
+            allowRebirthArtifact = Config.Bind<bool>(
+                "Artifacts", "Rebirth", false, "Rebirth artifact available as artifact stage modifier. Not intented to be available");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowRebirthArtifact));
+        }
+
+        private void AddHologramControllerToTeleporter()
         {
             var teleporterPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Teleporters/Teleporter1.prefab").WaitForCompletion();
 
@@ -246,127 +351,125 @@ namespace RiskOfRoutes
         {
             orig(self);
 
-            if (NetworkServer.active)
+            if (!NetworkServer.active) return;
+            Log.Info("BazaarController_Start: Replacing portal");
+
+            GameObject shopPortalObject = null;
+            RoR2.SceneExitController[] exits = FindObjectsOfType<RoR2.SceneExitController>(true);
+            foreach (var exit in exits)
             {
-                Log.Info("Replacing portal");
-
-                GameObject shopPortal = null;
-                RoR2.SceneExitController[] exits = FindObjectsOfType<RoR2.SceneExitController>(true);
-                foreach (var exit in exits)
+                if (exit.useRunNextStageScene || exit.gameObject.name.Contains("Shop"))
                 {
-                    if (exit.useRunNextStageScene || exit.gameObject.name.Contains("Shop"))
-                    {
-                        shopPortal = exit.gameObject;
-                        Log.Info($"Shop portal with name {exit.gameObject.name}");
-                        break;
-                    }
+                    shopPortalObject = exit.gameObject;
+                    Log.Info($"Shop portal with name {exit.gameObject.name}");
+                    break;
                 }
+            }
 
-                if (shopPortal != null)
+            if (shopPortalObject != null)
+            {
+                Vector3 pos = shopPortalObject.transform.position;
+                Quaternion rot = shopPortalObject.transform.rotation;
+
+                NetworkServer.Destroy(shopPortalObject);
+
+                GameObject shopRoutePortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/PortalShop/PortalShop.prefab").WaitForCompletion();
+                GameObject shopRoutePortal = Object.Instantiate(shopRoutePortalPrefab, pos, rot);
+
+                var shopRouteManager = shopRoutePortal.GetComponent<RoutePortalManager>();
+                if (shopRouteManager != null)
                 {
-                    Vector3 pos = shopPortal.transform.position;
-                    Quaternion rot = shopPortal.transform.rotation;
-
-                    NetworkServer.Destroy(shopPortal);
-
-                    GameObject shopRoutePortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/PortalShop/PortalShop.prefab").WaitForCompletion();
-                    GameObject shopRoutePortal = Object.Instantiate(shopRoutePortalPrefab, pos, rot);
-
-                    var mg = shopRoutePortal.GetComponent<RoutePortalManager>();
-                    if (mg != null)
-                    {
-                        mg.enabled = true;
-                        //mg.isManagerEnabled = true;
-                        mg.destinationSceneIndex = (int)(RoR2.Run.instance.nextStageScene.sceneDefIndex);
-                        mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopRoutePortal);
-                        mg.isOval = true;
-                        mg.isUsingModifiers = true;
-                        mg.isUsingSceneExit = true;
-                        mg.routeNode = StageModifierDirector.instance.currentNode;
-                        mg.UpdateText();
-                        Log.Info("Portal was replaced");
-                    }
-                    else
-                    {
-                        Log.Error("Shop portal does not have manager");
-                    }
-
-                    NetworkServer.Spawn(shopRoutePortal);
-                    Log.Info("Portal spawned on network");
-
-                    SceneExitController sceneExit = shopRoutePortal.GetComponent<SceneExitController>();
-
-                    if (sceneExit != null && self.seerStations != null)
-                    {
-                        List<SeerStationController> newSeerStations = new List<SeerStationController>();
-                        foreach (var oldSeerStationController in self.seerStations)
-                        {
-                            if (oldSeerStationController != null)
-                            {
-                                var oldSeer = oldSeerStationController.gameObject;
-
-                                Vector3 seerPos = oldSeer.transform.position;
-                                Quaternion seerRot = oldSeer.transform.rotation;
-                                int oldTargetSceneIndex = oldSeerStationController.targetSceneDefIndex;
-
-                                NetworkServer.Destroy(oldSeer);
-
-                                GameObject seerStationPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/bazaar/SeerStation.prefab").WaitForCompletion();
-                                GameObject newSeer = Object.Instantiate(seerStationPrefab, seerPos, seerRot);
-
-                                var newController = newSeer.GetComponent<SeerStationController>();
-                                if (newController != null)
-                                {
-                                    newController.targetSceneDefIndex = oldTargetSceneIndex;
-                                    newController.explicitTargetSceneExitController = sceneExit;
-                                }
-                                else
-                                {
-                                    Log.Error("Does not have controller by default");
-                                }
-
-                                var seerRouteManager = newSeer.GetComponent<RoutePortalManager>();
-                                if (seerRouteManager != null)
-                                {
-                                    seerRouteManager.isSeerStation = true;
-                                    seerRouteManager.destinationSceneIndex = oldTargetSceneIndex;
-                                    if (!IsSceneIntermission((SceneIndex)oldTargetSceneIndex))
-                                    {
-                                        seerRouteManager.isUsingModifiers = true;
-                                        seerRouteManager.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(newSeer);
-                                    }
-                                    else
-                                    {
-                                        seerRouteManager.isUsingModifiers = false;
-                                    }
-                                    if (IsSceneColossus((SceneIndex)oldTargetSceneIndex))
-                                    {
-                                        seerRouteManager.routeNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode, currentLayer: true);
-                                    }
-                                    else
-                                    {
-                                        seerRouteManager.routeNode = StageModifierDirector.instance.currentNode;
-                                    }
-
-                                    seerRouteManager.enabled = true;
-                                    //seerRouteManager.isManagerEnabled = true;
-                                    seerRouteManager.UpdateText();
-                                }
-
-                                NetworkServer.Spawn(newSeer);
-                                newSeerStations.Add(newController);
-                                Log.Info("Seer was replaced");
-                            }
-                        }
-
-                        self.seerStations = newSeerStations.ToArray();
-                    }
-
+                    shopRouteManager.enabled = true;
+                    //mg.isManagerEnabled = true;
+                    shopRouteManager.destinationSceneIndex = (int)(RoR2.Run.instance.nextStageScene.sceneDefIndex);
+                    shopRouteManager.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopRoutePortal);
+                    shopRouteManager.isOval = true;
+                    shopRouteManager.isUsingModifiers = true;
+                    shopRouteManager.isUsingSceneExit = true;
+                    shopRouteManager.routeNode = StageModifierDirector.instance.currentNode;
+                    shopRouteManager.UpdateText();
+                    Log.Info("Portal was replaced");
                 }
                 else
                 {
-                    Log.Error("Shop portal was not found");
+                    Log.Error("Shop portal does not have manager");
                 }
+
+                NetworkServer.Spawn(shopRoutePortal);
+                Log.Info("Portal spawned on network");
+
+                SceneExitController sceneExit = shopRoutePortal.GetComponent<SceneExitController>();
+
+                if (sceneExit != null && self.seerStations != null)
+                {
+                    List<SeerStationController> newSeerStations = new List<SeerStationController>();
+                    foreach (var oldSeerStationController in self.seerStations)
+                    {
+                        if (oldSeerStationController != null)
+                        {
+                            var oldSeer = oldSeerStationController.gameObject;
+
+                            Vector3 seerPos = oldSeer.transform.position;
+                            Quaternion seerRot = oldSeer.transform.rotation;
+                            int oldTargetSceneIndex = oldSeerStationController.targetSceneDefIndex;
+
+                            NetworkServer.Destroy(oldSeer);
+
+                            GameObject seerStationPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/bazaar/SeerStation.prefab").WaitForCompletion();
+                            GameObject newSeer = Object.Instantiate(seerStationPrefab, seerPos, seerRot);
+
+                            var newController = newSeer.GetComponent<SeerStationController>();
+                            if (newController != null)
+                            {
+                                newController.targetSceneDefIndex = oldTargetSceneIndex;
+                                newController.explicitTargetSceneExitController = sceneExit;
+                            }
+                            else
+                            {
+                                Log.Error("Does not have controller by default");
+                            }
+
+                            var seerRouteManager = newSeer.GetComponent<RoutePortalManager>();
+                            if (seerRouteManager != null)
+                            {
+                                seerRouteManager.isSeerStation = true;
+                                seerRouteManager.destinationSceneIndex = oldTargetSceneIndex;
+                                if (!IsSceneIntermission((SceneIndex)oldTargetSceneIndex))
+                                {
+                                    seerRouteManager.isUsingModifiers = true;
+                                    seerRouteManager.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(newSeer);
+                                }
+                                else
+                                {
+                                    seerRouteManager.isUsingModifiers = false;
+                                }
+                                if (IsSceneColossus((SceneIndex)oldTargetSceneIndex))
+                                {
+                                    seerRouteManager.routeNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode, currentLayer: true);
+                                }
+                                else
+                                {
+                                    seerRouteManager.routeNode = StageModifierDirector.instance.currentNode;
+                                }
+
+                                seerRouteManager.enabled = true;
+                                //seerRouteManager.isManagerEnabled = true;
+                                seerRouteManager.UpdateText();
+                            }
+
+                            NetworkServer.Spawn(newSeer);
+                            newSeerStations.Add(newController);
+                            Log.Info("Seer was replaced");
+                        }
+                    }
+
+                    self.seerStations = newSeerStations.ToArray();
+                }
+
+            }
+            else
+            {
+                Log.Error("Shop portal was not found");
             }
         }
 
@@ -399,7 +502,6 @@ namespace RiskOfRoutes
                 seerPrefab.AddComponent<RoutePortalManager>();
                 Log.Info($"Added route portal manager to seer prefab");
             }
-            seerRouteMg = seerPrefab.GetComponent<RoutePortalManager>();
 
         }
 
@@ -409,7 +511,7 @@ namespace RiskOfRoutes
             if (Stage.instance.sceneDef.baseSceneName == "conduitcanyon")
             {
                 Log.Info("Conduit canyon");
-                var hardwareNode= StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
+                var hardwareNode = StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
                 StageModifierDirector.instance.currentNode = hardwareNode;
                 StageModifierDirector.instance.currentNodeSync = new Vector2(hardwareNode.x, hardwareNode.y);
             }
@@ -418,26 +520,6 @@ namespace RiskOfRoutes
                 StageModifierDirector.instance.GetRouteNodeFromRandomPortal();
                 if (teleporterUseRandomMods.Value)
                     StageModifierDirector.instance.GetModifiersFromRandomPortal();
-
-            }
-            var teleporterPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Teleporters/Teleporter1.prefab").WaitForCompletion();
-            var baseMesh = teleporterPrefab.transform.Find("TeleporterBaseMesh").Find("HologramPivot").Find("ShrineBossIndicator");
-
-            var bossSymbol = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/ShrineBoss/ShrineBossSymbol.prefab").WaitForCompletion();
-            if (baseMesh != null)
-            {
-
-                var bossSymbolRectPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/ShrineBoss/ShrineBossSymbolRectTransform.prefab").WaitForCompletion();
-
-
-                if (bossSymbolRectPrefab == null)
-                {
-                    Log.Error("Failed to load ShrineBossSymbolRectTransform via Addressables");
-                }
-                else
-                {
-                    Log.Info("Loaded!!!");
-                }
             }
         }
 
@@ -656,180 +738,71 @@ namespace RiskOfRoutes
             }
         }
 
-        private void BindConfig()
-        {
 
-            usePortalMaterial = Config.Bind<bool>(
-                "Tweaks", "Use Scene Material", false, "[WIP] Sets destination scene portrait as a portal texture");
-            ModSettingsManager.AddOption(new CheckBoxOption(usePortalMaterial));
-
-            showPortalDestination = Config.Bind<bool>(
-                "Tweaks", "Show Portal Destination", true, "Show destination scene in hud");
-            ModSettingsManager.AddOption(new CheckBoxOption(showPortalDestination));
-
-            uniqueDestinations = Config.Bind<bool>(
-                "Tweaks", "Unique Destination", true, "Makes each route portal have unique scene as destination, limits their count to amount of scenes available");
-            ModSettingsManager.AddOption(new CheckBoxOption(uniqueDestinations));
-
-            teleporterUseRandomMods = Config.Bind<bool>(
-                "Tweaks", "Teleporter Use Random mods", true, "Makes teleporter use random modifiers of spawned route portals after interacting with it, set false if you want it not to use any stage modifiers");
-            ModSettingsManager.AddOption(new CheckBoxOption(teleporterUseRandomMods));
-            //todo
-            modifiersCanBeBanned = Config.Bind<bool>(
-                "Tweaks", "Modifiers can be banned after being used", true, "Prevents some of stage modifiers appearing on the next stage, if they were active on the current stage");
-            ModSettingsManager.AddOption(new CheckBoxOption(modifiersCanBeBanned));
-
-            //artifacts
-            allowMysteryArtifact = Config.Bind<bool>(
-                "Artifacts", "Mystery", true, "Mystery artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowMysteryArtifact));
-
-            allowChaosArtifact = Config.Bind<bool>(
-               "Artifacts", "Chaos", true, "Chaos artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowChaosArtifact));
-
-            allowDeathArtifact = Config.Bind<bool>(
-                "Artifacts", "Death", true, "Death artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowDeathArtifact));
-
-            allowDissonanceArtifact = Config.Bind<bool>(
-                "Artifacts", "Dissonance", true, "Dissonance artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowDissonanceArtifact));
-
-            allowFrailtyArtifact = Config.Bind<bool>(
-                "Artifacts", "Frailty", true, "Frailty artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowFrailtyArtifact));
-
-            allowHonorArtifact = Config.Bind<bool>(
-                "Artifacts", "Honor", true, "Honor artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowHonorArtifact));
-
-            allowSacrificeArtifact = Config.Bind<bool>(
-                "Artifacts", "Sacrifice", true, "Sacrifice artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowSacrificeArtifact));
-
-            allowSoulArtifact = Config.Bind<bool>(
-                "Artifacts", "Soul", true, "Soul artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowSoulArtifact));
-
-            allowSpiteArtifact = Config.Bind<bool>(
-                "Artifacts", "Spite", true, "Spite artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowSpiteArtifact));
-
-            allowSwarmsArtifact = Config.Bind<bool>(
-                "Artifacts", "Swarms", true, "Swarms artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowSwarmsArtifact));
-
-            allowVengeanceArtifact = Config.Bind<bool>(
-                "Artifacts", "Vengeance", true, "Vengeance artifact available as artifact stage modifier");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowVengeanceArtifact));
-
-            allowCommandArtifact = Config.Bind<bool>(
-                "Artifacts", "Command", false, "Command artifact available as artifact stage modifier. Not intented to be available");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowCommandArtifact));
-
-            allowDelusionArtifact = Config.Bind<bool>(
-                "Artifacts", "Delusion", false, "Delusion artifact available as artifact stage modifier. Not intented to be available");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowDelusionArtifact));
-
-            allowDevotionArtifact = Config.Bind<bool>(
-                "Artifacts", "Devotion", false, "Devotion artifact available as artifact stage modifier. Not intented to be available");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowDevotionArtifact));
-
-            allowEnigmaArtifact = Config.Bind<bool>(
-                "Artifacts", "Enigma", false, "Enigma artifact available as artifact stage modifier. Not intented to be available");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowEnigmaArtifact));
-
-            allowEvolutionArtifact = Config.Bind<bool>(
-                "Artifacts", "Evolution", false, "Evolution artifact available as artifact stage modifier. Not intented to be available");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowEvolutionArtifact));
-
-            allowGlassArtifact = Config.Bind<bool>(
-                "Artifacts", "Glass", false, "Glass artifact available as artifact stage modifier. Not intented to be available");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowGlassArtifact));
-
-            allowKinArtifact = Config.Bind<bool>(
-                "Artifacts", "Kin", false, "Kin artifact available as artifact stage modifier. Not intented to be available");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowKinArtifact));
-
-            allowMetamorphosisArtifact = Config.Bind<bool>(
-                "Artifacts", "Metamorphosis", false, "Metamorphosis artifact available as artifact stage modifier. Not intented to be available");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowMetamorphosisArtifact));
-
-            allowRebirthArtifact = Config.Bind<bool>(
-                "Artifacts", "Rebirth", false, "Rebirth artifact available as artifact stage modifier. Not intented to be available");
-            ModSettingsManager.AddOption(new CheckBoxOption(allowRebirthArtifact));
-
-
-
-        }
 
 
         private void SeerStationController_SetRunNextStageToTarget(On.RoR2.SeerStationController.orig_SetRunNextStageToTarget orig, SeerStationController self)
         {
             orig(self);
 
-            if (NetworkServer.active)
+            if (!NetworkServer.active || SceneManager.GetActiveScene().name != "bazaar")
             {
-                SceneIndex targetScene = (SceneIndex)self.targetSceneDefIndex;
+                return;
+            }
 
-                if (SceneManager.GetActiveScene().name == "bazaar")
+            //сцена самого сиера
+            SceneIndex targetScene = (SceneIndex)self.targetSceneDefIndex;
+
+            GameObject shopPortal = null;
+            SceneExitController exitController = null;
+            RoR2.SceneExitController[] exits = FindObjectsOfType<RoR2.SceneExitController>(true);
+            foreach (var exit in exits)
+            {
+                if (exit.useRunNextStageScene || exit.gameObject.name.Contains("Shop"))
                 {
-                    GameObject shopPortal = null;
-                    SceneExitController exitController = null;
-                    RoR2.SceneExitController[] exits = FindObjectsOfType<RoR2.SceneExitController>(true);
-                    foreach (var exit in exits)
-                    {
-                        if (exit.useRunNextStageScene || exit.gameObject.name.Contains("Shop"))
-                        {
-                            shopPortal = exit.gameObject;
-                            exitController = exit;
-                            exitController.useRunNextStageScene = true;
-                            Log.Info($"Shop portal with name {exit.gameObject.name}");
-                            break;
-                        }
-                    }
-
-                    if (!shopPortal)
-                    {
-                        Log.Error("Could not find shopportal on bazaar scene");
-                    }
-
-                    if (!shopPortal.GetComponent<RoutePortalManager>())
-                    {
-                        //TODO удалить после теста
-                        Log.Error("Shop portal doesn't have manager");
-                    }
-                    else
-                    {
-                        var seerRouteManager = self.gameObject.GetComponent<RoutePortalManager>();
-
-                        var mg = shopPortal.GetComponent<RoutePortalManager>();
-                        int previous = (int)mg.destinationSceneIndex;
-                        mg.destinationSceneIndex = (int)targetScene;
-                        if (seerRouteManager)
-                            mg.stageModifiers = seerRouteManager.stageModifiers;
-                        else
-                            mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopPortal);
-
-                        if (IsSceneColossus((SceneIndex)targetScene))
-                        {
-                            mg.routeNode = seerRouteManager.routeNode;
-                        }
-                        mg.UpdateText();
-                        Log.Info($"Updated exit destination:{previous}->{mg.destinationSceneIndex}");
-                    }
-
-                }
-                else
-                {
-                    Log.Debug("Not bazaar");
+                    shopPortal = exit.gameObject;
+                    exitController = exit;
+                    exitController.useRunNextStageScene = true;
+                    Log.Info($"Shop portal with name {exit.gameObject.name}");
+                    break;
                 }
             }
+
+            if (!shopPortal)
+            {
+                Log.Error("Could not find shopportal on bazaar scene");
+            }
+
+            if (!shopPortal.GetComponent<RoutePortalManager>())
+            {
+                //TODO удалить после теста
+                Log.Error("Shop portal doesn't have manager");
+            }
+            else
+            {
+                var seerRouteManager = self.gameObject.GetComponent<RoutePortalManager>();
+
+                var mg = shopPortal.GetComponent<RoutePortalManager>();
+                int previous = (int)mg.destinationSceneIndex;
+                mg.destinationSceneIndex = (int)targetScene;
+                if (seerRouteManager)
+                    mg.stageModifiers = seerRouteManager.stageModifiers;
+                else
+                    mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(shopPortal);
+
+                if (IsSceneColossus((SceneIndex)targetScene))
+                {
+                    mg.routeNode = seerRouteManager.routeNode;
+                }
+                mg.UpdateText();
+                Log.Info($"Updated exit destination:{previous}->{mg.destinationSceneIndex}");
+            }
+
+
         }
 
 
-        //todo переписать, добавить ванильным префабам mg сразу
+
         private GameObject OnVanillaPortalSpawn(On.RoR2.DirectorCore.orig_TrySpawnObject orig, DirectorCore self, DirectorSpawnRequest directorSpawnRequest)
         {
             //return orig(self, directorSpawnRequest);
@@ -873,8 +846,8 @@ namespace RiskOfRoutes
                                 var colossusNode = StageModifierDirector.instance.routeMap.CreateColossusNode(StageModifierDirector.instance.currentNode, currentLayer: true);
                                 StageModifierDirector.instance.UpdateSyncedMap();
                                 mgr.routeNode = colossusNode;
-                                mgr.nodeSync = new Vector2(colossusNode.x,colossusNode.y);
-                                
+                                mgr.nodeSync = new Vector2(colossusNode.x, colossusNode.y);
+
                             }
                             else
                             {
@@ -1586,7 +1559,7 @@ namespace RiskOfRoutes
                 else if (routeMapPanel.activeSelf)
                 {
                     routeMapPanel.SetActive(false);
-                    lastViewedNodeCoords = new Vector2(-1,-1);
+                    lastViewedNodeCoords = new Vector2(-1, -1);
                 }
             }
 
