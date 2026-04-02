@@ -11,9 +11,6 @@ namespace SamplePlugin.StageModifiers
     {
         public int stack = 1;
 
-        public string iconName;
-        public Color tooltipColor = new Color(0.86f, 0.57f, 0.57f, 1.0f);
-
         public bool negative = false;
         public bool stackable = true;
 

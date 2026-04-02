@@ -11,10 +11,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
         public MoreDronesModifier(int stack)
         {
-            name = "More drones";
-            activeText = "More <style=cIsUtility>drones</style> will appear on this stage.";
-            reservedText = "More <style=cIsUtility>drones</style> will appear on the next stage.";
-            iconName = "RoR2/Base/Common/MiscIcons/texDroneIconOutlined.png";
             negative = false;
             this.stack = stack;
         }

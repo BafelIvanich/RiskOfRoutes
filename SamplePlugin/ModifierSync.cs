@@ -1,4 +1,5 @@
-﻿using SamplePlugin.StageModifiers;
+﻿using RiskOfRoutes.StageModifiers;
+using SamplePlugin.StageModifiers;
 using SamplePlugin.StageModifiers.OtherModifiers;
 using System;
 
@@ -12,12 +13,12 @@ namespace SamplePlugin
         public int stack;
         public bool isArtifact;
 
-        public ModifierSync(StageModifier mod)
+        public ModifierSync(ModifierDef mod)
         {
             name = mod.name;
-            description = mod.activeText;
-            stack = mod.stack;
-            isArtifact = mod is ArtifactModifier ? true : false;
+            description = mod.name;
+            stack = 1;
+            isArtifact = mod is ArtifactModifier;
         }
 
         public bool Equals(ModifierSync other)

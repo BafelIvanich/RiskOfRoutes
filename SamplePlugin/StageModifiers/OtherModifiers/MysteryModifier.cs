@@ -10,12 +10,8 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
     {
         public MysteryModifier()
         {
-            name = "Mystery";
-            reservedText = "You cannot see items";
-            activeText = "You cannot see items";
             negative = true;
             stackable = false;
-            iconName = "mystery";
         }
 
         public override void OnEnd()

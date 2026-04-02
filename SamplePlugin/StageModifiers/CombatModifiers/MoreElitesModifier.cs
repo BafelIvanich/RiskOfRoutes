@@ -14,10 +14,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public MoreElitesModifier(int stack)
         {
-            name = "More elites";
-            activeText = "More <style=cDeath>elite</style> enemies will appear.";
-            reservedText = "More <style=cDeath>elite</style> enemies will appear on the next stage.";
-            iconName = "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveBossIcon.png";
             negative = true;
             this.stack = stack;
         }

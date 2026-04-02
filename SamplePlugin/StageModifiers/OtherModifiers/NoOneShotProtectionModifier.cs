@@ -4,9 +4,6 @@
     {
         public NoOneShotProtectionModifier()
         {
-            name = "No one shot protection";
-            reservedText = "<style=cDeath>One shot protection</style> will be disabled on the next stage.";
-            activeText = "<style=cDeath>One shot protection</style> will be disabled on this stage.";
             stackable = false;
             negative = true;
         }

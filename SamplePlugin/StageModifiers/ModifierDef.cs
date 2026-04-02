@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace RiskOfRoutes.StageModifiers
 {
@@ -12,6 +13,7 @@ namespace RiskOfRoutes.StageModifiers
         public Func<bool> isAvailable = () => true;
         public List<string> conflictList = new List<string>();
         public int maxStack = -1;
+        public Sprite icon;
 
 
         public ModifierDef(string name, int cost, float weight, bool stackable, string[] conflicts = null, int maxStack = -1)

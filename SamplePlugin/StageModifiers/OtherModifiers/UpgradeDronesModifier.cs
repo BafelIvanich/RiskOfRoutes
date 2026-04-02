@@ -7,10 +7,6 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
     {
         public UpgradeDronesModifier(int stack)
         {
-            name = "Upgrade drones";
-            activeText = "All of your <style=cIsUtility>drones</style> get upgraded.";
-            reservedText = "All of your <style=cIsUtility>drones</style> get upgraded.";
-            iconName = "RoR2/DLC3/UI/texUIdroneupgradeIcon.png";
             negative = false;
             this.stack = stack;
         }

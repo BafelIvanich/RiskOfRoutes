@@ -18,7 +18,8 @@ namespace SamplePlugin
         public static List<GameObject> activePortalInstances;
 
         public List<StageModifier> activeModifiers { get; set; }
-        public List<StageModifier> reservedModifiers { get; set; }
+        public List<ModifierSync> reservedModifiers { get; set; }
+
         public List<ModifierDef> bannedModifiers { get; set; }
         public List<string> runArtifactsApplied;
 
@@ -38,7 +39,7 @@ namespace SamplePlugin
         public bool isMoonVisited;
 
         [SyncVar]
-        public Vector2 currentNodeSync = new Vector2(-1,-1);
+        public Vector2 currentNodeSync = new Vector2(-1, -1);
 
         private static void OnModifiersSyncedUpdate()
         {
@@ -47,10 +48,8 @@ namespace SamplePlugin
 
         private static void OnRouteNodesSyncedUpdate()
         {
-            Log.Info("SyncedModifiers were updated");
+            Log.Info("RouteNodes were updated");
         }
-
-        //public SyncListModifier modifiersSynced = new SyncListModifier();
 
         public int startingCredits = 200;
         public int routeCredits = 60;
@@ -83,44 +82,6 @@ namespace SamplePlugin
         [SyncVar(hook = nameof(OnStageUpdate))]
         public int currStage = 0;
 
-        public static List<ItemInfo> itemsInfo =
-        [
-            //сильные
-            new ItemInfo("Syringe", ModifierTier.Tier3, 1f),
-            new ItemInfo("Bear", ModifierTier.Tier3, 1f),
-            new ItemInfo("FireRing", ModifierTier.Tier3, 1f),
-            new ItemInfo("IceRing", ModifierTier.Tier3, 1f),
-
-
-            //средне
-            new ItemInfo("Crowbar", ModifierTier.Tier2, 1f),
-            new ItemInfo("NearbyDamageBonus", ModifierTier.Tier2, 1f),
-            new ItemInfo("BleedOnHit", ModifierTier.Tier2, 1f),
-            new ItemInfo("FragileDamageBonus", ModifierTier.Tier2, 1f),
-            new ItemInfo("Missile", ModifierTier.Tier2, 1f),
-            new ItemInfo("ExecuteLowHealthElite", ModifierTier.Tier2, 1f),
-            new ItemInfo("ExplodeOnDeath", ModifierTier.Tier2, 1f),
-
-
-            //такое
-            new ItemInfo("IgniteOnKill", ModifierTier.Tier1, 1f),
-            new ItemInfo("SecondarySkillMagazine", ModifierTier.Tier1, 1f),
-            new ItemInfo("Thorns", ModifierTier.Tier1, 1f),
-            new ItemInfo("ChainLightning", ModifierTier.Tier1, 1f),
-            new ItemInfo("StrengthenBurn", ModifierTier.Tier1, 1f),
-            new ItemInfo("KnockBackHitEnemies", ModifierTier.Tier1, 1f),
-            new ItemInfo("ShieldBooster", ModifierTier.Tier1, 1f),
-            new ItemInfo("EquipmentMagazine",ModifierTier.Tier1,1f),
-            new ItemInfo("Seed",ModifierTier.Tier1,1f)
-
-        ];
-
-        public List<ModifierDef> allModifiers;
-        public List<ModifierDef> itemModifiersPool;
-        public List<ModifierDef> droneModifiersPool;
-        public List<ModifierDef> rareModifiersPool;
-        public List<ModifierDef> chefModifiersPool;
-
         public override void OnStartServer()
         {
             base.OnStartServer();
@@ -128,16 +89,10 @@ namespace SamplePlugin
             CreateDirector(Run.instance);
         }
 
-        //private void OnModifiersChanged(SyncList<ModifierSync>.Operation op, int itemIndex)
-        //{
-        //    Log.Info("Modifiers were changed");
-        //}
-
         //TODO обработка случая когда произошел переход на след стейдж но не поменялся нод
         private void CreateDirector(Run run)
         {
             Log.Info("Run started");
-
 
             runArtifactsApplied = GetArtifactsAppliedThisRun();
 
@@ -156,17 +111,17 @@ namespace SamplePlugin
             routeNodesSynced.Clear();
             int width = routeMap.width;
             int height = routeMap.height;
-            for(int x = 0; x<width+1;x++)
+            for (int x = 0; x < width + 1; x++)
             {
-                for(int y = 0; y<height;y++)
+                for (int y = 0; y < height; y++)
                 {
-                    if(routeMap.mapGrid[x,y]!= null)
+                    if (routeMap.mapGrid[x, y] != null)
                     {
-                        routeNodesSynced.Add(new RouteNodeSync(routeMap.mapGrid[x,y]));
+                        routeNodesSynced.Add(new RouteNodeSync(routeMap.mapGrid[x, y]));
                     }
                     else
                     {
-                        routeNodesSynced.Add(new RouteNodeSync(new RouteMap.RouteNode(-1,-1)));
+                        routeNodesSynced.Add(new RouteNodeSync(new RouteMap.RouteNode(-1, -1)));
                     }
                 }
             }
@@ -183,19 +138,13 @@ namespace SamplePlugin
             instance = this;
 
             activeModifiers = new List<StageModifier>();
-            reservedModifiers = new List<StageModifier>();
+            reservedModifiers = new List<ModifierSync>();
             bannedModifiers = new List<ModifierDef>();
-
-            allModifiers = new List<ModifierDef>();
-            itemModifiersPool = new List<ModifierDef>();
-            droneModifiersPool = new List<ModifierDef>();
-            rareModifiersPool = new List<ModifierDef>();
-            chefModifiersPool = new List<ModifierDef>();
 
             activePortalInstances = new List<GameObject>();
             DontDestroyOnLoad(gameObject);
 
-            RegisterModDefs();
+            //RegisterModDefs();
 
             Log.Info("StageModifierDirector created");
 
@@ -213,78 +162,6 @@ namespace SamplePlugin
             RoR2.SceneDirector.onPrePopulateSceneServer -= SceneDirector_onPrePopulateSceneServer;
             RoR2.Stage.onServerStageComplete -= Stage_onServerStageComplete;
         }
-
-        public void RegisterModDefs()
-        {
-            allModifiers.Add(new ModifierDef("BossRedItem", ModifierTier.Tier3, 1f, false, new string[] { "BossYellowItem", "DroneBossGreen" }));
-            allModifiers.Add(new ModifierDef("BossYellowItem", ModifierTier.Tier2, 1f, false, new string[] { "BossRedItem", "DroneBossGreen" }));
-            allModifiers.Add(new ModifierDef("DroneBossGreen", ModifierTier.Tier1, 1f, false));
-            allModifiers.Add(new ModifierDef("MoreElites", ModifierTier.Tier1, 1f, true));
-            allModifiers.Add(new ModifierDef("MoreDrones", ModifierTier.Tier1, 1f, true));
-            allModifiers.Add(new ModifierDef("LunarEnemies", ModifierTier.Tier3, 1f, true));
-            allModifiers.Add(new ModifierDef("VoidEnemies", ModifierTier.Tier3, 1f, true));
-            allModifiers.Add(new ModifierDef("YellowPrinter", ModifierTier.Tier1, 1f, CheckPlayersYellowItem, true));
-            allModifiers.Add(new ModifierDef("RedPrinter", ModifierTier.Tier1, 1f, CheckPlayersRedItem, true));
-            allModifiers.Add(new ModifierDef("OnlyFlying", ModifierTier.Tier2, 1f, false));
-            allModifiers.Add(new ModifierDef("PowerfulElites", ModifierTier.Tier3, 1f, true));
-            allModifiers.Add(new ModifierDef("Repair", ModifierTier.Tier3, 1f, CheckPlayersHaveConsumedItems, false));
-            allModifiers.Add(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false));
-            allModifiers.Add(new ModifierDef("Mountain", ModifierTier.Tier1, 1f, CheckMountainShrine, false));
-            allModifiers.Add(new ModifierDef("SoulCost", ModifierTier.Tier2, 1f, true));
-            allModifiers.Add(new ModifierDef("Doppelganger", ModifierTier.Tier2, 1f, true));
-            allModifiers.Add(new ModifierDef("UpgradeDrones", ModifierTier.Tier3, 1f, true));
-
-            //артефакты мода
-            if (RiskOfRoutes.RiskOfRoutes.allowMysteryArtifact.Value) allModifiers.Add(new ModifierDef("Mystery", ModifierTier.Tier2, 1f, () => CheckArtifactAvailable("Mystery"), false));
-            //артефакты
-            if (RiskOfRoutes.RiskOfRoutes.allowChaosArtifact.Value) allModifiers.Add(new ModifierDef("FriendlyFire", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("FriendlyFire"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowCommandArtifact.Value) allModifiers.Add(new ModifierDef("Command", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Command"), true));
-            if (RiskOfRoutes.RiskOfRoutes.allowDelusionArtifact.Value) allModifiers.Add(new ModifierDef("Delusion", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Delusion"), true));
-            if (RiskOfRoutes.RiskOfRoutes.allowDevotionArtifact.Value) allModifiers.Add(new ModifierDef("Devotion", ModifierTier.Tier2, 1f, () => CheckArtifactAvailable("Devotion"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowDissonanceArtifact.Value) allModifiers.Add(new ModifierDef("MixEnemy", ModifierTier.Tier2, 1f, () => CheckArtifactAvailable("MixEnemy"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowEnigmaArtifact.Value) allModifiers.Add(new ModifierDef("Enigma", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Enigma"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowEvolutionArtifact.Value) allModifiers.Add(new ModifierDef("MonsterTeamGainsItems", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("MonsterTeamGainsItems"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowFrailtyArtifact.Value) allModifiers.Add(new ModifierDef("WeakAssKnees", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("WeakAssKnees"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowGlassArtifact.Value) allModifiers.Add(new ModifierDef("Glass", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Glass"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowHonorArtifact.Value) allModifiers.Add(new ModifierDef("EliteOnly", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("EliteOnly"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowKinArtifact.Value) allModifiers.Add(new ModifierDef("SingleMonsterType", ModifierTier.Tier2, 1f, () => CheckArtifactAvailable("SingleMonsterType"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowMetamorphosisArtifact.Value) allModifiers.Add(new ModifierDef("RandomSurvivorOnRespawn", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("RandomSurvivorOnRespawn"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowRebirthArtifact.Value) allModifiers.Add(new ModifierDef("Rebirth", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("Rebirth"), true));
-            if (RiskOfRoutes.RiskOfRoutes.allowSacrificeArtifact.Value) allModifiers.Add(new ModifierDef("Sacrifice", ModifierTier.Tier3, 1f, () => CheckArtifactAvailable("Sacrifice"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowSoulArtifact.Value) allModifiers.Add(new ModifierDef("WispOnDeath", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("WispOnDeath"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowSpiteArtifact.Value) allModifiers.Add(new ModifierDef("Bomb", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("Bomb"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowSwarmsArtifact.Value) allModifiers.Add(new ModifierDef("Swarms", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("Swarms"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowVengeanceArtifact.Value) allModifiers.Add(new ModifierDef("ShadowClone", ModifierTier.Tier1, 1f, () => CheckArtifactAvailable("ShadowClone"), false));
-            if (RiskOfRoutes.RiskOfRoutes.allowDeathArtifact.Value) allModifiers.Add(new ModifierDef("TeamDeath", ModifierTier.Tier2, 1f, CheckArtifactOfDeathAvailable, false));
-
-
-            foreach (var item in itemsInfo)
-            {
-                itemModifiersPool.Add(new ModifierDef(item.internalName + " Printer", item.cost, item.weight, false));
-            }
-            droneModifiersPool.Add(new ModifierDef("DroneBossGreen", ModifierTier.Tier1, 1f, false));
-            droneModifiersPool.Add(new ModifierDef("MoreDrones", ModifierTier.Tier1, 1f, true));
-            droneModifiersPool.Add(new ModifierDef("UpgradeDrones", ModifierTier.Tier1, 1f, true));
-
-
-
-            var modifierPools = new List<List<ModifierDef>>() { rareModifiersPool, droneModifiersPool, itemModifiersPool };
-            //дефолтные
-            foreach (var modifierPool in modifierPools)
-            {
-                allModifiers.Add(new ModifierDef("MoreElites", ModifierTier.Tier1, 1f, true));
-                allModifiers.Add(new ModifierDef("LunarEnemies", ModifierTier.Tier3, 1f, true));
-                allModifiers.Add(new ModifierDef("VoidEnemies", ModifierTier.Tier3, 1f, true));
-                allModifiers.Add(new ModifierDef("UpgradeDrones", ModifierTier.Tier1, 1f, true));
-            }
-
-
-            rareModifiersPool.Add(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false));
-            rareModifiersPool.Add(new ModifierDef("BossRedItem", ModifierTier.Tier3, 1f, false, new string[] { "BossYellowItem", "DroneBossGreen" }));
-
-
-        }
-
 
         protected virtual void FixedUpdate()
         {
@@ -332,10 +209,17 @@ namespace SamplePlugin
             Log.Info($"Stage started, applying {reservedModifiers.Count} modifiers");
             if (reservedModifiers.Count == 0) return;
             Log.Info(reservedModifiers.Count);
-            activeModifiers = new List<StageModifier>(reservedModifiers);
+
+            activeModifiers.Clear();
+            foreach (var modifier in reservedModifiers)
+            {
+                StageModifier mod = StageModifierCatalog.StageModifierFromDef(modifier.name,modifier.stack);
+                activeModifiers.Add(mod);
+            }
+
             foreach (var mod in reservedModifiers)
             {
-                modifiersSynced.Add(new ModifierSync(mod));
+                modifiersSynced.Add(mod);
                 if (mod.name == "SoulCost")
                 {
                     Log.Info("Found soulcost");
@@ -417,7 +301,7 @@ namespace SamplePlugin
 
         }
 
-        public List<StageModifier> GetNextStageModifiers(GameObject portal)
+        public List<ModifierSync> GetNextStageModifiers(GameObject portal)
         {
             WeightedSelection<ModifierDef> weightedSelection = CreateAvailableModifierSelection(portal);
             var mg = portal.GetComponent<RoutePortalManager>();
@@ -452,7 +336,7 @@ namespace SamplePlugin
 
             int routePortalCredits = routeCredits;
             int attempts = 100;
-            while (routePortalCredits > 0 && attempts > 0 && modifiers.Count < 5)
+            while (routePortalCredits > 0 && attempts > 0 && modifiers.Count < uniqueModifierLimit)
             {
                 attempts--;
                 ModifierDef currentModifier = SelectModifier(weightedSelection, routePortalCredits, bannedFromSelection);
@@ -475,10 +359,10 @@ namespace SamplePlugin
 
             }
             Log.Error(weightedSelection.Count);
-            List<StageModifier> res = new List<StageModifier>();
+            List<ModifierSync> res = new List<ModifierSync>();
             foreach (var mod in modifiers)
             {
-                res.Add(StageModifierCatalog.StageModifierFromDef(mod.Key, mod.Value));
+                res.Add(new ModifierSync() { name = mod.Key, stack = mod.Value });
             }
             return res;
         }
@@ -523,29 +407,30 @@ namespace SamplePlugin
             //    return res;
             //}
 
-            foreach (var modDef in allModifiers)
+            foreach (var modName in StageModifierCatalog.AllDefNames)
             {
-                if (modDef.isAvailable())
-                {
+                var modDef = StageModifierCatalog.FindModifier(modName);
+                //if (modDef.isAvailable())
+                //{
                     res.AddChoice(modDef, modDef.selectionWeight);
                     //Log.Info($"Added {modDef.name}");
-                }
+                //}
             }
 
             return res;
         }
 
-        public List<ModifierDef> GetModifiersFromCategory(RoutePortalType type)
-        {
-            switch (type)
-            {
-                case RoutePortalType.None: return allModifiers;
-                case RoutePortalType.ItemType: return itemModifiersPool;
-                case RoutePortalType.DroneType: return droneModifiersPool;
-                case RoutePortalType.Rare: return rareModifiersPool;
-                default: return allModifiers;
-            }
-        }
+        //public List<ModifierDef> GetModifiersFromCategory(RoutePortalType type)
+        //{
+        //    //switch (type)
+        //    //{
+        //    //    case RoutePortalType.None: return allModifiers;
+        //    //    case RoutePortalType.ItemType: return itemModifiersPool;
+        //    //    case RoutePortalType.DroneType: return droneModifiersPool;
+        //    //    case RoutePortalType.Rare: return rareModifiersPool;
+        //    //    default: return allModifiers;
+        //    //}
+        //}
 
         public void AddRoutePortalInstance(GameObject portal)
         {
@@ -627,7 +512,7 @@ namespace SamplePlugin
 
 
         [Server]
-        private bool CheckPlayersRedItem()
+        public bool CheckPlayersRedItem()
         {
             int redItemCount = 0;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
@@ -652,7 +537,7 @@ namespace SamplePlugin
         }
 
         [Server]
-        private bool CheckPlayersYellowItem()
+        public bool CheckPlayersYellowItem()
         {
             int yellowItemCount = 0;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
@@ -679,7 +564,7 @@ namespace SamplePlugin
 
         //TODO можно проверить и активки
         [Server]
-        private bool CheckPlayersHaveConsumedItems()
+        public bool CheckPlayersHaveConsumedItems()
         {
             int consumedItemsCount = 0;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
@@ -704,7 +589,7 @@ namespace SamplePlugin
         }
 
         [Server]
-        private bool CheckMountainShrine()
+        public bool CheckMountainShrine()
         {
             if (RoR2.TeleporterInteraction.instance)
             {
@@ -714,13 +599,13 @@ namespace SamplePlugin
         }
 
         [Server]
-        private bool CheckArtifactOfDeathAvailable()
+        public bool CheckArtifactOfDeathAvailable()
         {
             return (Run.instance.participatingPlayerCount > 1) && (!runArtifactsApplied.Contains("TeamDeath"));
         }
 
         [Server]
-        private bool CheckArtifactAvailable(string name)
+        public bool CheckArtifactAvailable(string name)
         {
             if (name == "Mystery")
             {
@@ -731,7 +616,7 @@ namespace SamplePlugin
 
 
         [Server]
-        private int CheckPlayersHaveFoodItems()
+        public int CheckPlayersHaveFoodItems()
         {
             List<ItemDef> foodRelated = new List<ItemDef>()
             {

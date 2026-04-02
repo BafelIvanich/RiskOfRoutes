@@ -32,25 +32,25 @@ namespace SamplePlugin
             portalType = node.portalType;
 
             var front = node.front;
-            if(front != null)
+            if (front != null)
             {
                 frontX = front.x;
                 frontY = front.y;
             }
             var left = node.left;
-            if(left != null)
+            if (left != null)
             {
                 leftX = left.x;
                 leftY = left.y;
             }
             var right = node.right;
-            if(node.right != null)
+            if (node.right != null)
             {
                 rightX = right.x;
                 rightY = right.y;
             }
 
-            if(node.portalNode != null)
+            if (node.portalNode != null)
             {
                 bonusX = node.portalNode.x;
                 bonusY = node.portalNode.y;

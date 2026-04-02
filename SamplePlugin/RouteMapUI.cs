@@ -1,11 +1,8 @@
 ﻿using RoR2;
-using RoR2.UI;
 using SamplePlugin;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 using UnityEngine.UI;
-using static RouteMap;
 
 namespace RiskOfRoutes
 {
@@ -38,13 +35,15 @@ namespace RiskOfRoutes
         public Sprite solusWing;
 
         public void DrawMap()
-        { 
-            DrawMap(new Vector2(-1,-1));
+        {
+            DrawMap(new Vector2(-1, -1));
         }
 
 
         public void DrawMap(Vector2 selectedNodeCoords)
         {
+            Log.Info($"Selected coords:{selectedNodeCoords}");
+
             ClearContainer();
             MapNodes.Clear();
 
@@ -62,7 +61,7 @@ namespace RiskOfRoutes
                 Log.Info($"Map is {mapWidth}");
             }
 
-            var selectedNode = GetNode((int)selectedNodeCoords.x,(int)selectedNodeCoords.y, map, mapHeight);
+            var selectedNode = GetNode((int)selectedNodeCoords.x, (int)selectedNodeCoords.y, map, mapHeight);
 
             Transform linesContainer = new GameObject("Lines", typeof(RectTransform)).transform;
             linesContainer.SetParent(nodeContainer, false);
@@ -109,7 +108,7 @@ namespace RiskOfRoutes
                 for (int my = 0; my < mapHeight; my++)
                 {
 
-                    var currentNode = GetNode(mx, my, map,mapHeight);
+                    var currentNode = GetNode(mx, my, map, mapHeight);
                     bool isSpecialHidden = (currentNode.portalType == RoutePortalType.Colossus ||
                         currentNode.portalType == RoutePortalType.FalseSon ||
                         currentNode.portalType == RoutePortalType.Hardware ||
@@ -159,13 +158,11 @@ namespace RiskOfRoutes
                     //TODO если выбранный
 
 
-                    GameObject pingPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Common/PingIndicator.prefab").WaitForCompletion();
-                    PingIndicator pingIndicator = pingPrefab.GetComponent<PingIndicator>();
-                    ObjectScaleCurve pingCurve = pingIndicator.pingObjectScaleCurve;
+                    var pingCurve = RiskOfRoutes.pingCurve;
 
                     if (currentNode.Equals(selectedNode) && pingCurve != null)
                     {
-                        Log.Info("Curve is not null");
+                        //Log.Info("Curve is not null");
                         var curve = routeNode.AddComponent<ObjectScaleCurve>();
                         curve.useOverallCurveOnly = pingCurve.useOverallCurveOnly;
                         curve.overallCurve = pingCurve.overallCurve;
@@ -186,7 +183,7 @@ namespace RiskOfRoutes
 
                     bool isHighlighted = currentNode.visited || currentNode.Equals(selectedNode);
 
-                    SetIcon(routeNode, GetNode(mx, my,map, mapHeight).portalType, mx, my, isHighlighted);
+                    SetIcon(routeNode, GetNode(mx, my, map, mapHeight).portalType, mx, my, isHighlighted);
 
                     MapNodes.Add(currentNode, routeNodeRect);
                 }
@@ -204,7 +201,7 @@ namespace RiskOfRoutes
                     DrawLine(startRect.anchoredPosition, objectiveRect.anchoredPosition, linesContainer, parentNode.visited && isMoonVisited);
                 }
 
-                foreach (var childNode in GetChildren(parentNode, map, mapHeight,true))
+                foreach (var childNode in GetChildren(parentNode, map, mapHeight, true))
                 {
                     if ((parentNode.portalType == RoutePortalType.Colossus || parentNode.portalType == RoutePortalType.FalseSon) && !childNode.visited) continue;
 
@@ -276,7 +273,7 @@ namespace RiskOfRoutes
             }
         }
 
-        public int GetEffectiveWidth(RouteNodeSync selectedNode,int width, int height, SyncListRouteNode map)
+        public int GetEffectiveWidth(RouteNodeSync selectedNode, int width, int height, SyncListRouteNode map)
         {
             //максимум width+1
             int res = 0;
@@ -308,9 +305,9 @@ namespace RiskOfRoutes
 
         public List<RouteNodeSync> GetChildren(RouteNodeSync node, SyncListRouteNode map, int height, bool usePortalNode = false)
         {
-            var res = new List<RouteNodeSync>();    
+            var res = new List<RouteNodeSync>();
 
-            if(node.leftX != -1 && node.leftY != -1)
+            if (node.leftX != -1 && node.leftY != -1)
                 res.Add(GetNode(node.leftX, node.leftY, map, height));
 
             if (node.frontX != -1 && node.frontY != -1)
@@ -321,7 +318,7 @@ namespace RiskOfRoutes
 
             if (usePortalNode && (node.bonusX != -1 && node.bonusY != -1))
                 res.Add(GetNode(node.bonusX, node.bonusY, map, height));
-                
+
 
 
 

@@ -21,22 +21,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
         //todo кроме equipment Дрона
         public DroneBossRewardModifier(bool dropLegendary = false)
         {
-            if (dropLegendary)
-            {
-                reservedText = "Get <style=cDeath>random legendary drone</style> as a teleporter event reward.";
-                activeText = "Get <style=cDeath>random legendary drone</style> as a teleporter event reward.";
-                name = "Legendary drone reward";
-                iconName = "legendaryDroneReward";
-            }
-            else
-            {
-                reservedText = "Get <style=cIsHealing>random uncommon drone</style> as a teleporter event reward.";
-                activeText = "Get <style=cIsHealing>random uncommon drone</style> as a teleporter event reward.";
-                iconName = "uncommonDroneReward";
-                name = "Uncommon drone reward";
-            }
             this.dropLegendary = dropLegendary;
-            tooltipColor = new Color(246f / 255f, 90f / 255f, 58f / 255f);
             stackable = false;
 
         }

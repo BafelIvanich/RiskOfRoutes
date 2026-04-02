@@ -14,11 +14,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public LunarEnemiesModifier(int stack)
         {
-            name = "Moon invasion";
-            reservedText = "<style=cLunarObjective>Enemies from the moon</style> might appear on the next stage.";
-            activeText = "<style=cLunarObjective>Enemies from the moon</style> might appear on this stage.";
-            iconName = "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveLunarIcon.png";
-            //var icon = Addressables.LoadAssetAsync<Sprite>("RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveLunarIcon.png").WaitForCompletion();
             negative = true;
             this.stack = stack;
         }

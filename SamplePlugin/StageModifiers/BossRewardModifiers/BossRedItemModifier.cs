@@ -10,12 +10,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
     {
         public BossRedItemModifier()
         {
-            reservedText = "Get <style=cDeath>red item</style> as a teleporter event reward.";
-            activeText = "Get <style=cDeath>red item</style> as a teleporter event reward.";
-            name = "Red item";
-            tooltipColor = new Color(228f / 255f, 196f / 255f, 21f / 255f);
             stackable = false;
-            iconName = "redBossItem";
         }
 
         public override void OnEnd()

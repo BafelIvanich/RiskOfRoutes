@@ -13,10 +13,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         public List<DirectorCard> voidEnemies;
         public VoidEnemiesModifier(int stack)
         {
-            name = "Void invasion";
-            reservedText = "<style=cIsVoid>Enemies from the void</style> might appear on the next stage.";
-            activeText = "<style=cIsVoid>Enemies from the void</style> might appear on this stage.";
-            iconName = "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveVoidIcon.png";
             negative = true;
             this.stack = stack;
         }
@@ -39,25 +35,25 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                 Log.Error("No monster categories found. Returning");
                 return;
             }
-            foreach (var ctg in ClassicStageInfo.instance.monsterCategories.categories)
+            foreach (var category in ClassicStageInfo.instance.monsterCategories.categories)
             {
-                if (ctg.name == "Basic Monsters")
+                if (category.name == "Basic Monsters")
                 {
-                    foreach (var card in ctg.cards)
+                    foreach (var card in category.cards)
                     {
                         basicCost = Mathf.Max(basicCost, card.cost);
                     }
                 }
-                if (ctg.name == "Minibosses")
+                if (category.name == "Minibosses")
                 {
-                    foreach (var card in ctg.cards)
+                    foreach (var card in category.cards)
                     {
                         miniBossCost = Mathf.Max(miniBossCost, card.cost);
                     }
                 }
-                if (ctg.name == "Champions")
+                if (category.name == "Champions")
                 {
-                    foreach (var card in ctg.cards)
+                    foreach (var card in category.cards)
                     {
                         champCost = Mathf.Max(champCost, card.cost);
                     }

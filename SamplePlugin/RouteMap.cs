@@ -1,5 +1,4 @@
 ﻿using RiskOfRoutes;
-using SamplePlugin;
 using System.Collections.Generic;
 
 
@@ -91,19 +90,6 @@ public class RouteMap
         return pathNodes;
     }
 
-    private void PrintRoute(RouteNode node)
-    {
-        RouteNode curr = node;
-        while (curr != null)
-        {
-            var children = curr.GetPaths();
-            //Log.Info($"Route {curr.x},{curr.y} has {children.Count} paths");
-            //foreach(var n in children)
-            //{
-            //    Log.Info($"\t{n.x},{n.y}");
-            //}
-        }
-    }
 
     public void CreateRoute(RouteNode curr, int x, int y, Xoroshiro128Plus rng)
     {

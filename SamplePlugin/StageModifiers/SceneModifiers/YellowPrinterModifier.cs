@@ -14,11 +14,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         public YellowPrinterModifier(int stack)
         {
             CreateYellowPrinterSpawnCard();
-            name = "Yellow item printer";
-            reservedText = "<style=cShrine>Yellow printer</style> is guaranteed to appear somewhere on the next stage.";
-            activeText = "<style=cShrine>Yellow printer</style> has appeared somewhere on the stage.";
             negative = false;
-            iconName = "yellowPrinter";
             this.stack = stack;
         }
         public override void OnEnd()

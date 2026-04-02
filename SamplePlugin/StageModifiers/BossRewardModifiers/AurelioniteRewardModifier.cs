@@ -14,15 +14,8 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
         public AurelioniteRewardModifier()
         {
-            reservedText = "Get <color=#E4C415>aurelionite fragment</color> as a teleporter event reward.";
-            activeText = "Get <color=#E4C415>aurelionite fragment</color> as a teleporter event reward.";
-            name = "Aurelionite Fragment";
-            tooltipColor = new Color(228f / 255f, 196f / 255f, 21f / 255f);
             stackable = false;
-            iconName = "texBuffAurelioniteBlessingIcon";
         }
-
-
 
         public override void OnEnd()
         {

@@ -13,10 +13,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public Tier2ElitesEarlierModifier()
         {
-            activeText = "Post loop elites might appear earlier";
-            reservedText = "Post loop elites might appear earlier";
-            name = "Powerful elites";
-            var ic = "tier2elites";
             stackable = false;
         }
 

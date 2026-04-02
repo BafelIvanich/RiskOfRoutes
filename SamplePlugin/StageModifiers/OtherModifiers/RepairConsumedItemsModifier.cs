@@ -10,8 +10,6 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
 
         public RepairConsumedItemsModifier()
         {
-            reservedText = "Repairs all of your consumed items, available once per loop.";
-            activeText = "Consumed items restored.";
             stackable = false;
         }
 

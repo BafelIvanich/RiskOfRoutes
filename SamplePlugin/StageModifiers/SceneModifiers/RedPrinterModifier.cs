@@ -1,7 +1,6 @@
 ﻿using RiskOfRoutes;
 using RoR2;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 namespace SamplePlugin.StageModifiers.SceneModifiers
 {
@@ -12,11 +11,8 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         public RedPrinterModifier(int stack)
         {
             CreateRedPrinterSpawnCard();
-            name = "Red item printer";
-            reservedText = "<style=cDeath>Red printer</style> is guaranteed to appear somewhere on the next stage.";
-            activeText = "<style=cDeath>Red printer</style> has appeared somewhere on the stage.";
-            negative = false;
-            iconName = "redPrinter";
+
+            this.negative = false;
             this.stack = stack;
         }
         public override void OnEnd()
@@ -37,7 +33,8 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
         private void CreateRedPrinterSpawnCard()
         {
-            InteractableSpawnCard card = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/DuplicatorMilitary/iscDuplicatorMilitary.asset").WaitForCompletion();
+            //TODO вынести
+            InteractableSpawnCard card = RiskOfRoutes.RiskOfRoutes.tier3Printer;
 
             if (card != null)
             {

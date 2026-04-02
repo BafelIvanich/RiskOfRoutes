@@ -16,13 +16,8 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
         public BossYellowItemModifier()
         {
-            name = "Boss item modifier";
-            activeText = "Boss will drop <style=cShrine>yellow item</style> on this stage.";
-            reservedText = "Boss is guaranteed to drop <style=cShrine>Yellow Item.</style>";
             stackable = false;
             negative = false;
-            iconName = "yellowBossItem";
-
         }
         public override void OnEnd()
         {

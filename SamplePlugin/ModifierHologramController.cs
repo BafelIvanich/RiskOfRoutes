@@ -16,7 +16,7 @@ namespace RiskOfRoutes
 
         public Color uncommon = new Color(36f / 255f, 191f / 255f, 0f, 1f);
         public Color legendary = new Color(255f / 255f, 56f / 255f, 50f / 255f, 1f);
-        public Color boss = new Color(255f / 255f, 235f / 255f, 49f / 255f,1f);
+        public Color boss = new Color(255f / 255f, 235f / 255f, 49f / 255f, 1f);
         public Color aurelionite = new Color(255f / 255f, 144f / 255f, 0, 1f);
 
         private void Start()

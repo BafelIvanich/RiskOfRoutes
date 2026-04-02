@@ -1,7 +1,6 @@
 ﻿using RiskOfRoutes;
 using RoR2;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 
 namespace SamplePlugin.StageModifiers.SceneModifiers
@@ -18,13 +17,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             if (selectedItem == null) return;
             negative = false;
 
-            string name = internalName;
-            string displayName = selectedItem.name;
-            reservedText = $"Printer with <style=cIsUtility>{displayName}</style> will appear on the next stage";
-            activeText = $"Printer with <style=cIsUtility>{displayName}</style> has appeared somewhere on the stage.";
-            iconName = internalName;
-            this.name = displayName + " Printer";
-            Log.Info($"PrinterMod:{this.name}");
             stackable = false;
             CreatePrinterSpawnCard();
         }
@@ -76,13 +68,14 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
         private void CreatePrinterSpawnCard()
         {
+            //todo вынести
             InteractableSpawnCard card = selectedItem.tier switch
             {
-                ItemTier.Tier1 => Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/Duplicator/iscDuplicator.asset").WaitForCompletion(),
-                ItemTier.Tier2 => Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/DuplicatorLarge/iscDuplicatorLarge.asset").WaitForCompletion(),
-                ItemTier.Tier3 => Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/DuplicatorMilitary/iscDuplicatorMilitary.asset").WaitForCompletion(),
-                ItemTier.Boss => Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/DuplicatorWild/iscDuplicatorWild.asset").WaitForCompletion(),
-                _ => Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/Duplicator/iscDuplicator.asset").WaitForCompletion(),
+                ItemTier.Tier1 => RiskOfRoutes.RiskOfRoutes.tier1Printer,
+                ItemTier.Tier2 => RiskOfRoutes.RiskOfRoutes.tier2Printer,
+                ItemTier.Tier3 => RiskOfRoutes.RiskOfRoutes.tier3Printer,
+                ItemTier.Boss => RiskOfRoutes.RiskOfRoutes.bossPrinter,
+                _ => RiskOfRoutes.RiskOfRoutes.tier1Printer,
             };
 
             if (card != null)

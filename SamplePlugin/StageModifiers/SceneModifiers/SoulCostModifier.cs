@@ -13,10 +13,6 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
         public SoulCostModifier(int stack)
         {
             this.stack = stack;
-            name = "SoulCost";
-            reservedText = "Each purchase drains your max hp for the entire stage.";
-            activeText = reservedText;
-            iconName = "RoR2/DLC2/texBuffSoulCostIcon.png";
         }
 
         public override void OnEnd()

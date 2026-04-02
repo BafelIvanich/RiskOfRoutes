@@ -1,4 +1,5 @@
-﻿using RoR2;
+﻿using RiskOfRoutes.StageModifiers;
+using RoR2;
 using SamplePlugin;
 using SamplePlugin.StageModifiers;
 using System.Collections.Generic;
@@ -24,15 +25,15 @@ namespace RiskOfRoutes
         public bool isUsingSceneExit = false;
 
         public RouteMap.RouteNode routeNode;
-        public List<StageModifier> stageModifiers = new List<StageModifier>();
+        public List<ModifierSync> stageModifiers = new List<ModifierSync>();
 
-        public SyncListString iconNames = new SyncListString();
+        public SyncListString modDefNames = new SyncListString();
 
         [SyncVar(hook = nameof(UpdateSyncedText))]
         public string modifierTextSynced;
 
         [SyncVar]
-        public Vector2 nodeSync = new Vector2(-1,-1);
+        public Vector2 nodeSync = new Vector2(-1, -1);
 
         [SyncVar]
         public int destinationSceneIndex;
@@ -81,8 +82,8 @@ namespace RiskOfRoutes
             base.OnStartClient();
             Log.Info("Called method onStartClient");
 
-            iconNames.Callback -= OnIconsChanged;
-            iconNames.Callback += OnIconsChanged;
+            modDefNames.Callback -= OnIconsChanged;
+            modDefNames.Callback += OnIconsChanged;
 
             if (this.enabled)
             {
@@ -101,7 +102,7 @@ namespace RiskOfRoutes
             Log.Info("Called method UpdateText");
             if (NetworkServer.active && Run.instance)
             {
-                iconNames.Clear();
+                modDefNames.Clear();
 
                 List<string> positiveNames = new List<string>();
                 List<string> negativeNames = new List<string>();
@@ -115,21 +116,21 @@ namespace RiskOfRoutes
                     foreach (var stageModifier in stageModifiers)
                     {
                         Log.Info(stageModifier.GetType());
-                        if (stageModifier.negative)
+                        if (stageModifier.isArtifact)
                         {
-                            negativeText += $"{stageModifier.reservedText} - x{stageModifier.stack}" + '\n';
+                            negativeText += $"{stageModifier.description} - x{stageModifier.stack}" + '\n';
                             negativeNames.Add(stageModifier.name);
                         }
                         else
                         {
-                            positiveText += $"{stageModifier.reservedText} - x{stageModifier.stack}" + '\n';
+                            positiveText += $"{stageModifier.description} - x{stageModifier.stack}" + '\n';
                             positiveNames.Add(stageModifier.name);
                         }
                     }
                     foreach (var name in positiveNames)
-                        iconNames.Add(name);
+                        modDefNames.Add(name);
                     foreach (var name in negativeNames)
-                        iconNames.Add(name);
+                        modDefNames.Add(name);
                 }
                 else
                 {
@@ -210,9 +211,9 @@ namespace RiskOfRoutes
             float offsetAngle = 0;
             float radius = 5f;
 
-            for (int i = 0; i < iconNames.Count; i++)
+            for (int i = 0; i < modDefNames.Count; i++)
             {
-                //Log.Info($"act {iconNames.Count}");
+                //Log.Info($"act {modDefNames.Count}");
                 if (RiskOfRoutes.iconBubblePrefab == null)
                 {
                     RiskOfRoutes.iconBubblePrefab = RiskOfRoutes.CreateIconBubblePrefab();
@@ -253,9 +254,10 @@ namespace RiskOfRoutes
                     mat.SetTextureOffset("_MainTex", new Vector2(-0.5f, -0.5f));
 
                     Texture2D tex = null;
-                    if (iconNames[i] != "")
+                    if (modDefNames[i] != "")
                     {
-                        var icon = IconCatalog.ModifierIconFromDef(iconNames[i]);
+                        var modDef = StageModifierCatalog.FindModifier(modDefNames[i]);
+                        var icon = modDef.icon;
                         if (icon == null)
                         {
                             Log.Info("Uing placehdolde");

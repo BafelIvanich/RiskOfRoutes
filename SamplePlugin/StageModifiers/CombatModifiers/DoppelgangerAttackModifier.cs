@@ -10,12 +10,11 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
 {
     public class DoppelgangerAttackModifier : StageModifier
     {
-        float kd = 0;
+        float coolDown = 0;
+
+        //TODO можно добавить стаки
         public DoppelgangerAttackModifier()
         {
-            reservedText = "Your relentless doppelganger will attack you each 3 minutes on a stage";
-            name = "Doppelganger";
-            activeText = reservedText;
         }
 
         public override void OnEnd()
@@ -25,7 +24,7 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
 
         public override void OnStart()
         {
-            kd = RoR2.Run.instance.time + 180f;
+            coolDown = RoR2.Run.instance.time + 180f;
             On.RoR2.Run.FixedUpdate += Run_FixedUpdate;
         }
 
@@ -34,13 +33,13 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
             orig(self);
             if (!NetworkServer.active || self.isGameOverServer) return;
 
-            //Log.Info($"{self.fixedTime}:{kd}");
+            //Log.Info($"{self.fixedTime}:{coolDown}");
 
-            if (self.fixedTime > kd)
+            if (self.fixedTime > coolDown)
             {
                 Log.Info("Here doppel");
                 PerformInvasion();
-                kd = self.fixedTime + 180f;
+                coolDown = self.fixedTime + 180f;
             }
 
         }

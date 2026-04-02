@@ -1,16 +1,17 @@
 ﻿using RoR2;
+using SamplePlugin;
 using UnityEngine;
 namespace RiskOfRoutes
 {
-    public class Artifact
+    public class MysteryArtifact
     {
         public static ArtifactDef Mystery = ScriptableObject.CreateInstance<ArtifactDef>();
         public static void InitializeArtifact()
         {
             Mystery.nameToken = "Artifact of mystery";
             Mystery.descriptionToken = "All item pickups are obscured.";
-            Mystery.smallIconDeselectedSprite = IconCatalog.ModifierIconFromDef("mystery");
-            Mystery.smallIconSelectedSprite = IconCatalog.ModifierIconFromDef("mystery");
+            Mystery.smallIconDeselectedSprite = RiskOfRoutes.placeholderIcon;
+            Mystery.smallIconSelectedSprite = RiskOfRoutes.placeholderIcon;
             Mystery.cachedName = "Mystery";
             R2API.ContentAddition.AddArtifactDef(Mystery);
 

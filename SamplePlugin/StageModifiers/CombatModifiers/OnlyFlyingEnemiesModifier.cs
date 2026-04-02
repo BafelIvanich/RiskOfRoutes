@@ -8,8 +8,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     {
         public OnlyFlyingEnemiesModifier()
         {
-            name = "Flying enemies";
-            reservedText = "Only flying enemies will appear on the next stage";
             stackable = false;
             negative = true;
         }

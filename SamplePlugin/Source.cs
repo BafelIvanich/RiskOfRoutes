@@ -4,6 +4,7 @@ using LeTai.Asset.TranslucentImage;
 using R2API;
 using RiskOfOptions;
 using RiskOfOptions.Options;
+using RiskOfRoutes.StageModifiers;
 using RiskOfRoutes.StageModifiers.SceneModifiers;
 using RoR2;
 using RoR2.UI;
@@ -135,11 +136,18 @@ namespace RiskOfRoutes
         public static GameObject routePortalPanel;
         public static GameObject routeMapPanel;
 
+        public static InteractableSpawnCard tier1Printer;
+        public static InteractableSpawnCard tier2Printer;
+        public static InteractableSpawnCard tier3Printer;
+        public static InteractableSpawnCard bossPrinter;
+
         private InteractableSpawnCard portalSpawnCard;
         public static AssetBundle bundle;
         private TMP_FontAsset bomb;
 
         public static Sprite placeholderIcon;
+
+        public static ObjectScaleCurve pingCurve;
 
         public static CombatDirector.EliteTierDef[] defaultEliteTiers;
 
@@ -180,6 +188,15 @@ namespace RiskOfRoutes
             droneSymbolTexture = bundle.LoadAsset<Texture2D>("teleporterDrone");
             rewardSymbolTexture = bundle.LoadAsset<Texture2D>("teleporterReward");
             aurelioniteSymbolTexture = bundle.LoadAsset<Texture2D>("teleporterAurelionite");
+
+            GameObject pingPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Common/PingIndicator.prefab").WaitForCompletion();
+            PingIndicator pingIndicator = pingPrefab.GetComponent<PingIndicator>();
+            pingCurve = pingIndicator.pingObjectScaleCurve;
+
+            tier1Printer = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/Duplicator/iscDuplicator.asset").WaitForCompletion();
+            tier2Printer = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/DuplicatorLarge/iscDuplicatorLarge.asset").WaitForCompletion();
+            tier3Printer = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/DuplicatorMilitary/iscDuplicatorMilitary.asset").WaitForCompletion();
+            bossPrinter = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/DuplicatorWild/iscDuplicatorWild.asset").WaitForCompletion();
             //
 
             //для moreelitesmodifier
@@ -214,14 +231,11 @@ namespace RiskOfRoutes
             On.RoR2.BazaarController.Start += BazaarController_Start;
             On.RoR2.SeerStationController.SetRunNextStageToTarget += SeerStationController_SetRunNextStageToTarget;
 
-            RoR2.RoR2Application.onLoad += () =>
-            {
-                IconCatalog.Init(bundle);
-            };
+            StageModifierCatalog.Init(bundle);
 
             AddRouteManagersToPortalPrefabs();
 
-            Artifact.InitializeArtifact();
+            MysteryArtifact.InitializeArtifact();
             SoulCostController.Initialize();
 
             AddHologramControllerToTeleporter();
@@ -832,6 +846,10 @@ namespace RiskOfRoutes
                             return obj;
                         }
 
+                        if (name == "iscRoutePortal")
+                        {
+                            return obj;
+                        }
 
                         if (name == "iscColossusPortal")
                         {
@@ -974,8 +992,16 @@ namespace RiskOfRoutes
             foreach (var mod in StageModifierDirector.instance.modifiersSynced)
             {
                 if (mod.isArtifact) continue;
-
-                Sprite icon = IconCatalog.ModifierIconFromDef(mod.name);
+                Sprite icon = null;
+                ModifierDef def = StageModifierCatalog.FindModifier(mod.name);
+                if(def != null)
+                {
+                    icon = def.icon;
+                }
+                else
+                {
+                    return;
+                }
                 if (icon == null)
                 {
                     icon = placeholderIcon;
@@ -1167,7 +1193,7 @@ namespace RiskOfRoutes
             //    return;
             //}
             //Log.Info("Trying to update text");
-            //Log.Info($"i{mg.iconNames.Count}");
+            //Log.Info($"i{mg.modDefNames.Count}");
             //Log.Info($"{mg.stageModifiers.Count}");
             var textComponents = routePortalPanel.GetComponentsInChildren<TextMeshProUGUI>();
             TextMeshProUGUI panelText = null;
@@ -1213,13 +1239,14 @@ namespace RiskOfRoutes
 
             routePortalPanel.gameObject.SetActive(true);
 
-            foreach (var iconName in mg.iconNames)
+            foreach (var modName in mg.modDefNames)
             {
+                ModifierDef def = StageModifierCatalog.FindModifier(modName);
                 GameObject obj = new GameObject("ModifierIcon");
                 Image img = obj.AddComponent<Image>();
-                if (iconName != "")
+                if (modName != "")
                 {
-                    img.sprite = IconCatalog.ModifierIconFromDef(iconName);
+                    img.sprite = def.icon;
                 }
                 else
                 {
@@ -1242,9 +1269,9 @@ namespace RiskOfRoutes
             //    {
             //        GameObject obj = new GameObject("ModifierIcon");
             //        Image img = obj.AddComponent<Image>();
-            //        if (mod.iconName != null)
+            //        if (mod.modName != null)
             //        {
-            //            img.sprite = IconCatalog.ModifierIconFromDef(mod.iconName);
+            //            img.sprite = IconCatalog.ModifierIconFromDef(mod.modName);
             //        }
             //        else
             //        {
@@ -1281,15 +1308,6 @@ namespace RiskOfRoutes
 
             Util.ShuffleList(scenes, Run.instance.stageRng);
 
-            //int lim = count > scenes.Count ? scenes.Count : count;
-            //if (uniqueDestinations.Value)
-            //{
-            //    lim = count > scenes.Count ? scenes.Count : count;
-            //}
-            //else
-            //{
-            //    lim = count;
-            //}
             var nodes = StageModifierDirector.instance.GetAvailableNodes();
 
             for (int i = 0; i < nodes.Count; i++)
@@ -1311,7 +1329,7 @@ namespace RiskOfRoutes
 
                 if (routePortal == null)
                 {
-                    Log.Error("PortalCard is null");
+                    Log.Error("RoutePortal spawncard is null");
                     return;
                 }
 
@@ -1329,27 +1347,17 @@ namespace RiskOfRoutes
 
                 if (portalObject)
                 {
-                    foreach (Transform child in portalObject.GetComponentsInChildren<Transform>())
-                    {
-                        if (child.name.Contains("bubble"))
-                        {
-                            Log.Info("1");
-                        }
-                    }
-
-
-
                     var mg = portalObject.GetComponent<RoutePortalManager>();
 
                     mg.enabled = true;
-                    //mg.isManagerEnabled = true;
 
                     if (node == null)
                     {
-                        Log.Error("Node is null skipping");
+                        Log.Error("RouteNode is null, skipping");
                         continue;
                     }
                     mg.routeNode = node;
+                    Log.Info($"MG route node:{mg.routeNode.portalType}");
                     mg.isUsingModifiers = true;
                     mg.isUsingSceneExit = true;
                     mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(portalObject);
@@ -1364,8 +1372,6 @@ namespace RiskOfRoutes
                     Vector3 rdir = portalObject.transform.right;
 
                     StageModifierDirector.instance.AddRoutePortalInstance(portalObject);
-
-
                 }
 
             }

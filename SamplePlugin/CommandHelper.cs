@@ -44,14 +44,14 @@ namespace SamplePlugin
             var panel = RiskOfRoutes.RiskOfRoutes.routeMapPanel;
 
             var synced = StageModifierDirector.instance.routeNodesSynced;
-            if(synced == null)
+            if (synced == null)
             {
                 Log.Info("null synced data");
             }
             else
             {
                 Log.Info("not null synced");
-                foreach(var node in synced)
+                foreach (var node in synced)
                 {
                     Log.Info($"\t{node.portalType}:{node.x}.{node.y}:{node.visited}");
                 }
@@ -228,7 +228,7 @@ namespace SamplePlugin
                     {
                         foreach (var modifier in mods)
                         {
-                            Log.Info(modifier.reservedText);
+                            Log.Info(modifier.description);
                         }
                     }
                     else
