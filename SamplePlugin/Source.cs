@@ -1312,6 +1312,7 @@ namespace RiskOfRoutes
 
             for (int i = 0; i < nodes.Count; i++)
             {
+                Log.Info($"SpawnRouteportals:{nodes.Count}:{i}");
                 var node = nodes[i];
                 SceneDef destination = new SceneDef();
                 if (uniqueDestinations.Value)
@@ -1357,7 +1358,8 @@ namespace RiskOfRoutes
                         continue;
                     }
                     mg.routeNode = node;
-                    Log.Info($"MG route node:{mg.routeNode.portalType}");
+                    mg.nodeSync = new Vector2(node.x, node.y);
+                    Log.Info($"MG route node:{mg.routeNode.portalType}:{mg.routeNode.x},{mg.routeNode.y}");
                     mg.isUsingModifiers = true;
                     mg.isUsingSceneExit = true;
                     mg.stageModifiers = StageModifierDirector.instance.GetNextStageModifiers(portalObject);

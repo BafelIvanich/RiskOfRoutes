@@ -407,7 +407,7 @@ namespace SamplePlugin
             //    return res;
             //}
 
-            foreach (var modName in StageModifierCatalog.AllDefNames)
+            foreach (var modName in StageModifierCatalog.AllDefs.Keys)
             {
                 var modDef = StageModifierCatalog.FindModifier(modName);
                 //if (modDef.isAvailable())

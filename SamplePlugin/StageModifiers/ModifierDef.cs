@@ -16,6 +16,7 @@ namespace RiskOfRoutes.StageModifiers
         public Sprite icon;
 
 
+
         public ModifierDef(string name, int cost, float weight, bool stackable, string[] conflicts = null, int maxStack = -1)
         {
             this.name = name;

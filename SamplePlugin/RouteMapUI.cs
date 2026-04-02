@@ -1,5 +1,6 @@
 ﻿using RoR2;
 using SamplePlugin;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -114,8 +115,8 @@ namespace RiskOfRoutes
                         currentNode.portalType == RoutePortalType.Hardware ||
                         currentNode.portalType == RoutePortalType.SolusWing);
 
-                    Log.Info($"\tIn RouteMapUI: currentNode:{currentNode.x}.{currentNode.y},{currentNode.portalType}");
-                    Log.Info($"Selected node:{selectedNode.x},{selectedNode.y}, {selectedNode.portalType}");
+                    //Log.Info($"\tIn RouteMapUI: currentNode:{currentNode.x}.{currentNode.y},{currentNode.portalType}");
+                    //Log.Info($"Selected node:{selectedNode.x},{selectedNode.y}, {selectedNode.portalType}");
 
                     if (currentNode.x == -1 || currentNode.y == -1) continue;
                     if (currentNode.portalType == RoutePortalType.None && my != 0) continue;
@@ -329,7 +330,14 @@ namespace RiskOfRoutes
         {
             //Log.Info($"\tMap size:{map.Count}");
             //Log.Info($"\tTrying to access {x},{y}, index {y*mapHeight + x}");
-            return map.GetItem(x * mapHeight + y);
+            try
+            {
+                return map.GetItem(x * mapHeight + y);
+            }
+            catch (Exception e)
+            {
+                return map.GetItem(x * mapHeight + y);
+            }
         }
     }
 }

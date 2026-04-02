@@ -87,13 +87,13 @@ namespace RiskOfRoutes.StageModifiers
             }
 
             Register(new ModifierDef("Aurelionite", ModifierTier.Tier3, 1f, false), "texAurelioniteIcon");
-            Register(new ModifierDef("BossRedItem", ModifierTier.Tier3, 1f, false, new string[] { "BossYellowItem", "DroneBossGreen" }), "texAurelioniteIcon");
-            Register(new ModifierDef("BossYellowItem", ModifierTier.Tier2, 1f, false, new string[] { "BossRedItem", "DroneBossGreen" }), "texAurelioniteIcon");
-            Register(new ModifierDef("DroneBossGreen", ModifierTier.Tier1, 1f, false), "texAurelioniteIcon");
-            Register(new ModifierDef("DroneBossRed", ModifierTier.Tier3, 1f, false), "texAurelioniteIcon");
+            Register(new ModifierDef("BossRedItem", ModifierTier.Tier3, 1f, false, new string[] { "BossYellowItem", "DroneBossGreen" }), "redBossItem");
+            Register(new ModifierDef("BossYellowItem", ModifierTier.Tier2, 1f, false, new string[] { "BossRedItem", "DroneBossGreen" }), "yellowBossItem");
+            Register(new ModifierDef("DroneBossGreen", ModifierTier.Tier1, 1f, false), "uncommonDroneReward");
+            Register(new ModifierDef("DroneBossRed", ModifierTier.Tier3, 1f, false), "legendaryDroneReward");
 
-            Register(new ModifierDef("MoreElites", ModifierTier.Tier1, 1f, true), "texAurelioniteIcon");
-            Register(new ModifierDef("MoreDrones", ModifierTier.Tier1, 1f, true), "texAurelioniteIcon");
+            Register(new ModifierDef("MoreElites", ModifierTier.Tier1, 1f, true), "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveBossIcon.png");
+            Register(new ModifierDef("MoreDrones", ModifierTier.Tier1, 1f, true), "RoR2/Base/Common/MiscIcons/texDroneIconOutlined.png");
             Register(new ModifierDef("UpgradeDrones", ModifierTier.Tier3, 1f, true), "texAurelioniteIcon");
             Register(new ModifierDef("LunarEnemies", ModifierTier.Tier3, 1f, true), "texAurelioniteIcon");
             Register(new ModifierDef("VoidEnemies", ModifierTier.Tier3, 1f, true), "texAurelioniteIcon");
@@ -226,17 +226,20 @@ namespace RiskOfRoutes.StageModifiers
         {
             if (address.Contains("RoR2/"))
             {
+                Log.Info($"Searching for ingame sprite for{address}");
                 return Addressables.LoadAssetAsync<Sprite>(address).WaitForCompletion();
             }
 
             if (isArtifact)
             {
+                Log.Info($"Searching for artifact sprite for{address}");
                 ArtifactDef art = ArtifactCatalog.FindArtifactDef(address);
                 return art != null ? art.smallIconSelectedSprite : RiskOfRoutes.placeholderIcon;
             }
 
             if (isItem)
             {
+                Log.Info($"Searching for item sprite for{address}");
                 ItemIndex itemIndex = ItemCatalog.FindItemIndex(address);
                 if (itemIndex != ItemIndex.None)
                     return ItemCatalog.GetItemDef(itemIndex).pickupIconSprite;
@@ -244,9 +247,11 @@ namespace RiskOfRoutes.StageModifiers
 
             if (assetBundle != null && assetBundle.Contains(address))
             {
+                Log.Info($"Searching for assetBundle sprite for{address}");
                 return assetBundle.LoadAsset<Sprite>(address);
             }
 
+            Log.Info($"Not found sprite for {address}");
             return RiskOfRoutes.placeholderIcon;
         }
 

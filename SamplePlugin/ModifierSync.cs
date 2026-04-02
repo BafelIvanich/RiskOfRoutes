@@ -18,7 +18,7 @@ namespace SamplePlugin
             name = mod.name;
             description = mod.name;
             stack = 1;
-            isArtifact = mod is ArtifactModifier;
+            isArtifact = mod.;
         }
 
         public bool Equals(ModifierSync other)
