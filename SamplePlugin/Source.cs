@@ -909,6 +909,7 @@ namespace RiskOfRoutes
                             }
                             else
                             {
+                                //TODO
                                 mgr.destinationSceneIndex = (int)Run.instance.nextStageScene.sceneDefIndex;
                                 mgr.isUsingModifiers = true;
                                 mgr.isUsingSceneExit = false;
