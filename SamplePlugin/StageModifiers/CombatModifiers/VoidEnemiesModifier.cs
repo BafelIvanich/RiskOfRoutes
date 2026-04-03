@@ -13,7 +13,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         public List<DirectorCard> voidEnemies;
         public VoidEnemiesModifier(int stack)
         {
-            negative = true;
             this.stack = stack;
         }
 

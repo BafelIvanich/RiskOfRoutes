@@ -57,6 +57,8 @@ namespace SamplePlugin
         public int uniqueModifierLimit = 5;
         public int printerItemModifierLimit = 3;
 
+        public Inventory monsterTeamInventory;
+
         public RouteMap routeMap;
         public RouteMap.RouteNode currentNode;
 
@@ -133,7 +135,9 @@ namespace SamplePlugin
 
         public void Awake()
         {
+            if (!NetworkServer.active) return;
             Log.Info("Called method awake in stage modifier director");
+            monsterTeamInventory = Object.Instantiate(RiskOfRoutes.RiskOfRoutes.networkedInventoryPrefab).GetComponent<Inventory>();
 
             instance = this;
 
@@ -153,12 +157,16 @@ namespace SamplePlugin
             RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
             RoR2.Stage.onServerStageComplete += Stage_onServerStageComplete;
 
+            //
+            Log.Info("monsterTeamInventory has value: " + monsterTeamInventory);
+            monsterTeamInventory.GetComponent<TeamFilter>().teamIndex = TeamIndex.Monster;
+            NetworkServer.Spawn(monsterTeamInventory.gameObject);
+
         }
 
         public void OnDestroy()
         {
             RoR2.Run.onRunDestroyGlobal -= Run_onRunDestroyGlobal;
-
             RoR2.SceneDirector.onPrePopulateSceneServer -= SceneDirector_onPrePopulateSceneServer;
             RoR2.Stage.onServerStageComplete -= Stage_onServerStageComplete;
         }
@@ -191,6 +199,13 @@ namespace SamplePlugin
                 Log.Info("\tStageModifierDirector destroyed");
             }
 
+            if (monsterTeamInventory)
+            {
+                NetworkServer.Destroy(monsterTeamInventory.gameObject);
+            }
+
+            monsterTeamInventory = null;
+
         }
 
         public List<string> GetArtifactsAppliedThisRun()
@@ -213,7 +228,7 @@ namespace SamplePlugin
             activeModifiers.Clear();
             foreach (var modifier in reservedModifiers)
             {
-                StageModifier mod = StageModifierCatalog.StageModifierFromDef(modifier.name,modifier.stack);
+                StageModifier mod = StageModifierCatalog.StageModifierFromDef(modifier.name, modifier.stack);
                 activeModifiers.Add(mod);
             }
 
@@ -239,13 +254,15 @@ namespace SamplePlugin
             //if (currentScene.sceneType != SceneType.Intermission)
             //    currentNode.visited = true;
 
+
+            //todo
         }
 
         public bool IsModifierActive(string name)
         {
+            //Log.Info($"Checking for {name} active");
             foreach (var modifier in modifiersSynced)
             {
-                //Log.Info($"Name to compare{name}");
                 if (modifier.name == name) return true;
             }
             return false;
@@ -255,7 +272,6 @@ namespace SamplePlugin
         {
             currStage = Run.instance.stageClearCount + 1;
             Log.Info("Method updating syncvar was called");
-
         }
 
         private void Stage_onServerStageComplete(RoR2.Stage obj)
@@ -362,7 +378,12 @@ namespace SamplePlugin
             List<ModifierSync> res = new List<ModifierSync>();
             foreach (var mod in modifiers)
             {
-                res.Add(new ModifierSync() { name = mod.Key, stack = mod.Value });
+                var modDef = StageModifierCatalog.FindModifier(mod.Key);
+                if (modDef != null)
+                {
+                    res.Add(new ModifierSync() { name = modDef.name, stack = mod.Value, isArtifact = modDef.isArtifact }); //todo
+
+                }
             }
             return res;
         }
@@ -410,11 +431,11 @@ namespace SamplePlugin
             foreach (var modName in StageModifierCatalog.AllDefs.Keys)
             {
                 var modDef = StageModifierCatalog.FindModifier(modName);
-                //if (modDef.isAvailable())
-                //{
+                if (modDef.isAvailable())
+                {
                     res.AddChoice(modDef, modDef.selectionWeight);
                     //Log.Info($"Added {modDef.name}");
-                //}
+                }
             }
 
             return res;

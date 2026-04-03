@@ -14,7 +14,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public LunarEnemiesModifier(int stack)
         {
-            negative = true;
             this.stack = stack;
         }
 

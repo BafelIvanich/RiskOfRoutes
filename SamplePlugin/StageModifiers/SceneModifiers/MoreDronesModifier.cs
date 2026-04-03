@@ -11,7 +11,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
         public MoreDronesModifier(int stack)
         {
-            negative = false;
             this.stack = stack;
         }
 

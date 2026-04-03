@@ -9,7 +9,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         public OnlyFlyingEnemiesModifier()
         {
             stackable = false;
-            negative = true;
         }
 
         public override void OnEnd()

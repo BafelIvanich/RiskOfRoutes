@@ -14,7 +14,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public MoreElitesModifier(int stack)
         {
-            negative = true;
             this.stack = stack;
         }
         public override void OnEnd()

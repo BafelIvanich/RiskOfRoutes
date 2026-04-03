@@ -5,7 +5,6 @@
         public NoOneShotProtectionModifier()
         {
             stackable = false;
-            negative = true;
         }
 
         public override void OnEnd()

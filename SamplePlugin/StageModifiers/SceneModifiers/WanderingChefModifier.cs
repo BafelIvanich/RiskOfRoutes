@@ -16,7 +16,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         public WanderingChefModifier()
         {
             stackable = false;
-            negative = false;
             if (!spawnCardCreated) CreateChefSpawnCard();
         }
 

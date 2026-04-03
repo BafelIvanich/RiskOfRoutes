@@ -1,7 +1,6 @@
 ﻿using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin;
-using SamplePlugin.StageModifiers;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -110,21 +109,28 @@ namespace RiskOfRoutes
                 string positiveText = $"Positive:\n";
                 string negativeText = "Negative:\n";
 
+                var modifierDefs = new Dictionary<ModifierDef, int>();
+                foreach (var modSync in stageModifiers)
+                {
+                    modifierDefs?.Add(StageModifierCatalog.FindModifier(modSync.name), modSync.stack);
+                }
+
                 if (stageModifiers != null && stageModifiers.Count > 0)
                 {
-                    Log.Info(stageModifiers.Count);
-                    foreach (var stageModifier in stageModifiers)
+                    foreach (var stageModifier in modifierDefs)
                     {
-                        Log.Info(stageModifier.GetType());
-                        if (stageModifier.isArtifact)
+                        var def = stageModifier.Key;
+                        var stack = stageModifier.Value;
+
+                        if (def.isNegative)//todo
                         {
-                            negativeText += $"{stageModifier.description} - x{stageModifier.stack}" + '\n';
-                            negativeNames.Add(stageModifier.name);
+                            negativeText += $"{RoR2.Language.GetStringFormatted(def.descriptionToken)} - x{stack}" + '\n';
+                            negativeNames.Add(def.name);
                         }
                         else
                         {
-                            positiveText += $"{stageModifier.description} - x{stageModifier.stack}" + '\n';
-                            positiveNames.Add(stageModifier.name);
+                            positiveText += $"{def.descriptionToken} - x{stack}" + '\n';
+                            positiveNames.Add(def.name);
                         }
                     }
                     foreach (var name in positiveNames)
@@ -238,6 +244,8 @@ namespace RiskOfRoutes
 
                 var portalActiveDisplay = bubble.transform.Find("PortalActiveDisplay");
                 var portal = portalActiveDisplay.Find("Portal");
+                var donut = portalActiveDisplay.Find("Donut");
+                var portalEdges = portalActiveDisplay.Find("PortalEdges");
                 if (portal != null)
                 {
                     var rend = portal.GetComponent<Renderer>();
@@ -275,6 +283,27 @@ namespace RiskOfRoutes
                     mat.SetTexture("_MainTex", tex);
                     rend.materials = new Material[] { mat, mat };
                     //Log.Info("Bubble was set up");
+                }
+
+                if (portalEdges && donut != null && RiskOfRoutes.usePositiveNegativeColors.Value)
+                {
+                    Color positive = new Color(36f / 255f, 191f / 255f, 0f, 1f);
+                    Color negative = new Color(255f / 255f, 0f / 255f, 0f / 255f, 1f) * 1.8f;
+
+                    var donutRend = donut.GetComponent<Renderer>();
+                    var edgesRend = portalEdges.GetComponent<Renderer>();
+
+                    var donutMat = donutRend.materials[0];
+                    var edgesMat = edgesRend.materials[0];
+
+                    if (modDefNames[i] != "")
+                    {
+                        var modDef = StageModifierCatalog.FindModifier(modDefNames[i]);
+                        donutMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
+                        edgesMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
+                    }
+
+
                 }
             }
         }

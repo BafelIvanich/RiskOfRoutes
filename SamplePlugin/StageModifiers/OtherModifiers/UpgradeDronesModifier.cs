@@ -7,7 +7,6 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
     {
         public UpgradeDronesModifier(int stack)
         {
-            negative = false;
             this.stack = stack;
         }
 

@@ -14,7 +14,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         public YellowPrinterModifier(int stack)
         {
             CreateYellowPrinterSpawnCard();
-            negative = false;
             this.stack = stack;
         }
         public override void OnEnd()

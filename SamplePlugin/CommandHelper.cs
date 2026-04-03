@@ -32,11 +32,11 @@ namespace SamplePlugin
 
         }
 
-        [ConCommand(commandName = "enemyitems", flags = ConVarFlags.ExecuteOnServer, helpText = "Give enemies items")]
-        private static void GiveEnemiesItems(ConCommandArgs args)
-        {
-            TeamManager.instance.GiveTeamItem(TeamIndex.Monster, RoR2.RoR2Content.Items.Hoof.itemIndex, 5);
-        }
+        //[ConCommand(commandName = "enemyitems", flags = ConVarFlags.ExecuteOnServer, helpText = "Give enemies items")]
+        //private static void GiveEnemiesItems(ConCommandArgs args)
+        //{
+        //    TeamManager.instance.GiveTeamItem(TeamIndex.Monster, RoR2.RoR2Content.Items.Hoof.itemIndex, 5);
+        //}
 
         [ConCommand(commandName = "mapon", flags = ConVarFlags.ExecuteOnServer, helpText = "Give enemies items")]
         private static void MapOn(ConCommandArgs args)
@@ -287,6 +287,11 @@ namespace SamplePlugin
             }
 
             //Log.Info("Teleporter charged and bosses eliminated.");
+        }
+
+        [ConCommand(commandName = "giveEnemies", flags = ConVarFlags.ExecuteOnServer, helpText = "Give enemies items")]
+        static void GiveEnemiesItems(ConCommandArgs args)
+        {
         }
 
         [ConCommand(commandName = "tp", flags = ConVarFlags.ExecuteOnServer, helpText = "tp <x> <y> <z> - teleport local player to coordinates.")]

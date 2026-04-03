@@ -15,48 +15,16 @@ namespace RiskOfRoutes.StageModifiers
         public int maxStack = -1;
         public Sprite icon;
 
+        public string nameToken;
+        public string descriptionToken;
+
+        public bool isNegative = false;
+        public bool isArtifact = false;
 
 
-        public ModifierDef(string name, int cost, float weight, bool stackable, string[] conflicts = null, int maxStack = -1)
-        {
-            this.name = name;
-            this.cost = cost;
-            this.selectionWeight = weight;
-            if (!stackable)
-            {
-                conflictList.Add(name);
-            }
-            if (conflicts != null)
-            {
-                foreach (var c in conflicts)
-                {
-                    conflictList.Add(c);
-                }
-            }
 
-            this.maxStack = maxStack;
-        }
 
-        public ModifierDef(string name, int cost, float weight, Func<bool> isAvailable, bool stackable, string[] conflicts = null, int maxStack = -1)
-        {
-            this.name = name;
-            this.cost = cost;
-            this.selectionWeight = weight;
-            this.isAvailable = isAvailable;
-            if (!stackable)
-            {
-                conflictList.Add(name);
-            }
-            if (conflicts != null)
-            {
-                foreach (var c in conflicts)
-                {
-                    conflictList.Add(c);
-                }
-            }
-        }
-
-        public ModifierDef(string name, ModifierTier tier, float weight, bool stackable, string[] conflicts = null, int maxStack = -1)
+        public ModifierDef(string name, ModifierTier tier, float weight, bool stackable, bool isNegative, string[] conflicts = null, int maxStack = -1)
         {
             this.name = name;
             this.cost = tier switch
@@ -67,6 +35,7 @@ namespace RiskOfRoutes.StageModifiers
                 _ => 30,
             };
             this.selectionWeight = weight;
+            this.isNegative = isNegative;
             if (!stackable)
             {
                 conflictList.Add(name);
@@ -80,7 +49,7 @@ namespace RiskOfRoutes.StageModifiers
             }
         }
 
-        public ModifierDef(string name, ModifierTier tier, float weight, Func<bool> isAvailable, bool stackable, string[] conflicts = null, int maxStack = -1)
+        public ModifierDef(string name, ModifierTier tier, float weight, Func<bool> isAvailable, bool stackable, bool isNegative, string[] conflicts = null, int maxStack = -1)
         {
             this.name = name;
             this.cost = tier switch
@@ -91,6 +60,7 @@ namespace RiskOfRoutes.StageModifiers
                 _ => 30,
             };
             this.selectionWeight = weight;
+            this.isNegative = isNegative;
             this.isAvailable = isAvailable;
             if (!stackable)
             {

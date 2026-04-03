@@ -10,7 +10,6 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
     {
         public MysteryModifier()
         {
-            negative = true;
             stackable = false;
         }
 

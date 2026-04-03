@@ -12,7 +12,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         {
             CreateRedPrinterSpawnCard();
 
-            this.negative = false;
             this.stack = stack;
         }
         public override void OnEnd()

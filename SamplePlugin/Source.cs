@@ -94,6 +94,7 @@ namespace RiskOfRoutes
 
         //tweaks
         public static ConfigEntry<bool> usePortalMaterial { get; set; }
+        public static ConfigEntry<bool> usePositiveNegativeColors { get; set; }
         public static ConfigEntry<bool> uniqueDestinations { get; set; }
         public static ConfigEntry<bool> showPortalDestination { get; set; }
         public static ConfigEntry<bool> teleporterUseRandomMods { get; set; }
@@ -151,6 +152,8 @@ namespace RiskOfRoutes
 
         public static CombatDirector.EliteTierDef[] defaultEliteTiers;
 
+        public static GameObject networkedInventoryPrefab;
+
         internal static GameObject CentralNetworkObject;
         private static GameObject _centralNetworkObjectSpawned;
         private RoutePortalManager lastViewedManager = null;
@@ -177,6 +180,13 @@ namespace RiskOfRoutes
             BindConfig();
 
             //для своих префабов
+
+            //для модифаера на предметы мобов
+            networkedInventoryPrefab = new GameObject("NetworkedEnemyInventory", typeof(SetDontDestroyOnLoad));
+            networkedInventoryPrefab.AddComponent<Inventory>();
+            networkedInventoryPrefab.AddComponent<TeamFilter>();
+            networkedInventoryPrefab.AddComponent<EnemyInfoPanelInventoryProvider>();
+
             string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "riskofroutes");
             bundle = AssetBundle.LoadFromFile(path);
             //префабы
@@ -231,8 +241,10 @@ namespace RiskOfRoutes
             On.RoR2.BazaarController.Start += BazaarController_Start;
             On.RoR2.SeerStationController.SetRunNextStageToTarget += SeerStationController_SetRunNextStageToTarget;
 
-            StageModifierCatalog.Init(bundle);
-
+            RoR2.RoR2Application.onLoad += () =>
+            {
+                StageModifierCatalog.Init(bundle);
+            };
             AddRouteManagersToPortalPrefabs();
 
             MysteryArtifact.InitializeArtifact();
@@ -240,7 +252,12 @@ namespace RiskOfRoutes
 
             AddHologramControllerToTeleporter();
             //
+            networkedInventoryPrefab = new GameObject("NetworkedInventory", typeof(SetDontDestroyOnLoad));
+            networkedInventoryPrefab.AddComponent<Inventory>();
+            networkedInventoryPrefab.AddComponent<TeamFilter>();
+            networkedInventoryPrefab.AddComponent<EnemyInfoPanelInventoryProvider>();
         }
+
 
         private void BindConfig()
         {
@@ -248,6 +265,11 @@ namespace RiskOfRoutes
             usePortalMaterial = Config.Bind<bool>(
                 "Tweaks", "Use Scene Material", false, "[WIP] Sets destination scene portrait as a portal texture");
             ModSettingsManager.AddOption(new CheckBoxOption(usePortalMaterial));
+
+            usePositiveNegativeColors = Config.Bind<bool>(
+                "Tweaks", "Use Positive/Negative colors", false, "Makes bubbles on portals red and green, otherwise they are just blue");
+            ModSettingsManager.AddOption(new CheckBoxOption(usePositiveNegativeColors));
+
 
             showPortalDestination = Config.Bind<bool>(
                 "Tweaks", "Show Portal Destination", true, "Show destination scene in hud");
@@ -687,6 +709,7 @@ namespace RiskOfRoutes
                         mat.SetTextureOffset("_MainTex", new Vector2(-0.4f, -0.4f));
                         rend.materials = new Material[] { mat, mat };
                     }
+
                 }
 
                 GameObject.Destroy(seerPrefab);
@@ -991,10 +1014,11 @@ namespace RiskOfRoutes
             //Log.Info($"For icons there are {StageModifierDirector.instance.activeModifiers.Count}");
             foreach (var mod in StageModifierDirector.instance.modifiersSynced)
             {
+                //Log.Info($"Mod {mod.name}, artifact:{mod.isArtifact}");
                 if (mod.isArtifact) continue;
                 Sprite icon = null;
                 ModifierDef def = StageModifierCatalog.FindModifier(mod.name);
-                if(def != null)
+                if (def != null)
                 {
                     icon = def.icon;
                 }
@@ -1033,8 +1057,9 @@ namespace RiskOfRoutes
                 AddStackTextToImage(mod.stack, img);
 
                 RoR2.UI.TooltipProvider tooltip = iconObj.AddComponent<RoR2.UI.TooltipProvider>();
-                tooltip.titleToken = mod.name;
-                tooltip.bodyToken = mod.description;
+                var modDef = StageModifierCatalog.FindModifier(mod.name);
+                tooltip.titleToken = RoR2.Language.GetString(modDef.nameToken);
+                tooltip.bodyToken = RoR2.Language.GetString(modDef.descriptionToken);
                 //tooltip.titleColor = mod.tooltipColor;
                 tooltip.titleColor = new Color(246f / 255f, 90f / 255f, 58f / 255f);
 

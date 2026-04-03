@@ -15,13 +15,12 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         {
             selectedItem = stringToItemDef(internalName);
             if (selectedItem == null) return;
-            negative = false;
 
             stackable = false;
             CreatePrinterSpawnCard();
         }
 
-        private ItemDef stringToItemDef(string selectedItemName)
+        public static ItemDef stringToItemDef(string selectedItemName)
         {
             ItemIndex index = ItemCatalog.FindItemIndex(selectedItemName);
             if (index != ItemIndex.None)

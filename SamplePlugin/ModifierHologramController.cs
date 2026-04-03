@@ -37,11 +37,13 @@ namespace RiskOfRoutes
         {
             if (StageModifierDirector.instance != null)
             {
-                bool isAurelioniteActive = StageModifierDirector.instance.IsModifierActive("Aurelionite Fragment");
-                bool isDroneGreenActive = StageModifierDirector.instance.IsModifierActive("Uncommon drone reward");
-                bool isDroneRedActive = StageModifierDirector.instance.IsModifierActive("Legendary drone reward");
-                bool isRewardYellowActive = StageModifierDirector.instance.IsModifierActive("Red item");
-                bool isRewardRedActive = StageModifierDirector.instance.IsModifierActive("Boss item modifier");
+                bool isAurelioniteActive = StageModifierDirector.instance.IsModifierActive("Aurelionite");
+                bool isDroneGreenActive = StageModifierDirector.instance.IsModifierActive("DroneBossGreen");
+                bool isDroneRedActive = StageModifierDirector.instance.IsModifierActive("DroneBossRed");
+                bool isRewardYellowActive = StageModifierDirector.instance.IsModifierActive("BossYellowItem");
+                bool isRewardRedActive = StageModifierDirector.instance.IsModifierActive("BossRedItem");
+
+                Log.Info($"isAurelioniteActive:{isAurelioniteActive}");
 
                 if (isAurelioniteActive) SetAurelioniteIconActive(true);
                 if (isDroneGreenActive) SetDroneIconActive(true);
