@@ -7,22 +7,25 @@ namespace SamplePlugin
     public struct ModifierSync : IEquatable<ModifierSync>
     {
         public string name;
-        public string description;
+
+        public string nameToken;
+        public string descriptionToken;
+
         public int stack;
         public bool isArtifact;
 
         public ModifierSync(ModifierDef mod)
         {
-            name = mod.nameToken;
-            description = mod.descriptionToken;
+            name = mod.name;
+            descriptionToken = mod.descriptionToken;
             stack = 1;
             isArtifact = mod.isArtifact; //todo
         }
 
         public ModifierSync(ModifierDef mod, int stack)
         {
-            name = mod.nameToken;
-            description = mod.descriptionToken;
+            name = mod.name;
+            descriptionToken = mod.descriptionToken;
             this.stack = stack;
             isArtifact = mod.isArtifact; //todo
         }

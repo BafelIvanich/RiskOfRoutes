@@ -11,6 +11,12 @@ namespace SamplePlugin
     public class SyncListModifier : SyncListStruct<ModifierSync> { }
     public class SyncListRouteNode : SyncListStruct<RouteNodeSync> { }
 
+    public class ModifierSlotConfiguration
+    {
+        public Dictionary<ModifierTier, int> positive = new Dictionary<ModifierTier, int>();
+        public Dictionary<ModifierTier, int> negative = new Dictionary<ModifierTier, int>();
+    }
+
     public class StageModifierDirector : NetworkBehaviour
     {
         public static StageModifierDirector instance;
@@ -319,138 +325,140 @@ namespace SamplePlugin
 
         public List<ModifierSync> GetNextStageModifiers(GameObject portal)
         {
-            WeightedSelection<ModifierDef> weightedSelection = CreateAvailableModifierSelection(portal);
+            ModifierSlotConfiguration modifierSlots = GetModifierSlots(Run.instance.stageRng);
+
             var mg = portal.GetComponent<RoutePortalManager>();
             HashSet<string> bannedFromSelection = new HashSet<string>();
             Dictionary<string, int> modifiers = new Dictionary<string, int>();
 
-            if (mg)
+            if (mg == null || mg.routeNode == null)
             {
-                //lemurian temple, habitat
-                if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("lemurianTemple") || mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("habitat")))
-                {
-                    modifiers.Add("Aurelionite", 1);
-                    Log.Info("Added aurelionite");
-                }
-                else
-                {
-                    Log.Info("UIndex:" + mg.destinationSceneIndex + $"{SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex)}");
-                }
-
-                //todo посмотреть их id
-                if (mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("repurposedcrater"))
-                {
-                    modifiers.Add("DroneBossRed", 1);
-                }
-
-                if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("conduitcanyon")))
-                {
-                    modifiers.Add("UpgradeDrones", 1);
-                }
-
+                Log.Error("Portal doesn't have routePortalManager or RouteNode, couldn't get modifiers.");
+                return new List<ModifierSync>();
             }
 
-            int routePortalCredits = routeCredits;
-            int attempts = 100;
-            while (routePortalCredits > 0 && attempts > 0 && modifiers.Count < uniqueModifierLimit)
+            if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("lemurianTemple") || mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("habitat")))
             {
-                attempts--;
-                ModifierDef currentModifier = SelectModifier(weightedSelection, routePortalCredits, bannedFromSelection);
-                if (currentModifier == null) break;
-
-                foreach (var name in currentModifier.conflictList)
-                {
-                    bannedFromSelection.Add(name);
-                }
-
-                if (modifiers.ContainsKey(currentModifier.name))
-                {
-                    modifiers[currentModifier.name]++;
-                }
-                else
-                {
-                    modifiers.Add(currentModifier.name, 1);
-                }
-                routePortalCredits -= currentModifier.cost;
-
+                modifiers.Add("Aurelionite", 1);
+                Log.Info("Added aurelionite");
             }
-            Log.Error(weightedSelection.Count);
+            if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("conduitcanyon")))
+            {
+                List<string> canyonMod = new List<string>() { "UpgradeDrones", "DroneBossRed" };
+                modifiers.Add(Run.instance.stageRng.NextElementUniform(canyonMod), 1);
+            }
+            if (mg.routeNode.portalType == RoutePortalType.ChefType)
+            {
+                modifiers.Add("WanderingChef", 1);
+            }
+
+            //positive
+            var positive = modifierSlots.positive;
+            foreach (var tier in positive)
+            {
+                for (int i = 0; i < tier.Value; i++)
+                {
+                    ModifierDef currentModifier = StageModifierCatalog.SelectModifier(bannedFromSelection, mg.routeNode.portalType, tier.Key);
+                    if (currentModifier == null) continue;
+                    //точно
+                    bannedFromSelection.Add(currentModifier.name);
+                    if(currentModifier.conflictList != null)
+                    {
+                        foreach (var name in currentModifier.conflictList) bannedFromSelection.Add(name);
+                    }
+
+                    int stack = CalculateStack(currentModifier.tier, tier.Key);
+                    if (modifiers.ContainsKey(currentModifier.name))
+                        modifiers[currentModifier.name] += stack;
+                    else
+                        modifiers.Add(currentModifier.name, 1);
+                }
+            }
+
+            //negative
+            //int punishmentStacks = Mathf.FloorToInt(Run.instance.stopwa)
+
+            var negative = modifierSlots.negative;
+            foreach (var tier in negative)
+            {
+                for (int i = 0; i < tier.Value; i++)
+                {
+                    ModifierDef currentModifier = StageModifierCatalog.SelectModifier(bannedFromSelection, mg.routeNode.portalType, tier.Key, isNegative: true);
+                    if (currentModifier == null) continue;
+                    //точно выбран
+                    bannedFromSelection.Add(currentModifier.name);
+                    if (currentModifier.conflictList != null)
+                    {
+                        foreach (var name in currentModifier.conflictList) bannedFromSelection.Add(name);
+                    }
+
+                    int stack = CalculateStack(currentModifier.tier, tier.Key); //+ punishment
+                    if (modifiers.ContainsKey(currentModifier.name))
+                        modifiers[currentModifier.name] += stack;
+                    else
+                        modifiers.Add(currentModifier.name, 1);
+                }
+            }
+
             List<ModifierSync> res = new List<ModifierSync>();
             foreach (var mod in modifiers)
             {
                 var modDef = StageModifierCatalog.FindModifier(mod.Key);
                 if (modDef != null)
                 {
-                    res.Add(new ModifierSync() { name = modDef.name, stack = mod.Value, isArtifact = modDef.isArtifact }); //todo
-
+                    res.Add(new ModifierSync(modDef, mod.Value)); //todo
                 }
             }
             return res;
         }
 
-        private ModifierDef SelectModifier(WeightedSelection<ModifierDef> weightedSelection, int maxCost, HashSet<string> bannedFromSelection)
+        private int CalculateStack(ModifierTier currentTier, ModifierTier targetTier)
         {
-            WeightedSelection<ModifierDef> filtered = new WeightedSelection<ModifierDef>();
-
-            for (int i = 0; i < weightedSelection.Count; i++)
-            {
-                WeightedSelection<ModifierDef>.ChoiceInfo choice = weightedSelection.GetChoice(i);
-                if (choice.value.cost <= maxCost && !bannedFromSelection.Contains(choice.value.name))
-                {
-                    filtered.AddChoice(choice);
-                }
-            }
-            if (filtered.Count == 0)
-            {
-                Log.Error("Could not select modfiier");
-                return null;
-            }
-            else
-            {
-                Log.Info($"Filtered has {filtered.Count} entries");
-            }
-
-            return filtered.Evaluate(RoR2.Run.instance.runRNG.nextNormalizedFloat);
+            if (currentTier == targetTier) return 1;
+            if (currentTier == ModifierTier.Tier1 && targetTier == ModifierTier.Tier2) return 2;
+            if (currentTier == ModifierTier.Tier1 && targetTier == ModifierTier.Tier3) return 3;
+            else return 1;
         }
 
-        private WeightedSelection<ModifierDef> CreateAvailableModifierSelection(GameObject portal)
+        public static ModifierSlotConfiguration GetModifierSlots(Xoroshiro128Plus rng)
         {
-            WeightedSelection<ModifierDef> res = new WeightedSelection<ModifierDef>();
+            var selection = new WeightedSelection<ModifierSlotConfiguration>();
+            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 1 } }, negative = { { ModifierTier.Tier1, 1 } } }, 1.0f);
+            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 2 } }, negative = { { ModifierTier.Tier2, 1 } } }, 1.0f);
+            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier2, 1 } }, negative = { { ModifierTier.Tier1, 2 } } }, 1.0f);
 
-            //var mgr = portal.GetComponent<RoutePortalManager>();
-            //if(mgr == null)
-            //{
-            //    Log.Error("Mgr is null");
-            //}
-            //if(mgr.routeNode == null)
-            //{
-            //    Log.Error("error");
-            //    return res;
-            //}
+            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier3, 1 } } }, 0.3f);
+            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier2, 1 }, { ModifierTier.Tier1, 1 } } }, 0.3f);
 
-            foreach (var modName in StageModifierCatalog.AllDefs.Keys)
-            {
-                var modDef = StageModifierCatalog.FindModifier(modName);
-                if (modDef.isAvailable())
-                {
-                    res.AddChoice(modDef, modDef.selectionWeight);
-                    //Log.Info($"Added {modDef.name}");
-                }
-            }
-
-            return res;
+            return selection.Evaluate(rng.nextNormalizedFloat);
         }
 
-        //public List<ModifierDef> GetModifiersFromCategory(RoutePortalType type)
+        private static List<string> GetAvailableDefsByPortalType(RoutePortalType portalType)
+        {
+            switch (portalType)
+            {
+                case RoutePortalType.None: return new List<string>();
+                case RoutePortalType.Rare: return new List<string>() { };
+                case RoutePortalType.DroneType: return new List<string>() { };
+                case RoutePortalType.ItemType: return new List<string>() { };
+                default: return new List<string>() { };
+            }
+        }
+
+        //private WeightedSelection<ModifierDef> CreateAvailableModifierSelection()
         //{
-        //    //switch (type)
-        //    //{
-        //    //    case RoutePortalType.None: return allModifiers;
-        //    //    case RoutePortalType.ItemType: return itemModifiersPool;
-        //    //    case RoutePortalType.DroneType: return droneModifiersPool;
-        //    //    case RoutePortalType.Rare: return rareModifiersPool;
-        //    //    default: return allModifiers;
-        //    //}
+        //    WeightedSelection<ModifierDef> res = new WeightedSelection<ModifierDef>();
+
+        //    foreach (var modName in StageModifierCatalog.AllDefs.Keys)
+        //    {
+        //        var modDef = StageModifierCatalog.FindModifier(modName);
+        //        if (modDef != null && modDef.isAvailable())
+        //        {
+        //            res.AddChoice(modDef, modDef.selectionWeight);
+        //        }
+        //    }
+
+        //    return res;
         //}
 
         public void AddRoutePortalInstance(GameObject portal)
@@ -462,7 +470,6 @@ namespace SamplePlugin
                 {
                     activePortalInstances.Add(portal);
                     Log.Info($"StageModifierDirector: Added portal instance type {mg.routeNode.portalType}");
-
                 }
                 else
                 {

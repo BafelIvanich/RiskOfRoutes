@@ -74,6 +74,11 @@ namespace RiskOfRoutes.StageModifiers
                 }
             }
         }
+
+        public bool IsStackable()
+        {
+            return !conflictList.Contains(name);
+        }
     }
 }
 

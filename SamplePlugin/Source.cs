@@ -22,6 +22,7 @@ using Image = UnityEngine.UI.Image;
 
 //TODO
 //!Утечка памяти
+//Пофиксить синхронизация токенов name desc
 //Core:
 //Заменить seerStationController на базаре
 //SyncList не работает как надо

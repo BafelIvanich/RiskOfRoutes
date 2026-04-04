@@ -1,32 +1,84 @@
+using RoR2;
 using SamplePlugin.StageModifiers;
+using SamplePlugin.StageModifiers.SceneModifiers;
+using UnityEngine;
 
 namespace RiskOfRoutes.StageModifiers.OtherModifiers
 {
-    //На стейдже будет активно то количество артефактов горы, что были на том стейдже, где был выбран этот портал
     public class LunarItemsModifier : StageModifier
     {
-        public LunarItemsModifier()
+        ItemDef lunarItem;
+        Sprite lunarItemSprite;
+        string lunarItemDescToken;
+
+        public LunarItemsModifier(string internalName)
         {
-            if (RoR2.TeleporterInteraction.instance)
-            {
-                stack = RoR2.TeleporterInteraction.instance.shrineBonusStacks;
-            }
+            lunarItem = PrinterItemModifier.stringToItemDef(internalName);
+        }
+
+        public LunarItemsModifier(ItemDef item)
+        {
+            lunarItem = item;
         }
 
         public override void OnEnd()
         {
-            Log.Info("Shrine safe on end");
-            RoR2.Stage.onServerStageBegin -= Stage_onServerStageBegin;
+            if (lunarItem == null)
+            {
+                Log.Error("Lunar item is null");
+                return;
+            }
+
+            On.RoR2.UI.ItemIcon.SetItemIndex_ItemIndex_int_float -= ItemIcon_SetItemIndex_ItemIndex_int_float;
+
+            var instances = PlayerCharacterMasterController.instances;
+            foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
+            {
+                if (cm.playerCharacterMasterController != null && cm.inventory != null)
+                {
+                    var pearl = Run.instance.stageRng.nextNormalizedFloat > 0.2f ? RoR2Content.Items.Pearl : RoR2Content.Items.ShinyPearl;
+                    if (cm.inventory.GetItemCountEffective(lunarItem) > 0)
+                    {
+                        cm.inventory.RemoveItemPermanent(lunarItem);
+                        cm.inventory.GiveItemPermanent(pearl);
+                        Log.Info($"LunarItemModifier Gave player {cm.playerCharacterMasterController.GetDisplayName()} a {pearl.name}");
+                    }
+                }
+            }
         }
 
         public override void OnStart()
         {
-            RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
+            if (lunarItem == null)
+            {
+                Log.Error("Lunar item is null");
+                return;
+            }
+
+            On.RoR2.UI.ItemIcon.SetItemIndex_ItemIndex_int_float += ItemIcon_SetItemIndex_ItemIndex_int_float;
+
+            Log.Info("hook");
+
+            foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
+            {
+                if (cm.playerCharacterMasterController != null && cm.inventory != null)
+                {
+                    cm.inventory.GiveItemPermanent(lunarItem);
+                }
+            }
         }
 
-        private void Stage_onServerStageBegin(RoR2.Stage obj)
+        private void ItemIcon_SetItemIndex_ItemIndex_int_float(On.RoR2.UI.ItemIcon.orig_SetItemIndex_ItemIndex_int_float orig, RoR2.UI.ItemIcon self, ItemIndex newItemIndex, int newItemCount, float newDurationPercent)
         {
-            RoR2.TeleporterInteraction.instance.SetShrineStack(stack);
+            orig(self, newItemIndex, newItemCount, newDurationPercent);
+
+            if (newItemIndex == lunarItem.itemIndex)
+            {
+                self.image.color = new Color(0.3f, 0.3f, 0.3f, 1f);
+                self.tooltipProvider.bodyToken = "SMTH";
+            }
+
+            Log.Info($"Set item index intfloat{newItemIndex}");
         }
     }
 }

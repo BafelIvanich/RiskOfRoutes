@@ -228,7 +228,7 @@ namespace SamplePlugin
                     {
                         foreach (var modifier in mods)
                         {
-                            Log.Info(modifier.description);
+                            Log.Info(modifier.descriptionToken);
                         }
                     }
                     else

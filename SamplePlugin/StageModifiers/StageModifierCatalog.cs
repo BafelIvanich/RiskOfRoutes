@@ -8,19 +8,11 @@ using SamplePlugin.StageModifiers.BossRewardModifiers;
 using SamplePlugin.StageModifiers.CombatModifiers;
 using SamplePlugin.StageModifiers.OtherModifiers;
 using SamplePlugin.StageModifiers.SceneModifiers;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
-//Rare: random tier 3 positive, more credits on negative?
-//Chef: guaranteed chef, food printers more likely?
-//DroneFocused: DroneBossReward, more drones
-//Mountain effect only if 2 or more portals
-//printer limit 3
-//yellow/red printer only as additional
-//the better printer items the more neg credits
-//ban list
-//texture fix
 
 namespace RiskOfRoutes.StageModifiers
 {
@@ -29,6 +21,13 @@ namespace RiskOfRoutes.StageModifiers
         private static AssetBundle assetBundle;
 
         public static Dictionary<string, ModifierDef> AllDefs = new Dictionary<string, ModifierDef>();
+
+        public static List<string> generalNegativePool = new List<string>();
+        public static List<string> itemTypePool = new List<string>();
+        public static List<string> droneTypePool = new List<string>();
+        public static List<string> rarePool = new List<string>();
+
+
         public static readonly List<string> AllDefNames = new List<string>
         {
         "Aurelionite",
@@ -78,6 +77,15 @@ namespace RiskOfRoutes.StageModifiers
         {
             assetBundle = bundle;
             AllDefs.Clear();
+            generalNegativePool.Clear();
+            itemTypePool.Clear();
+            rarePool.Clear();
+            droneTypePool.Clear();
+
+            generalNegativePool.AddRange(new string[] { "Doppelganger", "SoulCost", "VoidEnemies", "MoreElites", "LunarEnemies", "PowerfulElites", "OnlyFlying" });
+            itemTypePool.AddRange(new string[] { "YellowPrinter", "RedPrinter" });
+            rarePool.AddRange(new string[] { "BossRedItem", "BossYellowItem" });
+            droneTypePool.AddRange(new string[] { "DroneBossGreen","DroneBossRed","UpgradeDrones","MoreDrones" });
 
             void Register(ModifierDef def, string iconAddress, bool isArtifact = false, bool isItem = false)
             {
@@ -93,17 +101,8 @@ namespace RiskOfRoutes.StageModifiers
                     ArtifactDef art = ArtifactCatalog.FindArtifactDef(def.name);
                     if (art != null)
                     {
-                        if (art == RoR2.RoR2Content.Artifacts.TeamDeath)
-                        {
-                            nameToken = art.nameToken;
-                            descriptionToken = "ARTIFACT_DEATH_DESCRIPTION_SHORT";
-                        }
-                        else
-                        {
-                            nameToken = art.nameToken;
-                            descriptionToken = art.descriptionToken;
-                        }
-
+                        nameToken = art.nameToken;
+                        descriptionToken = (art == RoR2Content.Artifacts.TeamDeath) ? "ARTIFACT_DEATH_DESCRIPTION_SHORT" : art.descriptionToken;
                         def.nameToken = nameToken;
                         def.descriptionToken = descriptionToken;
                     }
@@ -116,8 +115,6 @@ namespace RiskOfRoutes.StageModifiers
 
                         def.nameToken = nameToken;
                         def.descriptionToken = descriptionToken;
-
-                        return;
                     }
                 }
                 else if (isItem)
@@ -150,6 +147,47 @@ namespace RiskOfRoutes.StageModifiers
 
                 Log.Info($"Added tokens for modifier {def.name}:NAME - {nameToken}, DESCRIPTION - {descriptionToken}");
             }
+            void TryRegArtifact(bool isAllowed, string name, ModifierTier tier, bool isNegative)
+            {
+                if (!isAllowed) return;
+
+                Func<bool> isAvailable = (name == "TeamDeath")
+                    ? () => StageModifierDirector.instance?.CheckArtifactOfDeathAvailable() ?? false
+                    : () => StageModifierDirector.instance?.CheckArtifactAvailable(name) ?? false;
+
+                Register(new ModifierDef(name, tier, 1f, isAvailable, stackable: false, isNegative: isNegative), name, isArtifact: true);
+
+                if(isNegative)
+                {
+                    generalNegativePool.Add(name);
+                }
+                else
+                {
+                    rarePool.Add(name);
+                }
+            }
+
+            TryRegArtifact(RiskOfRoutes.allowMysteryArtifact.Value, "Mystery", ModifierTier.Tier2, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowChaosArtifact.Value, "FriendlyFire", ModifierTier.Tier1, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowCommandArtifact.Value, "Command", ModifierTier.Tier3, isNegative: false);
+            TryRegArtifact(RiskOfRoutes.allowDelusionArtifact.Value, "Delusion", ModifierTier.Tier3, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowDevotionArtifact.Value, "Devotion", ModifierTier.Tier2, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowDissonanceArtifact.Value, "MixEnemy", ModifierTier.Tier2, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowEnigmaArtifact.Value, "Enigma", ModifierTier.Tier3, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowEvolutionArtifact.Value, "MonsterTeamGainsItems", ModifierTier.Tier1, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowFrailtyArtifact.Value, "WeakAssKnees", ModifierTier.Tier1, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowGlassArtifact.Value, "Glass", ModifierTier.Tier3, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowHonorArtifact.Value, "EliteOnly", ModifierTier.Tier3, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowKinArtifact.Value, "SingleMonsterType", ModifierTier.Tier2, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowMetamorphosisArtifact.Value, "RandomSurvivorOnRespawn", ModifierTier.Tier3, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowRebirthArtifact.Value, "Rebirth", ModifierTier.Tier1, isNegative: false);
+            TryRegArtifact(RiskOfRoutes.allowSacrificeArtifact.Value, "Sacrifice", ModifierTier.Tier3, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowSoulArtifact.Value, "WispOnDeath", ModifierTier.Tier1, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowSpiteArtifact.Value, "Bomb", ModifierTier.Tier1, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowSwarmsArtifact.Value, "Swarms", ModifierTier.Tier1, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowVengeanceArtifact.Value, "ShadowClone", ModifierTier.Tier1, isNegative: true);
+            TryRegArtifact(RiskOfRoutes.allowDeathArtifact.Value, "TeamDeath", ModifierTier.Tier2, isNegative: true);
+
 
             Register(new ModifierDef("Aurelionite", ModifierTier.Tier3, 1f, false, false), "texBuffAurelioniteBlessingIcon");
             Register(new ModifierDef("BossRedItem", ModifierTier.Tier3, 1f, false, false, new string[] { "BossYellowItem", "DroneBossGreen" }), "redBossItem");
@@ -172,46 +210,84 @@ namespace RiskOfRoutes.StageModifiers
             Register(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false, false), "RoR2/DLC3/MealPrep/texMealPrepIcon.png");
 
             Register(new ModifierDef("Mountain", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckMountainShrine() ?? false, false, false), "RoR2/Base/Common/texMountainIcon.png");
-            Register(new ModifierDef("SoulCost", ModifierTier.Tier2, 1f, true, true), "texSoulCostIcon");
+            Register(new ModifierDef("SoulCost", ModifierTier.Tier2, 1f, true, true), "RoR2/DLC2/texBuffSoulCostIcon.png");
             Register(new ModifierDef("Doppelganger", ModifierTier.Tier2, 1f, true, true), "texAurelioniteIcon");
 
-            if (RiskOfRoutes.allowMysteryArtifact.Value) Register(new ModifierDef("Mystery", ModifierTier.Tier2, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Mystery") ?? false, false, true), "Mystery", true);
-            if (RiskOfRoutes.allowChaosArtifact.Value) Register(new ModifierDef("FriendlyFire", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("FriendlyFire") ?? false, false, true), "FriendlyFire", true);
-            if (RiskOfRoutes.allowCommandArtifact.Value) Register(new ModifierDef("Command", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Command") ?? false, false, false), "Command", true);
-            if (RiskOfRoutes.allowDelusionArtifact.Value) Register(new ModifierDef("Delusion", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Delusion") ?? false, false, true), "Delusion", true);
-            if (RiskOfRoutes.allowDevotionArtifact.Value) Register(new ModifierDef("Devotion", ModifierTier.Tier2, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Devotion") ?? false, false, true), "Devotion", true);
-            if (RiskOfRoutes.allowDissonanceArtifact.Value) Register(new ModifierDef("MixEnemy", ModifierTier.Tier2, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("MixEnemy") ?? false, false, true), "MixEnemy", true);
-            if (RiskOfRoutes.allowEnigmaArtifact.Value) Register(new ModifierDef("Enigma", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Enigma") ?? false, false, true), "Enigma", true);
-            if (RiskOfRoutes.allowEvolutionArtifact.Value) Register(new ModifierDef("MonsterTeamGainsItems", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("MonsterTeamGainsItems") ?? false, false, true), "MonsterTeamGainsItems", true);
-            if (RiskOfRoutes.allowFrailtyArtifact.Value) Register(new ModifierDef("WeakAssKnees", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("WeakAssKnees") ?? false, false, true), "WeakAssKnees", true);
-            if (RiskOfRoutes.allowGlassArtifact.Value) Register(new ModifierDef("Glass", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Glass") ?? false, false, true), "Glass", true);
-            if (RiskOfRoutes.allowHonorArtifact.Value) Register(new ModifierDef("EliteOnly", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("EliteOnly") ?? false, false, true), "EliteOnly", true);
-            if (RiskOfRoutes.allowKinArtifact.Value) Register(new ModifierDef("SingleMonsterType", ModifierTier.Tier2, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("SingleMonsterType") ?? false, false, true), "SingleMonsterType", true);
-            if (RiskOfRoutes.allowMetamorphosisArtifact.Value) Register(new ModifierDef("RandomSurvivorOnRespawn", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("RandomSurvivorOnRespawn") ?? false, false, true), "RandomSurvivorOnRespawn", true);
-            if (RiskOfRoutes.allowRebirthArtifact.Value) Register(new ModifierDef("Rebirth", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Rebirth") ?? false, false, false), "Rebirth", true);
-            if (RiskOfRoutes.allowSacrificeArtifact.Value) Register(new ModifierDef("Sacrifice", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Sacrifice") ?? false, false, true), "Sacrifice", true);
-            if (RiskOfRoutes.allowSoulArtifact.Value) Register(new ModifierDef("WispOnDeath", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("WispOnDeath") ?? false, false, true), "WispOnDeath", true);
-            if (RiskOfRoutes.allowSpiteArtifact.Value) Register(new ModifierDef("Bomb", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Bomb") ?? false, false, true), "Bomb", true);
-            if (RiskOfRoutes.allowSwarmsArtifact.Value) Register(new ModifierDef("Swarms", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("Swarms") ?? false, false, true), "Swarms", true);
-            if (RiskOfRoutes.allowVengeanceArtifact.Value) Register(new ModifierDef("ShadowClone", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckArtifactAvailable("ShadowClone") ?? false, false, true), "ShadowClone", true);
-            if (RiskOfRoutes.allowDeathArtifact.Value) Register(new ModifierDef("TeamDeath", ModifierTier.Tier2, 1f, () => StageModifierDirector.instance?.CheckArtifactOfDeathAvailable() ?? false, false, true), "TeamDeath", true);
-
-            List<string> items = new List<string>();
-            items.Add(RoR2.RoR2Content.Items.Hoof.name);
-            items.Add(RoR2.RoR2Content.Items.PersonalShield.name);
-            items.Add(RoR2.RoR2Content.Items.ArmorPlate.name);
-
-            foreach (var item in items)
+            void RegEnemy(string itemName, ModifierTier tier)
             {
-                Register(new ModifierDef(item + "_Printer", ModifierTier.Tier1, 1f, false, false), item, false, true);
+                string modName = itemName + "_EnemyItem";
+                Register(new ModifierDef(modName, tier, 1f, false, true), itemName, false, true);
+                generalNegativePool.Add(modName);
             }
 
-            foreach (var item in items)
+            void RegPrinter(string itemName, ModifierTier tier)
             {
-                Register(new ModifierDef(item + "_EnemyItem", ModifierTier.Tier1, 1f, false, true), item, false, true);
+                string modName = itemName + "_Printer";
+                Register(new ModifierDef(modName, tier, 1f, false, false), itemName, false, true);
+                itemTypePool.Add(modName);
             }
 
+            void RegLunar(string itemName, ModifierTier tier)
+            {
+                string modName = itemName + "_LunarItem";
+                Register(new ModifierDef(modName, tier, 1f, false, true), itemName, false, true);
+                generalNegativePool.Add(modName);
+            }
 
+            RegEnemy("SlowOnHit", ModifierTier.Tier1);
+            RegEnemy("FlatHealth", ModifierTier.Tier1);
+            RegEnemy("BarrierOnCooldown", ModifierTier.Tier1);
+            RegEnemy("NearbyDamageBonus", ModifierTier.Tier1);
+            RegEnemy("OutOfCombatArmor", ModifierTier.Tier1);
+            RegEnemy("PersonalShield", ModifierTier.Tier1);
+            RegEnemy("Hoof", ModifierTier.Tier1);
+            RegEnemy("ShieldBooster", ModifierTier.Tier1);
+
+            RegEnemy("Thorns", ModifierTier.Tier2);
+            RegEnemy("SprintOutOfCombat", ModifierTier.Tier2);
+            RegEnemy("FragileDamageBonus", ModifierTier.Tier2);
+            RegEnemy("CritGlasses", ModifierTier.Tier2);
+            RegEnemy("Syringe", ModifierTier.Tier2);
+            RegEnemy("ArmorPlate", ModifierTier.Tier2);
+
+            RegEnemy("Behemoth", ModifierTier.Tier3);
+            RegEnemy("CaptainDefensiveMatrix", ModifierTier.Tier3);
+            RegEnemy("ImmuneToDebuff", ModifierTier.Tier3);
+            RegEnemy("ExtraLife", ModifierTier.Tier3);
+            RegEnemy("ArmorReductionOnHit", ModifierTier.Tier3);
+            RegEnemy("PermanentDebuffOnHit", ModifierTier.Tier3);
+            RegEnemy("Bear", ModifierTier.Tier3);
+
+            //принтеры
+            RegPrinter("Crowbar", ModifierTier.Tier1);
+            RegPrinter("ShieldBooster", ModifierTier.Tier1);
+            RegPrinter("ArmorPlate", ModifierTier.Tier1);
+            RegPrinter("Hoof", ModifierTier.Tier1);
+            RegPrinter("IgniteOnKill", ModifierTier.Tier1);
+
+            RegPrinter("FragileDamageBonus", ModifierTier.Tier2);
+            RegPrinter("ExplodeOnDeath", ModifierTier.Tier2);
+            RegPrinter("ChainLightning", ModifierTier.Tier2);
+            RegPrinter("Thorns", ModifierTier.Tier2);
+            RegPrinter("StrengthenBurn", ModifierTier.Tier2);
+
+            RegPrinter("IceRing", ModifierTier.Tier3);
+            RegPrinter("FireRing", ModifierTier.Tier3);
+            RegPrinter("Bear", ModifierTier.Tier3);
+            RegPrinter("Syringe", ModifierTier.Tier3);
+            RegPrinter("CritGlasses", ModifierTier.Tier3);
+
+            //лунарные
+            RegLunar("GoldOnHit", ModifierTier.Tier1);
+            RegLunar("MonstersOnShrineUse", ModifierTier.Tier1);
+            RegLunar("FocusConvergence", ModifierTier.Tier1);
+
+            RegLunar("RepeatHeal", ModifierTier.Tier2);
+            RegLunar("HalfAttackSpeedHalfCooldowns", ModifierTier.Tier2);
+            RegLunar("ShieldOnly", ModifierTier.Tier2);
+
+            RegLunar("LunarBadLuck", ModifierTier.Tier3);
+            RegLunar("HalfSpeedDoubleHealth", ModifierTier.Tier3);
         }
 
         public static ModifierDef FindModifier(string name)
@@ -289,7 +365,7 @@ namespace RiskOfRoutes.StageModifiers
                             PrinterItemModifier mod = new PrinterItemModifier(itemName);
                             return mod;
                         }
-                        else if(def.Contains("EnemyItem"))
+                        else if (def.Contains("EnemyItem"))
                         {
                             string itemName = def.Split('_')[0];
                             ItemIndex itemIndex = RoR2.ItemCatalog.FindItemIndex(itemName);
@@ -301,6 +377,18 @@ namespace RiskOfRoutes.StageModifiers
                             EnemyItemsModifier mod = new EnemyItemsModifier(itemName);
                             return mod;
                         }
+                        else if (def.Contains("LunarItem"))
+                        {
+                            string itemName = def.Split('_')[0];
+                            ItemIndex itemIndex = RoR2.ItemCatalog.FindItemIndex(itemName);
+                            if (itemIndex == ItemIndex.None)
+                            {
+                                Log.Error($"Could not find item by the name {itemName}");
+                                return null;
+                            }
+                            LunarItemsModifier mod = new LunarItemsModifier(itemName);
+                            return mod;
+                        }
                         else
                         {
                             return null;
@@ -309,15 +397,64 @@ namespace RiskOfRoutes.StageModifiers
             }
         }
 
-        public static List<string> GetPortalTypeModifiers(RoutePortalType routePortalType)
+        private static List<string> GetPool(RoutePortalType routePortalType, bool isNegative = false)
         {
+            if (isNegative) return generalNegativePool;
+
             switch (routePortalType)
             {
-                case RoutePortalType.ItemType: return new List<string>();
-                case RoutePortalType.DroneType: return new List<string>();
-                case RoutePortalType.ChefType: return new List<string>();
-                case RoutePortalType.Rare: return new List<string>();
-                default: return new List<string>();
+                case RoutePortalType.ItemType: return itemTypePool;
+                case RoutePortalType.DroneType: return droneTypePool;
+                case RoutePortalType.ChefType: return new List<string>() { "YellowPrinter" };
+                case RoutePortalType.Rare: return rarePool;
+                default: return new List<string>() { "Mountain" }; //placeholder
+            }
+        }
+
+        public static ModifierDef SelectModifier(HashSet<string> banned, RoutePortalType portalType, ModifierTier tier, bool isNegative = false)
+        {
+            var pool = GetPool(portalType, isNegative);
+            if (pool.Count == 0)
+            {
+                Log.Info("Pool is emptyk");
+            }
+            else
+            {
+                Log.Info($"Got pool with {pool.Count}items");
+            }
+            WeightedSelection<ModifierDef> selection = new WeightedSelection<ModifierDef>();
+
+            foreach (var modName in pool)
+            {
+                if (banned.Contains(modName)) continue;
+
+                var currentDef = FindModifier(modName);
+                if (currentDef == null)
+                {
+                    Log.Error($"Returning null for name {modName}");
+                    return null;
+                }
+
+                if (!currentDef.isAvailable()) continue;
+
+                if (currentDef.tier == tier || (currentDef.tier < tier && currentDef.IsStackable()))
+                {
+                    selection.AddChoice(currentDef, 1f);
+                }
+                else
+                {
+                    //Log.Error($"Was searching for modifier with tier {tier} but got modifier {currentDef.name} with tier {currentDef.tier}");
+                }
+            }
+
+            if (selection.Count > 0)
+            {
+                return selection.Evaluate(Run.instance.stageRng.nextNormalizedFloat);
+            }
+            else
+            {
+                Log.Error("Error in select modifier");
+                return null;
             }
         }
 
@@ -353,8 +490,5 @@ namespace RiskOfRoutes.StageModifiers
             Log.Info($"Not found sprite for {address}");
             return RiskOfRoutes.placeholderIcon;
         }
-
-
-
     }
 }
