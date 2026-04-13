@@ -17,6 +17,14 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
 
         public override void OnStart()
         {
+            for (int i = 0; i < stack; i++)
+            {
+                UpgradePlayerDrones();
+            }
+        }
+
+        private void UpgradePlayerDrones()
+        {
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {
                 if (cm == null) continue;

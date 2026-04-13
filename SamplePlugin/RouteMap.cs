@@ -1,5 +1,7 @@
 ﻿using RiskOfRoutes;
 using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 
 
 
@@ -16,7 +18,7 @@ public class RouteMap
 
     public RouteMap(Xoroshiro128Plus rng)
     {
-        width = 3;
+        width = RiskOfRoutes.RiskOfRoutes.routeMapWidth.Value;
         height = 5;
         //+1 к ширине под порталы длс2 длс3
         mapGrid = new RouteNode[width + 1, height];
@@ -43,26 +45,116 @@ public class RouteMap
 
     public void SetupRewards(Xoroshiro128Plus rng)
     {
-        //TODO PLACEHOLDER
+        WeightedSelection<RoutePortalType> general = new WeightedSelection<RoutePortalType>();
+        //general.AddChoice(RoutePortalType.ItemType, 1f);
+        general.AddChoice(RoutePortalType.Heal, 1f);
+        general.AddChoice(RoutePortalType.Combat, 1f);
+        general.AddChoice(RoutePortalType.Utility, 1f);
+        general.AddChoice(RoutePortalType.DroneType, 1f);
+
+        WeightedSelection<RoutePortalType> postOne = new WeightedSelection<RoutePortalType>();
+        //postOne.AddChoice(RoutePortalType.ItemType, 1f);
+        general.AddChoice(RoutePortalType.Heal, 1f);
+        general.AddChoice(RoutePortalType.Combat, 1f);
+        general.AddChoice(RoutePortalType.Utility, 1f);
+        postOne.AddChoice(RoutePortalType.DroneType, 1f);
+        postOne.AddChoice(RoutePortalType.ChefType, 0.8f);
+        postOne.AddChoice(RoutePortalType.Rare, 0.8f);
+
         for (int i = 0; i < width; i++)
         {
+            if (mapGrid[i, 1].portalType != RoutePortalType.None)
+            {
+                mapGrid[i, 1].portalType = general.Evaluate(rng.nextNormalizedFloat);
+            }
             if (mapGrid[i, 3].portalType != RoutePortalType.None)
             {
-                mapGrid[i, 3].portalType = RoutePortalType.ChefType;
+                mapGrid[i, 3].portalType = postOne.Evaluate(rng.nextNormalizedFloat);
             }
             if (mapGrid[i, 2].portalType != RoutePortalType.None)
             {
-                mapGrid[i, 2].portalType = rng.NextElementUniform(new List<RoutePortalType>() { RoutePortalType.ItemType, RoutePortalType.DroneType, RoutePortalType.Rare });
-            }
-            if (mapGrid[i, 1].portalType != RoutePortalType.None)
-            {
-                mapGrid[i, 1].portalType = rng.NextElementUniform(new List<RoutePortalType>() { RoutePortalType.ItemType, RoutePortalType.DroneType, RoutePortalType.Rare });
+                mapGrid[i, 2].portalType = postOne.Evaluate(rng.nextNormalizedFloat);
             }
             if (mapGrid[i, 4].portalType != RoutePortalType.None)
             {
-                mapGrid[i, 4].portalType = rng.NextElementUniform(new List<RoutePortalType>() { RoutePortalType.ItemType, RoutePortalType.DroneType, RoutePortalType.Rare });
+                mapGrid[i, 4].portalType = RoutePortalType.ChefType;
             }
         }
+
+        HashSet<Vector2> memory = new HashSet<Vector2>();
+        var available = root.GetPaths(); //без доп портала
+        foreach (var path in available)
+        {
+            CheckNodeCorrect(path, rng, memory);
+        }
+    }
+
+    private void CheckNodeCorrect(RouteNode node, Xoroshiro128Plus rng, HashSet<Vector2> memory)
+    {
+        Vector2 coords = new Vector2(node.x, node.y);
+        if (memory.Contains(coords)) return;
+        memory.Add(coords);
+
+        RoutePortalType toSkip = RoutePortalType.None;
+
+        var children = node.GetPaths();
+        if (children.Count == 0) return;
+
+        if (node.portalType == RoutePortalType.Rare || node.portalType == RoutePortalType.ChefType)
+        {
+            toSkip = node.portalType;
+            foreach (var child in children)
+            {
+                if (child.portalType == node.portalType)
+                {
+                    child.portalType = RollPortalType(rng, node.portalType);
+                }
+            }
+        }
+
+        if (children.Count > 1)
+        {
+            if (children.Count == 2)
+            {
+                if (children[0].portalType == children[1].portalType)
+                {
+                    children[1].portalType = RollPortalType(rng, children[0].portalType, toSkip);
+                }
+            }
+            else if (children.Count == 3)
+            {
+                if (children[0].portalType == children[1].portalType)
+                {
+                    children[1].portalType = RollPortalType(rng, children[0].portalType, toSkip);
+                }
+
+                if (children[2].portalType == children[0].portalType || children[2].portalType == children[1].portalType)
+                {
+                    children[2].portalType = RollPortalType(rng, children[0].portalType, children[1].portalType, toSkip);
+                }
+            }
+        }
+
+        foreach (var child in children)
+        {
+            CheckNodeCorrect(child, rng, memory);
+        }
+    }
+
+    private RoutePortalType RollPortalType(Xoroshiro128Plus rng, params RoutePortalType[] skipTypes)
+    {
+        var res = new WeightedSelection<RoutePortalType>();
+        RoutePortalType[] types = { RoutePortalType.ItemType, RoutePortalType.DroneType, RoutePortalType.Rare, RoutePortalType.ChefType };
+        foreach (var type in types)
+        {
+            if (skipTypes.Contains(type)) continue;
+            if (type == RoutePortalType.Rare || type == RoutePortalType.ChefType)
+                res.AddChoice(type, 10.8f);
+            else
+                res.AddChoice(type, 1.0f);
+        }
+
+        return res.Evaluate(rng.nextNormalizedFloat);
     }
 
     public List<RouteNode> SetupPaths(Xoroshiro128Plus rng)

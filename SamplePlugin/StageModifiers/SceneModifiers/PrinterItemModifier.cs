@@ -61,7 +61,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
                 UniquePickup pickup = new UniquePickup { pickupIndex = currentPickupIndex };
 
                 shop.SetPickup(pickup, false);
-
             }
         }
 

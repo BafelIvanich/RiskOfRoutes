@@ -13,7 +13,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public Tier2ElitesEarlierModifier()
         {
-            stackable = false;
         }
 
         public override void OnEnd()

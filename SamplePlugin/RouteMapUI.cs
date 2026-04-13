@@ -34,6 +34,9 @@ namespace RiskOfRoutes
         public Sprite lineImage;
         public Sprite starting;
         public Sprite solusWing;
+        public Sprite heal;
+        public Sprite combat;
+        public Sprite utility;
 
         public void DrawMap()
         {
@@ -48,21 +51,25 @@ namespace RiskOfRoutes
             ClearContainer();
             MapNodes.Clear();
 
-            var map = StageModifierDirector.instance.routeNodesSynced;
+            var syncMap = StageModifierDirector.instance.routeNodesSynced;
             int mapWidth = StageModifierDirector.instance.mapWidth;
             int mapHeight = StageModifierDirector.instance.mapHeight;
             bool isMoonVisited = StageModifierDirector.instance.isMoonVisited;
-            if (map == null)
+
+            if (syncMap == null || syncMap.Count == 0)
             {
-                Log.Error("Map is not created yet");
+                Log.Error("Map is not created yet or is empty");
                 return;
             }
-            else
+
+            List<RouteNodeSync> map = new List<RouteNodeSync>();
+            foreach (var node in syncMap)
             {
-                Log.Info($"Map is {mapWidth}");
+                map.Add(node);
             }
 
             var selectedNode = GetNode((int)selectedNodeCoords.x, (int)selectedNodeCoords.y, map, mapHeight);
+            Log.Info($"Selected node:{selectedNode.x}:{selectedNode.y}:{selectedNode.portalType}-{selectedNode.visited}");
 
             Transform linesContainer = new GameObject("Lines", typeof(RectTransform)).transform;
             linesContainer.SetParent(nodeContainer, false);
@@ -74,8 +81,8 @@ namespace RiskOfRoutes
             //ноды
             //ширина карты исключая пустые строки резервированные под порталы длс2 длс3
             //int effectiveWidth = map.GetEffectiveWidth(selectedNode);
-            int effectiveWidth = GetEffectiveWidth(selectedNode, mapWidth, mapHeight, map);
-            Log.Info($"Effective width:{effectiveWidth}");
+            List<int> visibleRows = GetEffectiveWidth(selectedNode, mapWidth, mapHeight, map);
+            int effectiveWidth = visibleRows.Count;
 
             float containerWidth = nodeContainer.rect.width;
             float containerHeight = nodeContainer.rect.height;
@@ -106,6 +113,9 @@ namespace RiskOfRoutes
             //width+1 потому что для порталов слой
             for (int mx = 0; mx < mapWidth + 1; mx++)
             {
+                int visualX = visibleRows.IndexOf(mx);
+                if (visualX == -1) continue;
+
                 for (int my = 0; my < mapHeight; my++)
                 {
 
@@ -120,7 +130,11 @@ namespace RiskOfRoutes
 
                     if (currentNode.x == -1 || currentNode.y == -1) continue;
                     if (currentNode.portalType == RoutePortalType.None && my != 0) continue;
-                    if (isSpecialHidden && (currentNode.visited == false && !currentNode.Equals(selectedNode))) continue;
+                    if (isSpecialHidden && (currentNode.visited == false && !currentNode.Equals(selectedNode)))
+                    {
+                        Log.Info("Skipping this node");
+                        continue;
+                    }
 
                     float xPos;
                     float yPos;
@@ -134,7 +148,7 @@ namespace RiskOfRoutes
                         }
                         else
                         {
-                            xPos = -(mapContainerWidth / 2) + (mx * xStep);
+                            xPos = -(mapContainerWidth / 2) + (visualX * xStep);
                             yPos = -(mapContainerHeight / 2) + (my * yStep);
                         }
                     }
@@ -148,7 +162,7 @@ namespace RiskOfRoutes
                         else
                         {
                             xPos = -(mapContainerWidth / 2) + (my * xStep);
-                            yPos = -(mapContainerHeight / 2) + (mx * yStep);
+                            yPos = -(mapContainerHeight / 2) + (visualX * yStep);
                         }
                     }
 
@@ -204,7 +218,7 @@ namespace RiskOfRoutes
 
                 foreach (var childNode in GetChildren(parentNode, map, mapHeight, true))
                 {
-                    if ((parentNode.portalType == RoutePortalType.Colossus || parentNode.portalType == RoutePortalType.FalseSon) && !childNode.visited) continue;
+                    if ((parentNode.portalType == RoutePortalType.Colossus || parentNode.portalType == RoutePortalType.FalseSon) && !(childNode.visited || childNode.Equals(selectedNode))) continue;
 
 
                     if (MapNodes.TryGetValue(childNode, out RectTransform endRect))
@@ -252,6 +266,9 @@ namespace RiskOfRoutes
                 case RoutePortalType.Goldshores: icon = goldShores; break;
                 case RoutePortalType.Shop: icon = shop; break;
                 case RoutePortalType.FalseSon: icon = falseSon; break;
+                case RoutePortalType.Combat: icon = combat; break;
+                case RoutePortalType.Heal: icon = heal; break;
+                case RoutePortalType.Utility: icon = utility; break;
                 default: icon = empty; break;
             }
 
@@ -274,18 +291,19 @@ namespace RiskOfRoutes
             }
         }
 
-        public int GetEffectiveWidth(RouteNodeSync selectedNode, int width, int height, SyncListRouteNode map)
+        public List<int> GetEffectiveWidth(RouteNodeSync selectedNode, int width, int height, List<RouteNodeSync> map)
         {
             //максимум width+1
+            List<int> visibleRows = new List<int>();
             int res = 0;
             for (int x = 0; x < width + 1; x++)
             {
-                bool flag = false;
+                bool hasVisibleNode = false;
                 for (int y = 0; y < height; y++)
                 {
                     var node = GetNode(x, y, map, height);
 
-                    if (node.x == -1 || node.y == -1 || node.portalType == RoutePortalType.None) continue;
+                    if (node.x == -1 || node.y == -1 || node.portalType == RoutePortalType.None || node.portalType == RoutePortalType.Starting) continue;
 
                     bool isSpecialHidden = (node.portalType == RoutePortalType.Colossus ||
                                             node.portalType == RoutePortalType.FalseSon ||
@@ -294,17 +312,22 @@ namespace RiskOfRoutes
 
                     if (!isSpecialHidden || node.visited || node.Equals(selectedNode))
                     {
-                        flag = true;
+                        hasVisibleNode = true;
                         break;
                     }
                 }
 
-                if (flag) res++;
+                if (hasVisibleNode) visibleRows.Add(x);
             }
-            return res;
+            Log.Info("Rows that has visible nodes:");
+            foreach (var i in visibleRows)
+            {
+                Log.Info($"\t{i}");
+            }
+            return visibleRows;
         }
 
-        public List<RouteNodeSync> GetChildren(RouteNodeSync node, SyncListRouteNode map, int height, bool usePortalNode = false)
+        public List<RouteNodeSync> GetChildren(RouteNodeSync node, List<RouteNodeSync> map, int height, bool usePortalNode = false)
         {
             var res = new List<RouteNodeSync>();
 
@@ -326,17 +349,17 @@ namespace RiskOfRoutes
             return res;
         }
 
-        public RouteNodeSync GetNode(int x, int y, SyncListRouteNode map, int mapHeight)
+        public RouteNodeSync GetNode(int x, int y, List<RouteNodeSync> map, int mapHeight)
         {
             //Log.Info($"\tMap size:{map.Count}");
             //Log.Info($"\tTrying to access {x},{y}, index {y*mapHeight + x}");
             try
             {
-                return map.GetItem(x * mapHeight + y);
+                return map[x * mapHeight + y];
             }
             catch (Exception e)
             {
-                return map.GetItem(x * mapHeight + y);
+                return map[x * mapHeight + y];
             }
         }
     }

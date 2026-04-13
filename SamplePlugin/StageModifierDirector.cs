@@ -2,6 +2,7 @@
 using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin.StageModifiers;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -29,10 +30,8 @@ namespace SamplePlugin
         public List<ModifierDef> bannedModifiers { get; set; }
         public List<string> runArtifactsApplied;
 
-        [SyncVar(hook = nameof(OnModifiersSyncedUpdate))]
         public SyncListModifier modifiersSynced = new SyncListModifier();
 
-        [SyncVar(hook = nameof(OnRouteNodesSyncedUpdate))]
         public SyncListRouteNode routeNodesSynced = new SyncListRouteNode();
 
         [SyncVar]
@@ -47,21 +46,7 @@ namespace SamplePlugin
         [SyncVar]
         public Vector2 currentNodeSync = new Vector2(-1, -1);
 
-        private static void OnModifiersSyncedUpdate()
-        {
-            Log.Info("SyncedModifiers were updated");
-        }
-
-        private static void OnRouteNodesSyncedUpdate()
-        {
-            Log.Info("RouteNodes were updated");
-        }
-
-        public int startingCredits = 200;
-        public int routeCredits = 60;
-        public int negativeCredits = 30;
         public int uniqueModifierLimit = 5;
-        public int printerItemModifierLimit = 3;
 
         public Inventory monsterTeamInventory;
 
@@ -116,23 +101,62 @@ namespace SamplePlugin
 
         public void UpdateSyncedMap()
         {
-            routeNodesSynced.Clear();
             int width = routeMap.width;
             int height = routeMap.height;
-            for (int x = 0; x < width + 1; x++)
+
+            if (routeNodesSynced.Count != (width + 1) * height)
             {
-                for (int y = 0; y < height; y++)
+                routeNodesSynced.Clear();
+                for (int x = 0; x < width + 1; x++)
                 {
-                    if (routeMap.mapGrid[x, y] != null)
+                    for (int y = 0; y < height; y++)
                     {
-                        routeNodesSynced.Add(new RouteNodeSync(routeMap.mapGrid[x, y]));
-                    }
-                    else
-                    {
-                        routeNodesSynced.Add(new RouteNodeSync(new RouteMap.RouteNode(-1, -1)));
+                        if (routeMap.mapGrid[x, y] != null)
+                            routeNodesSynced.Add(new RouteNodeSync(routeMap.mapGrid[x, y]));
+                        else
+                            routeNodesSynced.Add(new RouteNodeSync(new RouteMap.RouteNode(-1, -1)));
                     }
                 }
             }
+            else
+            {
+                for (int x = 0; x < width + 1; x++)
+                {
+                    for (int y = 0; y < height; y++)
+                    {
+                        int index = x * height + y;
+                        RouteNodeSync node;
+
+                        if (routeMap.mapGrid[x, y] != null)
+                            node = new RouteNodeSync(routeMap.mapGrid[x, y]);
+                        else
+                            node = new RouteNodeSync(new RouteMap.RouteNode(-1, -1));
+
+                        //todo колоссус
+                        if (!routeNodesSynced[index].Equals(node))
+                        {
+                            routeNodesSynced[index] = node;
+                        }
+                    }
+                }
+            }
+
+            //routeNodesSynced.Clear();
+
+            //for (int x = 0; x < width + 1; x++)
+            //{
+            //    for (int y = 0; y < height; y++)
+            //    {
+            //        if (routeMap.mapGrid[x, y] != null)
+            //        {
+            //            routeNodesSynced.Add(new RouteNodeSync(routeMap.mapGrid[x, y]));
+            //        }
+            //        else
+            //        {
+            //            routeNodesSynced.Add(new RouteNodeSync(new RouteMap.RouteNode(-1, -1)));
+            //        }
+            //    }
+            //}
             mapWidth = width;
             mapHeight = height;
             isMoonVisited = routeMap.isMoonVisited;
@@ -141,11 +165,12 @@ namespace SamplePlugin
 
         public void Awake()
         {
+            instance = this;
+
             if (!NetworkServer.active) return;
             Log.Info("Called method awake in stage modifier director");
-            monsterTeamInventory = Object.Instantiate(RiskOfRoutes.RiskOfRoutes.networkedInventoryPrefab).GetComponent<Inventory>();
+            monsterTeamInventory = UnityEngine.Object.Instantiate(RiskOfRoutes.RiskOfRoutes.networkedInventoryPrefab).GetComponent<Inventory>();
 
-            instance = this;
 
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<ModifierSync>();
@@ -177,13 +202,6 @@ namespace SamplePlugin
             RoR2.Stage.onServerStageComplete -= Stage_onServerStageComplete;
         }
 
-        protected virtual void FixedUpdate()
-        {
-            if (Run.instance != null)
-            {
-                routeCredits = (int)(startingCredits * Run.instance.difficultyCoefficient) + 30 * Run.instance.stageClearCount;
-            }
-        }
 
 
 
@@ -291,10 +309,10 @@ namespace SamplePlugin
 
             Log.Info($"Modul:{Stage.instance.sceneDef.stageOrder}");
             //todo пиздец нагромождение, логика создания новой карты 5 стейд -> базар -> 1 стейдж 
-            if (Stage.instance.sceneDef.stageOrder == 5 || (currentNode.x == 0 && currentNode.y == 0 && Stage.instance.sceneDef.baseSceneName != "bazaar"))
+            if (Stage.instance.sceneDef.stageOrder == 5 || (currentNode.x == 0 && currentNode.y == 0 && Stage.instance.sceneDef.baseSceneName != "bazaar") && Stage.instance.sceneDef.sceneType == SceneType.Stage)
             {
                 Log.Info("Trying to create new map");
-                if (TeleporterInteraction.instance.sceneExitController.destinationScene.baseSceneName == "moon2" && TeleporterInteraction.instance.isCharged)
+                if (TeleporterInteraction.instance && TeleporterInteraction.instance.sceneExitController.destinationScene.baseSceneName == "moon2" && TeleporterInteraction.instance.isCharged)
                 {
                     routeMap.isMoonVisited = true;
                 }
@@ -323,19 +341,21 @@ namespace SamplePlugin
 
         }
 
-        public List<ModifierSync> GetNextStageModifiers(GameObject portal)
+        public void GetNextStageModifiers(GameObject portal)
         {
-            ModifierSlotConfiguration modifierSlots = GetModifierSlots(Run.instance.stageRng);
 
             var mg = portal.GetComponent<RoutePortalManager>();
-            HashSet<string> bannedFromSelection = new HashSet<string>();
-            Dictionary<string, int> modifiers = new Dictionary<string, int>();
 
             if (mg == null || mg.routeNode == null)
             {
                 Log.Error("Portal doesn't have routePortalManager or RouteNode, couldn't get modifiers.");
-                return new List<ModifierSync>();
+                return;
             }
+
+            HashSet<string> bannedFromSelection = new HashSet<string>();
+            Dictionary<string, int> modifiers = new Dictionary<string, int>();
+
+            ModifierSlotConfiguration modifierSlots = GetModifierSlots(Run.instance.stageRng,mg.routeNode.portalType);
 
             if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("lemurianTemple") || mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("habitat")))
             {
@@ -362,16 +382,18 @@ namespace SamplePlugin
                     if (currentModifier == null) continue;
                     //точно
                     bannedFromSelection.Add(currentModifier.name);
-                    if(currentModifier.conflictList != null)
+                    if (currentModifier.conflictList != null)
                     {
                         foreach (var name in currentModifier.conflictList) bannedFromSelection.Add(name);
                     }
+
+                    //if(!currentModifier.IsStackable() && currentModifier.)
 
                     int stack = CalculateStack(currentModifier.tier, tier.Key);
                     if (modifiers.ContainsKey(currentModifier.name))
                         modifiers[currentModifier.name] += stack;
                     else
-                        modifiers.Add(currentModifier.name, 1);
+                        modifiers.Add(currentModifier.name, stack);
                 }
             }
 
@@ -392,11 +414,13 @@ namespace SamplePlugin
                         foreach (var name in currentModifier.conflictList) bannedFromSelection.Add(name);
                     }
 
+                    Log.Info($"Modifier to calculate stacks for is {currentModifier.name} with tier {currentModifier.tier}");
                     int stack = CalculateStack(currentModifier.tier, tier.Key); //+ punishment
+                    Log.Info($"\t Stack for {currentModifier.name}:{stack}");
                     if (modifiers.ContainsKey(currentModifier.name))
                         modifiers[currentModifier.name] += stack;
                     else
-                        modifiers.Add(currentModifier.name, 1);
+                        modifiers.Add(currentModifier.name, stack);
                 }
             }
 
@@ -409,28 +433,66 @@ namespace SamplePlugin
                     res.Add(new ModifierSync(modDef, mod.Value)); //todo
                 }
             }
-            return res;
+            mg.stageModifiers.Clear();
+            foreach (var mod in res)
+            {
+                mg.stageModifiers.Add($"{mod.name}={mod.stack}={mod.isArtifact}");
+            }
         }
 
         private int CalculateStack(ModifierTier currentTier, ModifierTier targetTier)
         {
-            if (currentTier == targetTier) return 1;
-            if (currentTier == ModifierTier.Tier1 && targetTier == ModifierTier.Tier2) return 2;
-            if (currentTier == ModifierTier.Tier1 && targetTier == ModifierTier.Tier3) return 3;
-            else return 1;
+            Log.Info($"CurrentTier: {currentTier}, targetTier: {targetTier}");
+            if (currentTier == targetTier)
+            {
+                Log.Info("RETURNING 1");
+                return 1;
+            }
+            if (currentTier == ModifierTier.Tier1 && targetTier == ModifierTier.Tier2)
+            {
+                Log.Info("RETURNING 2");
+                return 2;
+            }
+            if (currentTier == ModifierTier.Tier1 && targetTier == ModifierTier.Tier3)
+            {
+                Log.Info("RETURNING 3");
+                return 3;
+            }
+            else
+            {
+                Log.Error("ELSEJjA");
+                return 1;
+            }
+
         }
 
-        public static ModifierSlotConfiguration GetModifierSlots(Xoroshiro128Plus rng)
+        public static ModifierSlotConfiguration GetModifierSlots(Xoroshiro128Plus rng, RoutePortalType type)
         {
             var selection = new WeightedSelection<ModifierSlotConfiguration>();
-            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 1 } }, negative = { { ModifierTier.Tier1, 1 } } }, 1.0f);
-            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 2 } }, negative = { { ModifierTier.Tier2, 1 } } }, 1.0f);
-            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier2, 1 } }, negative = { { ModifierTier.Tier1, 2 } } }, 1.0f);
+            if(type != RoutePortalType.Rare)
+            {
+                selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 1 } }, negative = { { ModifierTier.Tier1, 1 } } }, 1.0f);
+                selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 2 } }, negative = { { ModifierTier.Tier2, 1 } } }, 1.0f);
+            }
 
+            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier2, 1 } }, negative = { { ModifierTier.Tier1, 2 } } }, 1.0f);
             selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier3, 1 } } }, 0.3f);
             selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier2, 1 }, { ModifierTier.Tier1, 1 } } }, 0.3f);
 
-            return selection.Evaluate(rng.nextNormalizedFloat);
+            var res = selection.Evaluate(rng.nextNormalizedFloat);
+            Log.Info("\tSelected slots:");
+            Log.Info("\t\tPositive:");
+            foreach (var tier in res.positive)
+            {
+                Log.Info($"\t\t\tTier:{tier.Key}, amount: {tier.Value}");
+            }
+            Log.Info("\t\tNegative");
+            foreach (var tier in res.negative)
+            {
+                Log.Info($"\t\t\tTier:{tier.Key}, amount: {tier.Value}");
+            }
+
+            return res;
         }
 
         private static List<string> GetAvailableDefsByPortalType(RoutePortalType portalType)
@@ -493,13 +555,19 @@ namespace SamplePlugin
             var mg = portal.GetComponent<RoutePortalManager>();
             if (mg != null)
             {
-                reservedModifiers = mg.stageModifiers;
+                reservedModifiers.Clear();
+                foreach (var modStr in mg.stageModifiers)
+                {
+                    string[] parts = modStr.Split('=');
+                    StageModifierDirector.instance.reservedModifiers.Add(new ModifierSync { name = parts[0], stack = int.Parse(parts[1]) });
+                }
+
                 foreach (var p in activePortalInstances)
                 {
-                    var gi = p.GetComponent<GenericInteraction>();
-                    if (gi != null)
+                    var genericInteraction = p.GetComponent<GenericInteraction>();
+                    if (genericInteraction != null)
                     {
-                        gi.enabled = false;
+                        genericInteraction.enabled = false;
                     }
                 }
             }

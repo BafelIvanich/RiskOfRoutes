@@ -27,6 +27,7 @@ namespace RiskOfRoutes.StageModifiers
         public ModifierDef(string name, ModifierTier tier, float weight, bool stackable, bool isNegative, string[] conflicts = null, int maxStack = -1)
         {
             this.name = name;
+            this.tier = tier;
             this.cost = tier switch
             {
                 ModifierTier.Tier1 => 30,
@@ -52,6 +53,7 @@ namespace RiskOfRoutes.StageModifiers
         public ModifierDef(string name, ModifierTier tier, float weight, Func<bool> isAvailable, bool stackable, bool isNegative, string[] conflicts = null, int maxStack = -1)
         {
             this.name = name;
+            this.tier = tier;
             this.cost = tier switch
             {
                 ModifierTier.Tier1 => 30,
@@ -84,7 +86,7 @@ namespace RiskOfRoutes.StageModifiers
 
 public enum ModifierTier
 {
-    Tier1, Tier2, Tier3
+    Tier1 = 1, Tier2 = 2, Tier3 = 3
 }
 
 public enum ModifierRarity

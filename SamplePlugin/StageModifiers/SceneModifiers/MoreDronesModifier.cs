@@ -29,7 +29,9 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         {
             int count = 0;
             var credits = ClassicStageInfo.instance.sceneDirectorInteractibleCredits;
-            int droneCredits = (int)(credits * stack * 0.15);
+            float percent = (RiskOfRoutes.RiskOfRoutes.droneStackPercent.Value) / 100f;
+            Log.Info($"Drone stack percent is {percent}");
+            int droneCredits = (int)(credits * stack * percent);
 
             Log.Info("Spawning more drones");
 

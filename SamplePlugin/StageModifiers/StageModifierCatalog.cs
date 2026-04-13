@@ -10,6 +10,7 @@ using SamplePlugin.StageModifiers.OtherModifiers;
 using SamplePlugin.StageModifiers.SceneModifiers;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
@@ -22,10 +23,16 @@ namespace RiskOfRoutes.StageModifiers
 
         public static Dictionary<string, ModifierDef> AllDefs = new Dictionary<string, ModifierDef>();
 
+        public static List<string> generalPositivePool = new List<string>();
         public static List<string> generalNegativePool = new List<string>();
-        public static List<string> itemTypePool = new List<string>();
         public static List<string> droneTypePool = new List<string>();
         public static List<string> rarePool = new List<string>();
+        public static List<string> chefPool = new List<string>();
+
+        public static List<string> itemTypePool = new List<string>();
+        public static List<string> combatPool = new List<string>();
+        public static List<string> healPool = new List<string>();
+        public static List<string> utilityPool = new List<string>();
 
 
         public static readonly List<string> AllDefNames = new List<string>
@@ -70,22 +77,30 @@ namespace RiskOfRoutes.StageModifiers
         "ShadowClone",
         "TeamDeath",
         "Mystery",
-
         };
 
         public static void Init(AssetBundle bundle)
         {
             assetBundle = bundle;
+
             AllDefs.Clear();
+            generalPositivePool.Clear();
             generalNegativePool.Clear();
             itemTypePool.Clear();
             rarePool.Clear();
             droneTypePool.Clear();
 
+            generalPositivePool.AddRange(new string[] { });
             generalNegativePool.AddRange(new string[] { "Doppelganger", "SoulCost", "VoidEnemies", "MoreElites", "LunarEnemies", "PowerfulElites", "OnlyFlying" });
+
             itemTypePool.AddRange(new string[] { "YellowPrinter", "RedPrinter" });
+            combatPool.AddRange(new string[] { "YellowPrinter_Damage","RedPrinter_Damage" });
+            healPool.AddRange(new string[] { "YellowPrinter_Heal", "RedPrinter_Heal" });
+            utilityPool.AddRange(new string[] { "YellowPrinter_Utility", "RedPrinter_Utility" });
+            
+
             rarePool.AddRange(new string[] { "BossRedItem", "BossYellowItem" });
-            droneTypePool.AddRange(new string[] { "DroneBossGreen","DroneBossRed","UpgradeDrones","MoreDrones" });
+            droneTypePool.AddRange(new string[] { "DroneBossGreen", "DroneBossRed", "UpgradeDrones", "MoreDrones" });
 
             void Register(ModifierDef def, string iconAddress, bool isArtifact = false, bool isItem = false)
             {
@@ -157,7 +172,7 @@ namespace RiskOfRoutes.StageModifiers
 
                 Register(new ModifierDef(name, tier, 1f, isAvailable, stackable: false, isNegative: isNegative), name, isArtifact: true);
 
-                if(isNegative)
+                if (isNegative)
                 {
                     generalNegativePool.Add(name);
                 }
@@ -204,12 +219,20 @@ namespace RiskOfRoutes.StageModifiers
             Register(new ModifierDef("YellowPrinter", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinter");
             Register(new ModifierDef("RedPrinter", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinter");
 
+            Register(new ModifierDef("YellowPrinter_Damage", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinter");
+            Register(new ModifierDef("YellowPrinter_Healing", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinter");
+            Register(new ModifierDef("YellowPrinter_Utility", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinter");
+            Register(new ModifierDef("RedPrinter_Damage", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinter");
+            Register(new ModifierDef("RedPrinter_Healing", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinter");
+            Register(new ModifierDef("RedPrinter_Utility", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinter");
+
+
             Register(new ModifierDef("OnlyFlying", ModifierTier.Tier2, 1f, false, true), "texAurelioniteIcon");
             Register(new ModifierDef("PowerfulElites", ModifierTier.Tier3, 1f, true, true), "texAurelioniteIcon");
             Register(new ModifierDef("Repair", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckPlayersHaveConsumedItems() ?? false, false, false), "texAurelioniteIcon");
             Register(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false, false), "RoR2/DLC3/MealPrep/texMealPrepIcon.png");
 
-            Register(new ModifierDef("Mountain", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckMountainShrine() ?? false, false, false), "RoR2/Base/Common/texMountainIcon.png");
+            Register(new ModifierDef("Mountain", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckMountainShrine() ?? false,false, false), "mountIcon");
             Register(new ModifierDef("SoulCost", ModifierTier.Tier2, 1f, true, true), "RoR2/DLC2/texBuffSoulCostIcon.png");
             Register(new ModifierDef("Doppelganger", ModifierTier.Tier2, 1f, true, true), "texAurelioniteIcon");
 
@@ -222,8 +245,20 @@ namespace RiskOfRoutes.StageModifiers
 
             void RegPrinter(string itemName, ModifierTier tier)
             {
+                ItemIndex index = ItemCatalog.FindItemIndex(itemName);
+                ItemDef def = ItemCatalog.GetItemDef(index);
+                if (def == null) return;
+               
                 string modName = itemName + "_Printer";
                 Register(new ModifierDef(modName, tier, 1f, false, false), itemName, false, true);
+
+                if (def.tags.Contains(ItemTag.Damage))
+                    combatPool.Add(modName);
+                else if (def.tags.Contains(ItemTag.Healing))
+                    healPool.Add(modName);
+                else if (def.tags.Contains(ItemTag.Utility))
+                    utilityPool.Add(modName);
+
                 itemTypePool.Add(modName);
             }
 
@@ -259,6 +294,17 @@ namespace RiskOfRoutes.StageModifiers
             RegEnemy("Bear", ModifierTier.Tier3);
 
             //принтеры
+
+            //damage
+            //Mocha 2;
+            //Predatory instisnt 2;
+            //tri tip dagger 3;
+            //hiker boots 3;
+            
+            //heal
+
+
+            //utility
             RegPrinter("Crowbar", ModifierTier.Tier1);
             RegPrinter("ShieldBooster", ModifierTier.Tier1);
             RegPrinter("ArmorPlate", ModifierTier.Tier1);
@@ -309,21 +355,30 @@ namespace RiskOfRoutes.StageModifiers
                 case "Aurelionite": return new AurelioniteRewardModifier();
                 case "BossRedItem": return new BossRedItemModifier();
                 case "BossYellowItem": return new BossYellowItemModifier();
-                case "DroneBossGreen": return new DroneBossRewardModifier(false);
-                case "DroneBossRed": return new DroneBossRewardModifier(true);
+                case "DroneBossGreen": return new DroneBossRewardModifier(dropLegendary: false);
+                case "DroneBossRed": return new DroneBossRewardModifier(dropLegendary: true);
                 case "MoreElites": return new MoreElitesModifier(stack);
                 case "MoreDrones": return new MoreDronesModifier(stack);
                 case "LunarEnemies": return new LunarEnemiesModifier(stack);
                 case "VoidEnemies": return new VoidEnemiesModifier(stack);
+
                 case "YellowPrinter": return new YellowPrinterModifier(stack);
+                case "YellowPrinter_Damage": return new YellowPrinterModifier(stack, ItemTag.Damage);
+                case "YellowPrinter_Healing": return new YellowPrinterModifier(stack, ItemTag.Healing);
+                case "YellowPrinter_Utility": return new YellowPrinterModifier(stack, ItemTag.Utility);
+
                 case "RedPrinter": return new RedPrinterModifier(stack);
+                case "RedPrinter_Damage": return new RedPrinterModifier(stack, ItemTag.Damage);
+                case "RedPrinter_Healing": return new RedPrinterModifier(stack, ItemTag.Healing);
+                case "RedPrinter_Utility": return new RedPrinterModifier(stack, ItemTag.Utility);
+
                 case "OnlyFlying": return new OnlyFlyingEnemiesModifier();
                 case "PowerfulElites": return new Tier2ElitesEarlierModifier();
                 case "Repair": return new RepairConsumedItemsModifier();
                 case "WanderingChef": return new WanderingChefModifier();
                 case "Mountain": return new SaveMountainEffectModifier();
                 case "SoulCost": return new SoulCostModifier(stack);
-                case "Doppelganger": return new DoppelgangerAttackModifier();
+                case "Doppelganger": return new DoppelgangerAttackModifier(stack);
                 case "UpgradeDrones": return new UpgradeDronesModifier(stack);
 
                 //артефакты
@@ -407,6 +462,9 @@ namespace RiskOfRoutes.StageModifiers
                 case RoutePortalType.DroneType: return droneTypePool;
                 case RoutePortalType.ChefType: return new List<string>() { "YellowPrinter" };
                 case RoutePortalType.Rare: return rarePool;
+                case RoutePortalType.Combat: return combatPool;
+                case RoutePortalType.Heal: return healPool;
+                case RoutePortalType.Utility: return utilityPool;
                 default: return new List<string>() { "Mountain" }; //placeholder
             }
         }
@@ -439,6 +497,8 @@ namespace RiskOfRoutes.StageModifiers
 
                 if (currentDef.tier == tier || (currentDef.tier < tier && currentDef.IsStackable()))
                 {
+                    if (currentDef.tier != tier)
+                        Log.Info($"Modifier {currentDef.name} with default tier {currentDef.tier} needs to be stacked for tier {tier}");
                     selection.AddChoice(currentDef, 1f);
                 }
                 else

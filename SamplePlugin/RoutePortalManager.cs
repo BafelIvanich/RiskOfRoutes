@@ -1,7 +1,6 @@
 ﻿using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -24,12 +23,8 @@ namespace RiskOfRoutes
         public bool isUsingSceneExit = false;
 
         public RouteMap.RouteNode routeNode;
-        public List<ModifierSync> stageModifiers = new List<ModifierSync>();
 
-        public SyncListString modDefNames = new SyncListString();
-
-        [SyncVar(hook = nameof(UpdateSyncedText))]
-        public string modifierTextSynced;
+        public SyncListString stageModifiers = new SyncListString();
 
         [SyncVar]
         public Vector2 nodeSync = new Vector2(-1, -1);
@@ -56,8 +51,6 @@ namespace RiskOfRoutes
                 if (purchaseInteraction)
                 {
                     purchaseInteraction.onPurchase.AddListener(OnSeerActivation);
-                    if (NetworkServer.active)
-                        UpdateText();
                     return;
                 }
                 else
@@ -66,6 +59,7 @@ namespace RiskOfRoutes
                     return;
                 }
             }
+            //UpdateBubbles();
             genericInteraction.onActivation.AddListener(OnPortalActivation);
 
             if (isUsingSceneExit)
@@ -75,96 +69,45 @@ namespace RiskOfRoutes
         }
 
 
+        public void OnDestroy()
+        {
+            //if (stageModifiers != null)
+            //{
+            //    stageModifiers.Callback -= OnModifiersChanged;
+            //}
+
+            if (genericInteraction != null)
+            {
+                genericInteraction.onActivation.RemoveListener(OnPortalActivation);
+            }
+
+            if (purchaseInteraction != null)
+            {
+                purchaseInteraction.onPurchase.RemoveListener(OnSeerActivation);
+            }
+        }
+
 
         public override void OnStartClient()
         {
             base.OnStartClient();
             Log.Info("Called method onStartClient");
 
-            modDefNames.Callback -= OnIconsChanged;
-            modDefNames.Callback += OnIconsChanged;
+            stageModifiers.Callback += OnModifiersChanged;
+            stageModifiers.Callback -= OnModifiersChanged;
 
             if (this.enabled)
             {
-                UpdateBubbles();
-            }
-
-        }
-
-        private void OnIconsChanged(SyncListString.Operation op, int itemIndex)
-        {
-            UpdateBubbles();
-        }
-
-        public void UpdateText()
-        {
-            Log.Info("Called method UpdateText");
-            if (NetworkServer.active && Run.instance)
-            {
-                modDefNames.Clear();
-
-                List<string> positiveNames = new List<string>();
-                List<string> negativeNames = new List<string>();
-
-                string positiveText = $"Positive:\n";
-                string negativeText = "Negative:\n";
-
-                var modifierDefs = new Dictionary<ModifierDef, int>();
-                foreach (var modSync in stageModifiers)
-                {
-                    modifierDefs?.Add(StageModifierCatalog.FindModifier(modSync.name), modSync.stack);
-                }
-
-                if (stageModifiers != null && stageModifiers.Count > 0)
-                {
-                    foreach (var stageModifier in modifierDefs)
-                    {
-                        var def = stageModifier.Key;
-                        var stack = stageModifier.Value;
-
-                        if (def.isNegative)//todo
-                        {
-                            negativeText += $"{RoR2.Language.GetStringFormatted(def.descriptionToken)} - x{stack}" + '\n';
-                            negativeNames.Add(def.name);
-                        }
-                        else
-                        {
-                            positiveText += $"{def.descriptionToken} - x{stack}" + '\n';
-                            positiveNames.Add(def.name);
-                        }
-                    }
-                    foreach (var name in positiveNames)
-                        modDefNames.Add(name);
-                    foreach (var name in negativeNames)
-                        modDefNames.Add(name);
-                }
-                else
-                {
-                    Log.Error("NoModifiers");
-                }
-
-                if (routeNode != null)
-                {
-                    modifierTextSynced = $"{routeNode.portalType}:{routeNode.x}.{routeNode.y}:\n{positiveText}\n{negativeText}";
-                    nodeSync = new Vector2(routeNode.x, routeNode.y);
-                }
-                else
-                {
-                    //TODO
-                    Log.Error("Route node is null");
-                    modifierTextSynced = $"Null node {positiveText}\n{negativeText}";
-                }
-
-                //Log.Info(positiveText + negativeText);
-                UpdateBubbles();
+                //UpdateBubbles();
             }
         }
 
-        private void UpdateSyncedText(string newText)
+        private void OnModifiersChanged(SyncListString.Operation op, int itemIndex)
         {
-            Log.Info($"Updating synced text with new text:{newText}");
-            modifierTextSynced = newText;
+            Log.Info("Modifiers were changed, updating bubbles");
+            //UpdateBubbles();
         }
+
 
         public void UpdateBubbles()
         {
@@ -194,7 +137,7 @@ namespace RiskOfRoutes
                     Destroy(child.gameObject);
                 }
             }
-            AttachBubblesToPortal();
+            //AttachBubblesToPortal();
         }
 
 
@@ -217,7 +160,7 @@ namespace RiskOfRoutes
             float offsetAngle = 0;
             float radius = 5f;
 
-            for (int i = 0; i < modDefNames.Count; i++)
+            for (int i = 0; i < stageModifiers.Count; i++)
             {
                 //Log.Info($"act {modDefNames.Count}");
                 if (RiskOfRoutes.iconBubblePrefab == null)
@@ -262,17 +205,18 @@ namespace RiskOfRoutes
                     mat.SetTextureOffset("_MainTex", new Vector2(-0.5f, -0.5f));
 
                     Texture2D tex = null;
-                    if (modDefNames[i] != "")
+                    if (stageModifiers[i] != "")
                     {
-                        var modDef = StageModifierCatalog.FindModifier(modDefNames[i]);
-                        var icon = modDef.icon;
-                        if (icon == null)
+                        var modDef = StageModifierCatalog.FindModifier(stageModifiers[i]);
+                        if (modDef != null && modDef.icon != null)
+                        {
+                            tex = modDef.icon.texture;
+                        }
+                        else
                         {
                             Log.Info("Uing placehdolde");
                             tex = RiskOfRoutes.placeholderIcon.texture;
                         }
-                        else
-                            tex = icon.texture;
                     }
                     else
                     {
@@ -296,11 +240,14 @@ namespace RiskOfRoutes
                     var donutMat = donutRend.materials[0];
                     var edgesMat = edgesRend.materials[0];
 
-                    if (modDefNames[i] != "")
+                    if (stageModifiers[i] != "")
                     {
-                        var modDef = StageModifierCatalog.FindModifier(modDefNames[i]);
-                        donutMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
-                        edgesMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
+                        var modDef = StageModifierCatalog.FindModifier(stageModifiers[i]);
+                        if (modDef != null)
+                        {
+                            donutMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
+                            edgesMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
+                        }
                     }
 
 
@@ -339,7 +286,12 @@ namespace RiskOfRoutes
 
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
-                StageModifierDirector.instance.reservedModifiers = stageModifiers;
+                StageModifierDirector.instance.reservedModifiers.Clear();
+                foreach (var modStr in stageModifiers)
+                {
+                    string[] parts = modStr.Split('=');
+                    StageModifierDirector.instance.reservedModifiers.Add(new ModifierSync { name = parts[0], stack = int.Parse(parts[1]), isArtifact = bool.Parse(parts[2]) });
+                }
             }
 
             Log.Info($"Trying {StageModifierDirector.instance.activeModifiers.Count}");
@@ -351,13 +303,19 @@ namespace RiskOfRoutes
 
                 if (isUsingSceneExit)
                 {
-                    Run.instance.nextStageScene = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
-                    Log.Info($"inside RPM: {Run.instance.nextStageScene.cachedName}");
+                    SceneDef targetSceneDef = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
+
+                    if (targetSceneDef != null && targetSceneDef.sceneType == SceneType.Stage)
+                    {
+                        Run.instance.nextStageScene = targetSceneDef;
+                        Log.Info($"inside RPM: updated nextStageScene to {Run.instance.nextStageScene.cachedName}");
+                    }
 
                     //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("ai_test");
                     foreach (SceneExitController exitController in InstanceTracker.GetInstancesList<SceneExitController>())
                     {
-                        exitController.destinationScene = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
+                        exitController.destinationScene = targetSceneDef;
+                        exitController.useRunNextStageScene = false;
                     }
 
                     sceneExitController.Begin();
@@ -388,8 +346,18 @@ namespace RiskOfRoutes
 
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
-                StageModifierDirector.instance.reservedModifiers = stageModifiers;
-                Run.instance.nextStageScene = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
+                StageModifierDirector.instance.reservedModifiers.Clear();
+                foreach (var modStr in stageModifiers)
+                {
+                    string[] parts = modStr.Split('=');
+                    StageModifierDirector.instance.reservedModifiers.Add(new ModifierSync { name = parts[0], stack = int.Parse(parts[1]), isArtifact = bool.Parse(parts[2]) });
+                }
+                SceneDef targetSceneDef = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex);
+
+                if (targetSceneDef != null && targetSceneDef.sceneType == SceneType.Stage)
+                {
+                    Run.instance.nextStageScene = targetSceneDef;
+                }
                 Log.Info("Seer got modifiers");
             }
         }
@@ -399,5 +367,5 @@ namespace RiskOfRoutes
 
 public enum RoutePortalType
 {
-    None, Rare, ItemType, DroneType, ChefType, Colossus, Hardware, SolusWing, Goldshores, Shop, FalseSon, Starting
+    None, Rare, ItemType, DroneType, ChefType, Colossus, Hardware, SolusWing, Goldshores, Shop, FalseSon, Starting, Combat, Heal, Utility
 }

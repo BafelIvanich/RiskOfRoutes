@@ -56,6 +56,10 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             if (basicCost == 0) basicCost = 40;
             if (miniBossCost == 0) miniBossCost = 200;
 
+            float divisor = 1f + (RiskOfRoutes.RiskOfRoutes.voidStackPercent.Value / 100f);
+            basicCost = (int)(basicCost / divisor);
+            miniBossCost = (int)(miniBossCost / divisor);
+
             CreateLunarEnemiesSpawnCards(basicCost, miniBossCost);
             if (ClassicStageInfo.instance && ClassicStageInfo.instance.monsterSelection != null)
             {

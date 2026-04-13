@@ -1,7 +1,11 @@
 ﻿using RiskOfRoutes;
 using RoR2;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using static UnityEngine.RemoteConfigSettingsHelper;
 
 
 
@@ -10,11 +14,13 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
     public class YellowPrinterModifier : StageModifier
     {
         public static InteractableSpawnCard yellowPrinterSpawnCard;
+        public ItemTag tag;
 
-        public YellowPrinterModifier(int stack)
+        public YellowPrinterModifier(int stack, ItemTag tag = ItemTag.Any)
         {
             CreateYellowPrinterSpawnCard();
             this.stack = stack;
+            this.tag = tag;
         }
         public override void OnEnd()
         {
@@ -29,7 +35,48 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
         private void SpawnYellowPrinter()
         {
-            GameObject redPrinter = TryPlaceObjectOnScene(yellowPrinterSpawnCard, "Yellow item printer");
+            List<PickupIndex> availableYellows = Run.instance.availableBossDropList;
+            List<PickupIndex> filtered = new List<PickupIndex>();
+
+            foreach (PickupIndex pickupIndex in availableYellows)
+            {
+                PickupDef pickupDef = PickupCatalog.GetPickupDef(pickupIndex);
+                if (pickupDef != null && pickupDef.itemIndex != ItemIndex.None)
+                {
+                    ItemDef itemDef = ItemCatalog.GetItemDef(pickupDef.itemIndex);
+
+                    if (itemDef != null && itemDef.tags.Contains(tag)) //todo проверка
+                    {
+                        filtered.Add(pickupIndex);
+                    }
+                }
+            }
+
+            if (filtered.Count == 0)
+            {
+                Log.Error($"No yellow items available for tag {tag}");
+                filtered = availableYellows;
+            }
+
+            for (int i = 0; i < stack; i++)
+            {
+                GameObject redPrinter = TryPlaceObjectOnScene(yellowPrinterSpawnCard, "Yellow item printer");
+
+                if (redPrinter)
+                {
+                    Log.Info($"printer appeared at {redPrinter.transform.position} on stage");
+
+                    ShopTerminalBehavior shop = redPrinter.GetComponent<ShopTerminalBehavior>();
+
+                    shop.dropTable = null;
+                    shop.selfGeneratePickup = false;
+
+                    PickupIndex currentPickupIndex = Run.instance.stageRng.NextElementUniform(filtered);
+                    UniquePickup pickup = new UniquePickup { pickupIndex = currentPickupIndex };
+
+                    shop.SetPickup(pickup, false);
+                }
+            }
         }
 
         private void CreateYellowPrinterSpawnCard()

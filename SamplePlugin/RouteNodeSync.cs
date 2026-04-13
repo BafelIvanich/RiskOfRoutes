@@ -60,7 +60,18 @@ namespace SamplePlugin
 
         public bool Equals(RouteNodeSync other)
         {
-            return (this.x == other.x) && (this.y == other.y);
+            return this.x == other.x &&
+                   this.y == other.y &&
+                   this.visited == other.visited &&
+                   this.portalType == other.portalType &&
+                   this.frontX == other.frontX &&
+                   this.frontY == other.frontY &&
+                   this.leftX == other.leftX &&
+                   this.leftY == other.leftY &&
+                   this.rightX == other.rightX &&
+                   this.rightY == other.rightY &&
+                   this.bonusX == other.bonusX &&
+                   this.bonusY == other.bonusY;
         }
     }
 }

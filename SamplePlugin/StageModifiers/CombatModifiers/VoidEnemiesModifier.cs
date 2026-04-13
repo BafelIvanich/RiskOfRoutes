@@ -63,6 +63,11 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             if (miniBossCost == 0) miniBossCost = 200;
             if (champCost == 0 || champCost > 800) champCost = 800;
 
+            float divisor = 1f + (RiskOfRoutes.RiskOfRoutes.voidStackPercent.Value / 100f);
+            basicCost = (int)(basicCost / divisor);
+            miniBossCost = (int)(miniBossCost / divisor);
+            champCost = (int)(champCost / divisor);
+
             CreateVoidEnemiesSpawnCard(basicCost, miniBossCost, champCost);
             if (ClassicStageInfo.instance && ClassicStageInfo.instance.monsterSelection != null)
             {

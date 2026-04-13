@@ -1,6 +1,7 @@
 ﻿using RoR2;
 using SamplePlugin;
 using SamplePlugin.StageModifiers;
+using UnityEngine;
 using UnityEngine.Networking;
 
 namespace RiskOfRoutes.StageModifiers.SceneModifiers
@@ -22,7 +23,7 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
 
         public override void OnStart()
         {
-            curseAdd = 0.03f + (stack - 1) * 0.01f;
+            curseAdd = 0.03f + (stack - 1) * Mathf.Max((float)(RiskOfRoutes.soulCostStackPercent.Value/100), 0.25f);
 
             if (NetworkServer.active && StageModifierDirector.instance)
             {

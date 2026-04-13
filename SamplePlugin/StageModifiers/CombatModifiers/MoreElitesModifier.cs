@@ -11,6 +11,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     public class MoreElitesModifier : StageModifier
     {
         public Dictionary<CombatDirector.EliteTierDef, float> tierAndInitialPrice = new Dictionary<CombatDirector.EliteTierDef, float>();
+        public float defaultPercent = 0.33f;
 
         public MoreElitesModifier(int stack)
         {
@@ -40,9 +41,9 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                     if (eliteTier != null)
                     {
                         if (eliteTier.costMultiplier == 1) continue;
-                        float pct = 1 - 0.15f - ((stack - 1) * 0.15f);
+                        float pct = 1 - defaultPercent - ((stack - 1) * (float)(RiskOfRoutes.RiskOfRoutes.elitesStackPercent.Value)/100f);
 
-                        Log.Info($"Elite cost lowered by {(stack - 1) * 0.15f}: {eliteTier.costMultiplier}->{eliteTier.costMultiplier * pct}");
+                        Log.Info($"Elite cost lowered by {(stack - 1) * (float)(RiskOfRoutes.RiskOfRoutes.elitesStackPercent.Value) / 100f}: {eliteTier.costMultiplier}->{eliteTier.costMultiplier * pct}");
                         tierAndInitialPrice.Add(eliteTier, eliteTier.costMultiplier);
                         eliteTier.costMultiplier = Mathf.Max(eliteTier.costMultiplier * pct, 1);
                     }

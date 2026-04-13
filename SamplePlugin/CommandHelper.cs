@@ -2,6 +2,7 @@
 using RoR2;
 using RoR2.UI;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -37,39 +38,6 @@ namespace SamplePlugin
         //{
         //    TeamManager.instance.GiveTeamItem(TeamIndex.Monster, RoR2.RoR2Content.Items.Hoof.itemIndex, 5);
         //}
-
-        [ConCommand(commandName = "mapon", flags = ConVarFlags.ExecuteOnServer, helpText = "Give enemies items")]
-        private static void MapOn(ConCommandArgs args)
-        {
-            var panel = RiskOfRoutes.RiskOfRoutes.routeMapPanel;
-
-            var synced = StageModifierDirector.instance.routeNodesSynced;
-            if (synced == null)
-            {
-                Log.Info("null synced data");
-            }
-            else
-            {
-                Log.Info("not null synced");
-                foreach (var node in synced)
-                {
-                    Log.Info($"\t{node.portalType}:{node.x}.{node.y}:{node.visited}");
-                }
-            }
-
-            var mapScript = panel.GetComponent<RouteMapUI>();
-            mapScript.DrawMap();
-            var canvasGroup = panel.GetComponent<CanvasGroup>();
-            var juice = panel.GetComponent<UIJuice>();
-
-            panel.SetActive(true);
-            if (canvasGroup != null && juice != null)
-            {
-                juice.TransitionPanFromTop();
-                juice.TransitionAlphaFadeIn();
-            }
-        }
-
         [ConCommand(commandName = "upgradeDrones", flags = ConVarFlags.ExecuteOnServer, helpText = "Upgrade drones")]
         private static void UpgradePlayerDrones(ConCommandArgs args)
         {
@@ -97,12 +65,6 @@ namespace SamplePlugin
             }
         }
 
-        [ConCommand(commandName = "mapoff", flags = ConVarFlags.ExecuteOnServer, helpText = "Give enemies items")]
-        private static void MapOff(ConCommandArgs args)
-        {
-            RiskOfRoutes.RiskOfRoutes.routeMapPanel.SetActive(false);
-        }
-
         [ConCommand(commandName = "dccs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all cards for enemies that can spawn on current stage")]
         private static void GetDccs(ConCommandArgs args)
         {
@@ -121,17 +83,24 @@ namespace SamplePlugin
         [ConCommand(commandName = "node", flags = ConVarFlags.ExecuteOnServer, helpText = "node")]
         private static void GetCurrentNode(ConCommandArgs args)
         {
-            var node = StageModifierDirector.instance.currentNode;
-            if (node == null)
+            //var node = StageModifierDirector.instance.currentNode;
+            //if (node == null)
+            //{
+            //    Log.Error("Current node is null");
+            //}
+            //else
+            //{
+            //    Log.Info($"Current node is {node.x},{node.y} with {node.GetPaths().Count} children, visited {node.visited}");
+            //    Log.Info($"\tNext scene:{Run.instance.nextStageScene.cachedName}");
+            //    Log.Info($"\tCurr scene:{Stage.instance.sceneDef.cachedName}");
+            //    Log.Info($"\tLoop clear count:{Run.instance.loopClearCount}");
+            //}
+
+            var nodes = StageModifierDirector.instance.routeNodesSynced;
+            if (nodes.Count == 0) Log.Error("none");
+            foreach(var node in nodes)
             {
-                Log.Error("Current node is null");
-            }
-            else
-            {
-                Log.Info($"Current node is {node.x},{node.y} with {node.GetPaths().Count} children, visited {node.visited}");
-                Log.Info($"\tNext scene:{Run.instance.nextStageScene.cachedName}");
-                Log.Info($"\tCurr scene:{Stage.instance.sceneDef.cachedName}");
-                Log.Info($"\tLoop clear count:{Run.instance.loopClearCount}");
+                Log.Info($"{node.x}.{node.y}:{node.portalType}-{node.visited}");
             }
         }
 
@@ -162,7 +131,9 @@ namespace SamplePlugin
         {
             if (args.senderMaster)
             {
-                args.senderMaster.GetBody().inventory.GiveItemPermanent(DLC3Content.Items.DroneUpgradeHidden);
+                args.senderMaster.GetBody().inventory.GiveItemPermanent(RoR2.RoR2Content.Items.AlienHead);
+                args.senderMaster.GetBody().inventory.GiveItemPermanent(RoR2.RoR2Content.Items.Knurl);
+                Log.Info($"Red:{StageModifierDirector.instance.CheckPlayersRedItem()}, yellow:{StageModifierDirector.instance.CheckPlayersYellowItem()}");
             }
 
         }
@@ -180,6 +151,55 @@ namespace SamplePlugin
                 if (nu)
                 {
                     nu.AwardLunarCoins(100);
+                }
+            }
+        }
+
+        [ConCommand(commandName = "itemTags", flags = ConVarFlags.ExecuteOnServer, helpText = "ItemTags")]
+        private static void ItemTags(ConCommandArgs args)
+        {
+            Log.Info("Items with damage tag");
+            foreach(var item in RoR2.ItemCatalog.allItemDefs)
+            {
+                if(item.tags.Contains(ItemTag.Damage) && (item.tier == ItemTier.Tier1 || item.tier == ItemTier.Tier2))
+                {
+                    Log.Info($"\t{item.name}:{RoR2.Language.GetString(item.nameToken)}");
+                }
+            }
+
+            Log.Info("Items with healing tag");
+            foreach (var item in RoR2.ItemCatalog.allItemDefs)
+            {
+                if (item.tags.Contains(ItemTag.Healing) && (item.tier == ItemTier.Tier1 || item.tier == ItemTier.Tier2))
+                {
+                    Log.Info($"\t{item.name}:{RoR2.Language.GetString(item.nameToken)}");
+                }
+            }
+
+            Log.Info("Items with utility tag");
+            foreach (var item in RoR2.ItemCatalog.allItemDefs)
+            {
+                if (item.tags.Contains(ItemTag.Utility) && (item.tier == ItemTier.Tier1 || item.tier == ItemTier.Tier2))
+                {
+                    Log.Info($"\t{item.name}:{RoR2.Language.GetString(item.nameToken)}");
+                }
+            }
+
+            Log.Info("Items with food-related tag");
+            foreach (var item in RoR2.ItemCatalog.allItemDefs)
+            {
+                if (item.tags.Contains(ItemTag.FoodRelated) && (item.tier == ItemTier.Tier1 || item.tier == ItemTier.Tier2))
+                {
+                    Log.Info($"\t{item.name}:{RoR2.Language.GetString(item.nameToken)}");
+                }
+            }
+
+            Log.Info("Items with ai_blacklist tag");
+            foreach (var item in RoR2.ItemCatalog.allItemDefs)
+            {
+                if (item.tags.Contains(ItemTag.AIBlacklist))
+                {
+                    Log.Info($"\t{item.name}:{RoR2.Language.GetString(item.nameToken)}");
                 }
             }
         }
@@ -215,6 +235,25 @@ namespace SamplePlugin
 
         }
 
+        [ConCommand(commandName = "getSyncData", flags = ConVarFlags.ExecuteOnServer, helpText = "Get syned vars values")]
+        private static void GetSyncedData(ConCommandArgs args)
+        {
+            Log.Info("Getting synced modifiers");
+            if (StageModifierDirector.instance != null)
+            {
+                Log.Info("Modifiers synced");
+                foreach(var mod in StageModifierDirector.instance.modifiersSynced)
+                {
+                    Log.Info($"{mod.name}:{mod.stack}:{mod.isArtifact}");
+                }
+            }
+            else
+            {
+                Log.Info("StageModifierDirector is null");
+            }
+
+        }
+
 
         [ConCommand(commandName = "reservedModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get modifiers that would be active on next stage")]
         private static void GetReservedModifiersCommand(ConCommandArgs args)
@@ -228,7 +267,7 @@ namespace SamplePlugin
                     {
                         foreach (var modifier in mods)
                         {
-                            Log.Info(modifier.descriptionToken);
+                            Log.Info(modifier);
                         }
                     }
                     else
@@ -369,6 +408,8 @@ namespace SamplePlugin
             };
 
             GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
+
+            Log.Info("Mount availalbe:" + StageModifierDirector.instance?.CheckMountainShrine());
 
         }
 
