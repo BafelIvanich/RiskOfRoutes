@@ -91,9 +91,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                         };
 
                         PickupDropletController.CreatePickupDroplet(pickupInfo, position, vector);
-
-
-
                     });
                 }
 
