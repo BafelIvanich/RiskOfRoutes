@@ -95,7 +95,7 @@ namespace RiskOfRoutes.StageModifiers
 
             itemTypePool.AddRange(new string[] { "YellowPrinter", "RedPrinter" });
             combatPool.AddRange(new string[] { "YellowPrinter_Damage","RedPrinter_Damage" });
-            healPool.AddRange(new string[] { "YellowPrinter_Heal", "RedPrinter_Heal" });
+            healPool.AddRange(new string[] { "YellowPrinter_Healing", "RedPrinter_Healing" });
             utilityPool.AddRange(new string[] { "YellowPrinter_Utility", "RedPrinter_Utility" });
             
 
@@ -219,16 +219,16 @@ namespace RiskOfRoutes.StageModifiers
             Register(new ModifierDef("YellowPrinter", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinter");
             Register(new ModifierDef("RedPrinter", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinter");
 
-            Register(new ModifierDef("YellowPrinter_Damage", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinter");
-            Register(new ModifierDef("YellowPrinter_Healing", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinter");
-            Register(new ModifierDef("YellowPrinter_Utility", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinter");
-            Register(new ModifierDef("RedPrinter_Damage", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinter");
-            Register(new ModifierDef("RedPrinter_Healing", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinter");
-            Register(new ModifierDef("RedPrinter_Utility", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinter");
+            Register(new ModifierDef("YellowPrinter_Damage", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinterDamage");
+            Register(new ModifierDef("YellowPrinter_Healing", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinterHealing");
+            Register(new ModifierDef("YellowPrinter_Utility", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinterUtility");
+            Register(new ModifierDef("RedPrinter_Damage", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinterDamage");
+            Register(new ModifierDef("RedPrinter_Healing", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinterHealing");
+            Register(new ModifierDef("RedPrinter_Utility", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinterUtility");
 
 
-            Register(new ModifierDef("OnlyFlying", ModifierTier.Tier2, 1f, false, true), "texAurelioniteIcon");
-            Register(new ModifierDef("PowerfulElites", ModifierTier.Tier3, 1f, true, true), "texAurelioniteIcon");
+            Register(new ModifierDef("OnlyFlying", ModifierTier.Tier2, 1f, false, true), "onlyFlying");
+            Register(new ModifierDef("PowerfulElites", ModifierTier.Tier3, 1f, true, true), "tier2elites");
             Register(new ModifierDef("Repair", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckPlayersHaveConsumedItems() ?? false, false, false), "texAurelioniteIcon");
             Register(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false, false), "RoR2/DLC3/MealPrep/texMealPrepIcon.png");
 
@@ -290,38 +290,49 @@ namespace RiskOfRoutes.StageModifiers
             RegEnemy("ImmuneToDebuff", ModifierTier.Tier3);
             RegEnemy("ExtraLife", ModifierTier.Tier3);
             RegEnemy("ArmorReductionOnHit", ModifierTier.Tier3);
-            RegEnemy("PermanentDebuffOnHit", ModifierTier.Tier3);
+            //RegEnemy("PermanentDebuffOnHit", ModifierTier.Tier3);
             RegEnemy("Bear", ModifierTier.Tier3);
 
             //принтеры
 
-            //damage
-            //Mocha 2;
-            //Predatory instisnt 2;
-            //tri tip dagger 3;
-            //hiker boots 3;
-            
-            //heal
-
-
-            //utility
-            RegPrinter("Crowbar", ModifierTier.Tier1);
-            RegPrinter("ShieldBooster", ModifierTier.Tier1);
             RegPrinter("ArmorPlate", ModifierTier.Tier1);
+            RegPrinter("Crowbar", ModifierTier.Tier1);
+            RegPrinter("DeathMark", ModifierTier.Tier1);
+            RegPrinter("DelayedDamage", ModifierTier.Tier1);
+            RegPrinter("DronesDropDynamite", ModifierTier.Tier1);
             RegPrinter("Hoof", ModifierTier.Tier1);
             RegPrinter("IgniteOnKill", ModifierTier.Tier1);
+            RegPrinter("JumpBoost", ModifierTier.Tier1);
+            RegPrinter("Mushroom", ModifierTier.Tier1);
+            RegPrinter("ShieldBooster", ModifierTier.Tier1);
+            RegPrinter("SprintBonus", ModifierTier.Tier1);
+            RegPrinter("StunChanceOnHit", ModifierTier.Tier1);
 
-            RegPrinter("FragileDamageBonus", ModifierTier.Tier2);
-            RegPrinter("ExplodeOnDeath", ModifierTier.Tier2);
+            RegPrinter("AttackSpeedAndMoveSpeed", ModifierTier.Tier2);
+            RegPrinter("AttackSpeedOnCrit", ModifierTier.Tier2);
+            RegPrinter("Bandolier", ModifierTier.Tier2);
+            RegPrinter("BarrierOnKill", ModifierTier.Tier2);
             RegPrinter("ChainLightning", ModifierTier.Tier2);
-            RegPrinter("Thorns", ModifierTier.Tier2);
+            RegPrinter("CritAtLowerElevation", ModifierTier.Tier2);
+            RegPrinter("EquipmentMagazine", ModifierTier.Tier2);
+            RegPrinter("ExplodeOnDeath", ModifierTier.Tier2);
+            RegPrinter("FragileDamageBonus", ModifierTier.Tier2);
+            RegPrinter("IncreaseDamageOnMultiKill", ModifierTier.Tier2);
+            RegPrinter("KnockBackHitEnemies", ModifierTier.Tier2);
+            RegPrinter("NearbyDamageBonus", ModifierTier.Tier2);
+            RegPrinter("PrimarySkillShuriken", ModifierTier.Tier2);
+            RegPrinter("SpeedBoostPickup", ModifierTier.Tier2);
             RegPrinter("StrengthenBurn", ModifierTier.Tier2);
+            RegPrinter("Thorns", ModifierTier.Tier2);
 
-            RegPrinter("IceRing", ModifierTier.Tier3);
-            RegPrinter("FireRing", ModifierTier.Tier3);
             RegPrinter("Bear", ModifierTier.Tier3);
-            RegPrinter("Syringe", ModifierTier.Tier3);
+            RegPrinter("BleedOnHit", ModifierTier.Tier3);
             RegPrinter("CritGlasses", ModifierTier.Tier3);
+            RegPrinter("FireRing", ModifierTier.Tier3);
+            RegPrinter("IceRing", ModifierTier.Tier3);
+            RegPrinter("Missile", ModifierTier.Tier3);
+            RegPrinter("StickyBomb", ModifierTier.Tier3);
+            RegPrinter("Syringe", ModifierTier.Tier3);
 
             //лунарные
             RegLunar("GoldOnHit", ModifierTier.Tier1);
@@ -376,7 +387,7 @@ namespace RiskOfRoutes.StageModifiers
                 case "PowerfulElites": return new Tier2ElitesEarlierModifier();
                 case "Repair": return new RepairConsumedItemsModifier();
                 case "WanderingChef": return new WanderingChefModifier();
-                case "Mountain": return new SaveMountainEffectModifier();
+                case "Mountain": return new SaveMountainEffectModifier(stack);
                 case "SoulCost": return new SoulCostModifier(stack);
                 case "Doppelganger": return new DoppelgangerAttackModifier(stack);
                 case "UpgradeDrones": return new UpgradeDronesModifier(stack);
@@ -520,6 +531,8 @@ namespace RiskOfRoutes.StageModifiers
 
         private static Sprite LoadSprite(string address, bool isArtifact, bool isItem)
         {
+            
+
             if (address.Contains("RoR2/"))
             {
                 Log.Info($"Searching for ingame sprite for{address}");
