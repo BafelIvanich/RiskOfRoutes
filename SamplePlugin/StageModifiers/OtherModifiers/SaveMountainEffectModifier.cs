@@ -5,12 +5,9 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
     //На стейдже будет активно то количество артефактов горы, что были на том стейдже, где был выбран этот портал
     public class SaveMountainEffectModifier : StageModifier
     {
-        public SaveMountainEffectModifier()
+        public SaveMountainEffectModifier(int stack)
         {
-            if (RoR2.TeleporterInteraction.instance)
-            {
-                stack = RoR2.TeleporterInteraction.instance.shrineBonusStacks;
-            }
+            this.stack = stack;
         }
 
         public override void OnEnd()
