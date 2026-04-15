@@ -59,7 +59,7 @@ namespace RiskOfRoutes
                     return;
                 }
             }
-            //UpdateBubbles();
+            UpdateBubbles();
             genericInteraction.onActivation.AddListener(OnPortalActivation);
 
             if (isUsingSceneExit)
@@ -98,14 +98,14 @@ namespace RiskOfRoutes
 
             if (this.enabled)
             {
-                //UpdateBubbles();
+                UpdateBubbles();
             }
         }
 
         private void OnModifiersChanged(SyncListString.Operation op, int itemIndex)
         {
             Log.Info("Modifiers were changed, updating bubbles");
-            //UpdateBubbles();
+            UpdateBubbles();
         }
 
 
@@ -137,7 +137,7 @@ namespace RiskOfRoutes
                     Destroy(child.gameObject);
                 }
             }
-            //AttachBubblesToPortal();
+            AttachBubblesToPortal();
         }
 
 
@@ -207,10 +207,22 @@ namespace RiskOfRoutes
                     Texture2D tex = null;
                     if (stageModifiers[i] != "")
                     {
-                        var modDef = StageModifierCatalog.FindModifier(stageModifiers[i]);
+                        string[] parts = stageModifiers[i].Split('=');
+                        string name = parts[0];
+
+                        Log.Info($"StageModfieir:{name}");
+                        var modDef = StageModifierCatalog.FindModifier(name);
                         if (modDef != null && modDef.icon != null)
                         {
-                            tex = modDef.icon.texture;
+                            if(modDef.name != "Doppelganger")
+                            {
+                                tex = modDef.icon.texture;
+                            }
+                            else
+                            {
+                                tex = ModUIManager.GetHostSprite().texture;
+                                //todo цвет темный сделать
+                            }
                         }
                         else
                         {
@@ -231,6 +243,7 @@ namespace RiskOfRoutes
 
                 if (portalEdges && donut != null && RiskOfRoutes.usePositiveNegativeColors.Value)
                 {
+                    Log.Info("Changing colors");
                     Color positive = new Color(36f / 255f, 191f / 255f, 0f, 1f);
                     Color negative = new Color(255f / 255f, 0f / 255f, 0f / 255f, 1f) * 1.8f;
 
@@ -240,13 +253,17 @@ namespace RiskOfRoutes
                     var donutMat = donutRend.materials[0];
                     var edgesMat = edgesRend.materials[0];
 
-                    if (stageModifiers[i] != "")
+                    string[] parts = stageModifiers[i].Split('=');
+                    string name = parts[0];
+
+                    if (name != "")
                     {
-                        var modDef = StageModifierCatalog.FindModifier(stageModifiers[i]);
+                        var modDef = StageModifierCatalog.FindModifier(name);
                         if (modDef != null)
                         {
                             donutMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
                             edgesMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
+                            Log.Info("Succesfully changed colors");
                         }
                     }
 
@@ -278,11 +295,7 @@ namespace RiskOfRoutes
         public void OnPortalActivation(Interactor interactor)
         {
             genericInteraction.interactability = Interactability.Disabled;
-            if (!NetworkServer.active)
-            {
-                Log.Warning("[Server] function 'RoutePortalManager::OnPurchase(RoR2.Interactor)' called on client");
-                return;
-            }
+            if (!NetworkServer.active) return;
 
             if (stageModifiers != null && stageModifiers.Count > 0)
             {

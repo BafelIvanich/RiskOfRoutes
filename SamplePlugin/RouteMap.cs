@@ -83,6 +83,7 @@ public class RouteMap
 
         HashSet<Vector2> memory = new HashSet<Vector2>();
         var available = root.GetPaths(); //без доп портала
+
         foreach (var path in available)
         {
             CheckNodeCorrect(path, rng, memory);

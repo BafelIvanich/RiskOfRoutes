@@ -371,6 +371,11 @@ namespace SamplePlugin
             {
                 modifiers.Add("WanderingChef", 1);
             }
+            //todo условие можно сделать интереснее
+            if(CheckMountainShrine() && Run.instance.stageRng.nextNormalizedFloat > 0.5f)
+            {
+                modifiers.Add("Mountain", RoR2.TeleporterInteraction.instance.shrineBonusStacks);
+            }
 
             //positive
             var positive = modifierSlots.positive;
