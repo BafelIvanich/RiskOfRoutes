@@ -66,10 +66,10 @@ namespace RiskOfRoutes
             foreach (var mod in StageModifierDirector.instance.modifiersSynced)
             {
                 if (mod.isArtifact) continue;
+                if (mod.name == "Repair" || mod.name.EndsWith("_EnemyItem")) continue; //todo оптимизация?
                 ModifierDef def = StageModifierCatalog.FindModifier(mod.name);
                 if(def == null) continue;
 
-                Sprite icon = def.icon != null ? def.icon : RiskOfRoutes.placeholderIcon;
                 string iconName = mod.name;
                 Transform container = controller.iconContainer;
 
@@ -80,8 +80,15 @@ namespace RiskOfRoutes
 
                 Image img = iconObj.AddComponent<Image>();
 
-                img.sprite = icon;
-                //img.raycastTarget = true;
+                if (def.name != "Doppelganger")
+                {
+                    img.sprite = def.icon != null ? def.icon : RiskOfRoutes.placeholderIcon;
+                }
+                else
+                {
+                    img.sprite = GetHostSprite();
+                    img.color = new Color(163f/255f, 61f/255f, 205f/255f, 1f);
+                }
 
                 LayoutElement layout = iconObj.AddComponent<LayoutElement>();
                 layout.preferredHeight = 32f;
@@ -318,7 +325,16 @@ namespace RiskOfRoutes
 
                 GameObject obj = new GameObject("ModifierIcon");
                 Image img = obj.AddComponent<Image>();
-                img.sprite = def.icon != null ? def.icon : RiskOfRoutes.placeholderIcon;
+                if(def.name != "Doppelganger")
+                {
+                    img.sprite = def.icon != null ? def.icon : RiskOfRoutes.placeholderIcon;
+
+                }
+                else
+                {
+                    img.sprite = GetHostSprite();
+                    img.color = new Color(0.4f, 0.15f, 0.5f, 1f);
+                }
                 img.transform.SetParent(grid.transform, false);
 
                 obj.AddComponent<LayoutElement>();
@@ -334,6 +350,30 @@ namespace RiskOfRoutes
             string portalType = "";
             panelText.text = portalType + (hasPositive ? positiveText : "") + (hasNegative ? negativeText : "");
 
+        }
+
+        public static Sprite GetHostSprite()
+        {
+            if (CharacterMaster.instancesList != null && CharacterMaster.instancesList.Count > 0)
+            {
+                CharacterBody host = CharacterMaster.instancesList[0].GetBody();
+
+                if (host != null && host.portraitIcon != null)
+                {
+                    Texture2D portraitTex = host.portraitIcon as Texture2D;
+
+                    if (portraitTex != null)
+                    {
+                        return Sprite.Create(
+                            portraitTex,
+                            new Rect(0, 0, portraitTex.width, portraitTex.height),
+                            new Vector2(0.5f, 0.5f)
+                        );
+                    }
+                }
+            }
+
+            return RiskOfRoutes.placeholderIcon;
         }
 
         private void Update()
