@@ -2,7 +2,6 @@
 using RoR2;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using UnityEngine;
 
 namespace SamplePlugin.StageModifiers.SceneModifiers
@@ -35,21 +34,21 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             List<PickupIndex> availableReds = Run.instance.availableTier3DropList;
             List<PickupIndex> filtered = new List<PickupIndex>();
 
-            foreach(PickupIndex pickupIndex in availableReds)
+            foreach (PickupIndex pickupIndex in availableReds)
             {
                 PickupDef pickupDef = PickupCatalog.GetPickupDef(pickupIndex);
-                if(pickupDef != null && pickupDef.itemIndex!=ItemIndex.None)
+                if (pickupDef != null && pickupDef.itemIndex != ItemIndex.None)
                 {
                     ItemDef itemDef = ItemCatalog.GetItemDef(pickupDef.itemIndex);
 
-                    if(itemDef!= null && itemDef.tags.Contains(tag)) //todo проверка
+                    if (itemDef != null && itemDef.tags.Contains(tag)) //todo проверка
                     {
                         filtered.Add(pickupIndex);
                     }
                 }
             }
 
-            if(filtered.Count == 0)
+            if (filtered.Count == 0)
             {
                 Log.Error($"No red items available for tag {tag}");
                 filtered = availableReds;
@@ -71,7 +70,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
                     PickupIndex currentPickupIndex = Run.instance.stageRng.NextElementUniform(filtered);
                     UniquePickup pickup = new UniquePickup { pickupIndex = currentPickupIndex };
 
-                    shop.SetPickup(pickup,false);
+                    shop.SetPickup(pickup, false);
                 }
             }
         }
@@ -79,7 +78,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         private void CreateRedPrinterSpawnCard()
         {
             //TODO вынести
-            InteractableSpawnCard card = RiskOfRoutes.RiskOfRoutes.tier3Printer;
+            InteractableSpawnCard card = AssetManager.tier3Printer;
 
             if (card != null)
             {
