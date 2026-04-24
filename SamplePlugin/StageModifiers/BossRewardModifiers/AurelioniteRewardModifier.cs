@@ -11,7 +11,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 {
     public class AurelioniteRewardModifier : StageModifier
     {
-
         public AurelioniteRewardModifier()
         {
             stackable = false;
@@ -19,13 +18,13 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
         public override void OnEnd()
         {
-            Log.Info("HalcyoniteReward on end");
+            Log.Info("AurelioniteReward on end");
             IL.RoR2.BossGroup.DropRewards -= BossGroup_DropRewards;
         }
 
         public override void OnStart()
         {
-            Log.Info("HalcyoniteReward on start");
+            Log.Info("AurelioniteReward on start");
 
             //On.RoR2.BossGroup.DropRewards += DropHalcyoniteReward;
             IL.RoR2.BossGroup.DropRewards += BossGroup_DropRewards;
@@ -35,6 +34,9 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
         {
             var halcyoniteDropTableTier2 = Addressables.LoadAssetAsync<PickupDropTable>("RoR2/DLC2/dtShrineHalcyoniteTier2.asset").WaitForCompletion();
             var halcyoniteDropTableTier3 = Addressables.LoadAssetAsync<PickupDropTable>("RoR2/DLC2/dtShrineHalcyoniteTier3.asset").WaitForCompletion();
+
+            //todo обработка BossRedItem BossYellowItem
+
             var rewardPickupPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC2/FragmentPotentialPickup.prefab").WaitForCompletion();
 
             ILCursor c = new ILCursor(il);
@@ -47,6 +49,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                 c.EmitDelegate<Action<UniquePickup, Vector3, Vector3>>((origPickup, position, vector) =>
                 {
                     RoR2.GenericPickupController.CreatePickupInfo pickup;
+
                     var droneMod = StageModifierDirector.instance.activeModifiers.OfType<DroneBossRewardModifier>().FirstOrDefault();
                     if (droneMod != null)
                     {
