@@ -1,6 +1,5 @@
 ﻿using RoR2;
 using SamplePlugin;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,8 +14,13 @@ namespace RiskOfRoutes
         public GameObject linePrefab;
         public RectTransform nodeContainer;
         public RectTransform mainContainer;
+        public GameObject horizontalBars;
+        public GameObject verticalBars;
+        public Image barImageHorizontal;
+        public Image barImageVertical;
 
-        public bool isVertical;
+        public bool isMapVertical;
+        public bool isBarVertical;
 
         public Sprite empty;
         public Sprite drone;
@@ -46,30 +50,64 @@ namespace RiskOfRoutes
 
         public void DrawMap(Vector2 selectedNodeCoords)
         {
-            Log.Info($"Selected coords:{selectedNodeCoords}");
+            Log.Info($"{nameof(DrawMap)}: Coords of selected node:{selectedNodeCoords}");
 
             ClearContainer();
             MapNodes.Clear();
 
-            var syncMap = StageModifierDirector.instance.routeNodesSynced;
+            //isMapVertical = true;
+
             int mapWidth = StageModifierDirector.instance.mapWidth;
             int mapHeight = StageModifierDirector.instance.mapHeight;
             bool isMoonVisited = StageModifierDirector.instance.isMoonVisited;
 
-            if (syncMap == null || syncMap.Count == 0)
+            isBarVertical = RiskOfRoutes.punishmentBarOrientation.Value == RiskOfRoutes.MapOrientation.Vertical;
+
+            if (!RiskOfRoutes.negativeStackPunishment.Value)
             {
-                Log.Error("Map is not created yet or is empty");
+                verticalBars.SetActive(false);
+                horizontalBars.SetActive(false);
+            }
+            else
+            {
+                if (isBarVertical)
+                {
+                    verticalBars.SetActive(true);
+                    horizontalBars.SetActive(false);
+                }
+                else
+                {
+                    verticalBars.SetActive(false);
+                    horizontalBars.SetActive(true);
+                }
+            }
+
+
+            Log.Info($"Bar Image {barImageVertical.fillAmount}");
+            barImageHorizontal.fillAmount = Run.instance.runRNG.nextNormalizedFloat;
+            barImageVertical.fillAmount = Run.instance.runRNG.nextNormalizedFloat;
+
+            barImageHorizontal.color = RiskOfRoutes.punishmentBarColor.Value;
+            barImageVertical.color = RiskOfRoutes.punishmentBarColor.Value;
+
+
+            List<RouteNodeSync> map = StageModifierDirector.instance.routeNodesSynced;
+            if (map == null || map.Count == 0)
+            {
+                if (map == null) Log.Error($"{nameof(DrawMap)}: Map is null");
+                if (map.Count == 0) Log.Error($"{nameof(DrawMap)}: Map is empty");
                 return;
             }
 
-            List<RouteNodeSync> map = new List<RouteNodeSync>();
-            foreach (var node in syncMap)
-            {
-                map.Add(node);
-            }
+            float scaleMultiplier = RiskOfRoutes.routeMapSize.Value / 100f;
+
+            RectTransform mapRect = this.GetComponent<RectTransform>();
+            mapRect.localScale = new Vector3(scaleMultiplier, scaleMultiplier, 1f);
+
+            var iconsSize = 48f * (RiskOfRoutes.routeMapIconSize.Value / 100f);
 
             var selectedNode = GetNode((int)selectedNodeCoords.x, (int)selectedNodeCoords.y, map, mapHeight);
-            Log.Info($"Selected node:{selectedNode.x}:{selectedNode.y}:{selectedNode.portalType}-{selectedNode.visited}");
+            Log.Info($"{nameof(DrawMap)}: Selected node:{selectedNode.x}:{selectedNode.y}:{selectedNode.portalType}-{selectedNode.visited}");
 
             Transform linesContainer = new GameObject("Lines", typeof(RectTransform)).transform;
             linesContainer.SetParent(nodeContainer, false);
@@ -93,14 +131,14 @@ namespace RiskOfRoutes
             float mapContainerWidth = containerWidth - (xPadding * 2);
             float mapContainerHeight = containerHeight - (yPadding * 2);
 
-            float xStep = isVertical ? (mapContainerWidth / (effectiveWidth - 1)) : (mapContainerWidth / mapHeight);
-            float yStep = isVertical ? (mapContainerHeight / mapHeight) : (mapContainerHeight / (effectiveWidth - 1));
+            float xStep = isMapVertical ? (mapContainerWidth / (effectiveWidth - 1)) : (mapContainerWidth / mapHeight);
+            float yStep = isMapVertical ? (mapContainerHeight / mapHeight) : (mapContainerHeight / (effectiveWidth - 1));
 
             objectiveRect.anchorMin = new Vector2(0.5f, 0.5f);
             objectiveRect.anchorMax = new Vector2(0.5f, 0.5f);
 
-            float objX = isVertical ? 0 : (mapContainerWidth / 2);
-            float objY = isVertical ? (mapContainerHeight / 2) : 0;
+            float objX = isMapVertical ? 0 : (mapContainerWidth / 2);
+            float objY = isMapVertical ? (mapContainerHeight / 2) : 0;
 
             objectiveRect.anchoredPosition = new Vector2(objX, objY);
             objectiveRect.sizeDelta = new Vector2(75f, 75f);
@@ -139,7 +177,7 @@ namespace RiskOfRoutes
                     float xPos;
                     float yPos;
 
-                    if (isVertical)
+                    if (isMapVertical)
                     {
                         if (my == 0)
                         {
@@ -173,8 +211,7 @@ namespace RiskOfRoutes
                     //TODO если выбранный
 
 
-                    var pingCurve = RiskOfRoutes.pingCurve;
-
+                    var pingCurve = AssetManager.pingCurve;
                     if (currentNode.Equals(selectedNode) && pingCurve != null)
                     {
                         //Log.Info("Curve is not null");
@@ -194,11 +231,11 @@ namespace RiskOfRoutes
                     routeNodeRect.anchorMin = new Vector2(0.5f, 0.5f);
                     routeNodeRect.anchorMax = new Vector2(0.5f, 0.5f);
                     routeNodeRect.anchoredPosition = new Vector2(xPos, yPos);
-                    routeNodeRect.sizeDelta = (mx == 0 && my == 0) ? new Vector2(4f, 4f) : new Vector2(48f, 48f);
+                    routeNodeRect.sizeDelta = (mx == 0 && my == 0) ? new Vector2(4f, 4f) : new Vector2(iconsSize, iconsSize);
 
                     bool isHighlighted = currentNode.visited || currentNode.Equals(selectedNode);
 
-                    SetIcon(routeNode, GetNode(mx, my, map, mapHeight).portalType, mx, my, isHighlighted);
+                    SetIconAndTooltip(routeNode, GetNode(mx, my, map, mapHeight).portalType, mx, my, isHighlighted);
 
                     MapNodes.Add(currentNode, routeNodeRect);
                 }
@@ -250,7 +287,7 @@ namespace RiskOfRoutes
         }
 
         //TODO потом можно убрать tooltip и координаты в аргументе
-        private void SetIcon(GameObject routeNode, RoutePortalType portalType, int x, int y, bool visited = false)
+        private void SetIconAndTooltip(GameObject routeNode, RoutePortalType portalType, int x, int y, bool visited = false)
         {
             var icon = empty;
             switch (portalType)
@@ -274,8 +311,13 @@ namespace RiskOfRoutes
 
             var image = routeNode.GetComponent<Image>();
             RoR2.UI.TooltipProvider tooltip = routeNode.AddComponent<RoR2.UI.TooltipProvider>();
-            tooltip.titleToken = $"{x},{y}:Visited:{visited}";
-            tooltip.bodyToken = "test";
+            //tooltip.titleToken = $"{x},{y}:Visited:{visited}";
+            //tooltip.bodyToken = "test";
+            string typeName = portalType.ToString().ToUpper();
+
+            tooltip.titleToken = $"ROUTENODE_{typeName}_NAME";
+            tooltip.bodyToken = $"ROUTENODE_{typeName}_DESCRIPTION";
+
             //tooltip.titleColor = mod.tooltipColor;
             tooltip.titleColor = new Color(246f / 255f, 90f / 255f, 58f / 255f);
             image.sprite = icon;
@@ -287,7 +329,7 @@ namespace RiskOfRoutes
         {
             for (int i = nodeContainer.childCount - 1; i >= 0; i--)
             {
-                UnityEngine.Object.DestroyImmediate(nodeContainer.GetChild(i).gameObject);
+                DestroyImmediate(nodeContainer.GetChild(i).gameObject);
             }
         }
 
@@ -303,7 +345,7 @@ namespace RiskOfRoutes
                 {
                     var node = GetNode(x, y, map, height);
 
-                    if (node.x == -1 || node.y == -1 || node.portalType == RoutePortalType.None || node.portalType == RoutePortalType.Starting) continue;
+                    if (node.x == -1 || node.y == -1 || node.portalType == RoutePortalType.None) continue;
 
                     bool isSpecialHidden = (node.portalType == RoutePortalType.Colossus ||
                                             node.portalType == RoutePortalType.FalseSon ||
@@ -319,11 +361,11 @@ namespace RiskOfRoutes
 
                 if (hasVisibleNode) visibleRows.Add(x);
             }
-            Log.Info("Rows that has visible nodes:");
-            foreach (var i in visibleRows)
-            {
-                Log.Info($"\t{i}");
-            }
+            //Log.Info("Rows that has visible nodes:");
+            //foreach (var i in visibleRows)
+            //{
+            //    Log.Info($"\t{i}");
+            //}
             return visibleRows;
         }
 
@@ -343,24 +385,13 @@ namespace RiskOfRoutes
             if (usePortalNode && (node.bonusX != -1 && node.bonusY != -1))
                 res.Add(GetNode(node.bonusX, node.bonusY, map, height));
 
-
-
-
             return res;
         }
 
         public RouteNodeSync GetNode(int x, int y, List<RouteNodeSync> map, int mapHeight)
         {
-            //Log.Info($"\tMap size:{map.Count}");
-            //Log.Info($"\tTrying to access {x},{y}, index {y*mapHeight + x}");
-            try
-            {
-                return map[x * mapHeight + y];
-            }
-            catch (Exception e)
-            {
-                return map[x * mapHeight + y];
-            }
+            //todo indexOutOfBounds Обработка
+            return map[x * mapHeight + y];
         }
     }
 }
