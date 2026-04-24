@@ -94,10 +94,10 @@ namespace RiskOfRoutes.StageModifiers
             generalNegativePool.AddRange(new string[] { "Doppelganger", "SoulCost", "VoidEnemies", "MoreElites", "LunarEnemies", "PowerfulElites", "OnlyFlying" });
 
             itemTypePool.AddRange(new string[] { "YellowPrinter", "RedPrinter" });
-            combatPool.AddRange(new string[] { "YellowPrinter_Damage","RedPrinter_Damage" });
+            combatPool.AddRange(new string[] { "YellowPrinter_Damage", "RedPrinter_Damage" });
             healPool.AddRange(new string[] { "YellowPrinter_Healing", "RedPrinter_Healing" });
             utilityPool.AddRange(new string[] { "YellowPrinter_Utility", "RedPrinter_Utility" });
-            
+
 
             rarePool.AddRange(new string[] { "BossRedItem", "BossYellowItem" });
             droneTypePool.AddRange(new string[] { "DroneBossGreen", "DroneBossRed", "UpgradeDrones", "MoreDrones" });
@@ -123,7 +123,7 @@ namespace RiskOfRoutes.StageModifiers
                     }
                     else
                     {
-                        Log.Error($"Something went wrong for artifact:{def.name}");
+                        Log.Error($"{nameof(StageModifierCatalog)}: Init - Something went wrong for artifact:{def.name}");
 
                         nameToken = "MODIFIER_" + def.name.ToUpper() + "_NAME";
                         descriptionToken = "MODIFIER_" + def.name.ToUpper() + "_DESCRIPTION";
@@ -232,7 +232,7 @@ namespace RiskOfRoutes.StageModifiers
             Register(new ModifierDef("Repair", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckPlayersHaveConsumedItems() ?? false, false, false), "texAurelioniteIcon");
             Register(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false, false), "RoR2/DLC3/MealPrep/texMealPrepIcon.png");
 
-            Register(new ModifierDef("Mountain", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckMountainShrine() ?? false,false, false), "mountIcon");
+            Register(new ModifierDef("Mountain", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckMountainShrine() ?? false, false, false), "mountIcon");
             Register(new ModifierDef("SoulCost", ModifierTier.Tier2, 1f, true, true), "RoR2/DLC2/texBuffSoulCostIcon.png");
             Register(new ModifierDef("Doppelganger", ModifierTier.Tier2, 1f, true, true), "texAurelioniteIcon");
 
@@ -248,7 +248,7 @@ namespace RiskOfRoutes.StageModifiers
                 ItemIndex index = ItemCatalog.FindItemIndex(itemName);
                 ItemDef def = ItemCatalog.GetItemDef(index);
                 if (def == null) return;
-               
+
                 string modName = itemName + "_Printer";
                 Register(new ModifierDef(modName, tier, 1f, false, false), itemName, false, true);
 
@@ -531,7 +531,7 @@ namespace RiskOfRoutes.StageModifiers
 
         private static Sprite LoadSprite(string address, bool isArtifact, bool isItem)
         {
-            
+
 
             if (address.Contains("RoR2/"))
             {
@@ -543,7 +543,7 @@ namespace RiskOfRoutes.StageModifiers
             {
                 Log.Info($"Searching for artifact sprite for{address}");
                 ArtifactDef art = ArtifactCatalog.FindArtifactDef(address);
-                return art != null ? art.smallIconSelectedSprite : RiskOfRoutes.placeholderIcon;
+                return art != null ? art.smallIconSelectedSprite : AssetManager.placeholderIcon;
             }
 
             if (isItem)
@@ -561,7 +561,73 @@ namespace RiskOfRoutes.StageModifiers
             }
 
             Log.Info($"Not found sprite for {address}");
-            return RiskOfRoutes.placeholderIcon;
+            return AssetManager.placeholderIcon;
+        }
+
+        public static string GetModifierDescriptionFormatted(ModifierSync mod, ModifierDef def)
+        {
+            string stackText = mod.stack > 1 ? $" - x{mod.stack}" : "";
+
+            if (def.name.Contains("_Printer") || def.name.Contains("_EnemyItem") || def.name.Contains("_LunarItem"))
+            {
+                string itemName = def.name.Split('_')[0];
+                ItemIndex itemIndex = ItemCatalog.FindItemIndex(itemName);
+                ItemDef itemDef = ItemCatalog.GetItemDef(itemIndex);
+
+                string localizedName = itemName;
+
+                if (itemDef != null)
+                {
+                    string defaultName = RoR2.Language.GetString(itemDef.nameToken);
+                    string colorHex = "#FFFFFF";
+
+                    switch (itemDef.tier)
+                    {
+                        case ItemTier.Tier1:
+                            colorHex = "#FFFFFF";
+                            break;
+                        case ItemTier.Tier2:
+                            colorHex = "#72ff13";
+                            break;
+                        case ItemTier.Tier3:
+                            colorHex = "#e65541";
+                            break;
+                        case ItemTier.Boss:
+                            colorHex = "#E4C415";
+                            break;
+                        case ItemTier.Lunar:
+                            colorHex = "#3168c0";
+                            break;
+                    }
+
+                    localizedName = $"<color={colorHex}>{defaultName}</color>";
+                }
+
+                if (def.name.Contains("_Printer"))
+                {
+                    return RoR2.Language.GetStringFormatted("PRINTER_ITEMS_MODIFIER_DESCRIPTION", localizedName);
+                }
+                else if (def.name.Contains("_EnemyItem"))
+                {
+                    if (itemDef != null)
+                    {
+                        int enemyItemStack = EnemyItemsModifier.GetItemStack(itemDef, mod.stack);
+                        return RoR2.Language.GetStringFormatted("ENEMY_ITEMS_MODIFIER_DESCRIPTION", localizedName, enemyItemStack);
+                    }
+
+                    return RoR2.Language.GetStringFormatted("ENEMY_ITEMS_MODIFIER_DESCRIPTION", localizedName, mod.stack);
+                }
+                else if (def.name.Contains("_LunarItem"))
+                {
+                    return RoR2.Language.GetStringFormatted("LUNAR_ITEMS_MODIFIER_DESCRIPTION", localizedName);
+                }
+            }
+            else if (def.isArtifact)
+            {
+                return $"<style=cWorldEvent>{RoR2.Language.GetStringFormatted(def.descriptionToken)}</style>";
+            }
+
+            return RoR2.Language.GetString(def.descriptionToken) + stackText;
         }
     }
 }
