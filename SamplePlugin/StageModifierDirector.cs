@@ -2,7 +2,6 @@
 using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin.StageModifiers;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -26,13 +25,15 @@ namespace SamplePlugin
 
         public List<StageModifier> activeModifiers { get; set; }
         public List<ModifierSync> reservedModifiers { get; set; }
-
         public List<ModifierDef> bannedModifiers { get; set; }
         public List<string> runArtifactsApplied;
 
         public SyncListModifier modifiersSynced = new SyncListModifier();
+        public List<RouteNodeSync> routeNodesSynced = new List<RouteNodeSync>();
 
-        public SyncListRouteNode routeNodesSynced = new SyncListRouteNode();
+        public int mapState = 0;
+
+        float stageEnterTime = 0; //todo
 
         [SyncVar]
         public int mapWidth;
@@ -42,6 +43,9 @@ namespace SamplePlugin
 
         [SyncVar]
         public bool isMoonVisited;
+
+        [SyncVar]
+        public float punishmentFillAmount;
 
         [SyncVar]
         public Vector2 currentNodeSync = new Vector2(-1, -1);
@@ -58,131 +62,33 @@ namespace SamplePlugin
         [SyncVar]
         public int soulCostStack = 0;
 
-        private void OnBaseCurseSyncedUpdate(float newValue)
-        {
-            syncedBaseCurse = newValue;
-
-            foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
-            {
-                if (cm.playerCharacterMasterController == null) continue;
-                if (cm && cm.GetBody())
-                {
-                    cm.GetBody().RecalculateStats();
-                }
-            }
-        }
-
-        [SyncVar(hook = nameof(OnStageUpdate))]
-        public int currStage = 0;
-
-        public override void OnStartServer()
-        {
-            base.OnStartServer();
-
-            CreateDirector(Run.instance);
-        }
-
-        //TODO обработка случая когда произошел переход на след стейдж но не поменялся нод
-        private void CreateDirector(Run run)
-        {
-            Log.Info("Run started");
-
-            runArtifactsApplied = GetArtifactsAppliedThisRun();
-
-            Log.Info("Creating route map");
-            routeMap = new RouteMap(run.runRNG);
-            UpdateSyncedMap();
-
-            currentNode = routeMap.GetStartingNode();
-            currentNode.visited = true;
-            currentNodeSync = new Vector2(currentNode.x, currentNode.y);
-            Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
-        }
-
-        public void UpdateSyncedMap()
-        {
-            int width = routeMap.width;
-            int height = routeMap.height;
-
-            if (routeNodesSynced.Count != (width + 1) * height)
-            {
-                routeNodesSynced.Clear();
-                for (int x = 0; x < width + 1; x++)
-                {
-                    for (int y = 0; y < height; y++)
-                    {
-                        if (routeMap.mapGrid[x, y] != null)
-                            routeNodesSynced.Add(new RouteNodeSync(routeMap.mapGrid[x, y]));
-                        else
-                            routeNodesSynced.Add(new RouteNodeSync(new RouteMap.RouteNode(-1, -1)));
-                    }
-                }
-            }
-            else
-            {
-                for (int x = 0; x < width + 1; x++)
-                {
-                    for (int y = 0; y < height; y++)
-                    {
-                        int index = x * height + y;
-                        RouteNodeSync node;
-
-                        if (routeMap.mapGrid[x, y] != null)
-                            node = new RouteNodeSync(routeMap.mapGrid[x, y]);
-                        else
-                            node = new RouteNodeSync(new RouteMap.RouteNode(-1, -1));
-
-                        //todo колоссус
-                        if (!routeNodesSynced[index].Equals(node))
-                        {
-                            routeNodesSynced[index] = node;
-                        }
-                    }
-                }
-            }
-
-            //routeNodesSynced.Clear();
-
-            //for (int x = 0; x < width + 1; x++)
-            //{
-            //    for (int y = 0; y < height; y++)
-            //    {
-            //        if (routeMap.mapGrid[x, y] != null)
-            //        {
-            //            routeNodesSynced.Add(new RouteNodeSync(routeMap.mapGrid[x, y]));
-            //        }
-            //        else
-            //        {
-            //            routeNodesSynced.Add(new RouteNodeSync(new RouteMap.RouteNode(-1, -1)));
-            //        }
-            //    }
-            //}
-            mapWidth = width;
-            mapHeight = height;
-            isMoonVisited = routeMap.isMoonVisited;
-        }
-
-
+        /////
         public void Awake()
         {
             instance = this;
+            DontDestroyOnLoad(gameObject);
 
-            if (!NetworkServer.active) return;
-            Log.Info("Called method awake in stage modifier director");
-            monsterTeamInventory = UnityEngine.Object.Instantiate(RiskOfRoutes.RiskOfRoutes.networkedInventoryPrefab).GetComponent<Inventory>();
+            Log.Info("Called method Awake in StageModifierDirector");
+
+            //todo клиенты не видят это меню
+            var networkedInventoryPrefab = new GameObject("NetworkedInventory", typeof(SetDontDestroyOnLoad));
+            networkedInventoryPrefab.AddComponent<Inventory>();
+            networkedInventoryPrefab.AddComponent<TeamFilter>();
+            networkedInventoryPrefab.AddComponent<EnemyInfoPanelInventoryProvider>();
+            monsterTeamInventory = Instantiate(networkedInventoryPrefab).GetComponent<Inventory>();
 
 
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<ModifierSync>();
             bannedModifiers = new List<ModifierDef>();
-
             activePortalInstances = new List<GameObject>();
-            DontDestroyOnLoad(gameObject);
 
+            if (!NetworkServer.active) return;
             //RegisterModDefs();
 
             Log.Info("StageModifierDirector created");
 
+            RoR2.Run.onRunStartGlobal += Run_onRunStartGlobal;
             RoR2.Run.onRunDestroyGlobal += Run_onRunDestroyGlobal;
 
             RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
@@ -198,12 +104,155 @@ namespace SamplePlugin
         public void OnDestroy()
         {
             RoR2.Run.onRunDestroyGlobal -= Run_onRunDestroyGlobal;
+            RoR2.Run.onRunStartGlobal -= Run_onRunStartGlobal;
             RoR2.SceneDirector.onPrePopulateSceneServer -= SceneDirector_onPrePopulateSceneServer;
             RoR2.Stage.onServerStageComplete -= Stage_onServerStageComplete;
         }
 
+        private void Run_onRunStartGlobal(Run run)
+        {
+            Log.Info($"{nameof(Run_onRunStartGlobal)}:Run started");
+
+            runArtifactsApplied = GetArtifactsAppliedThisRun();
+
+            Log.Info("Creating route map");
+            routeMap = new RouteMap(run.runRNG);
+
+            currentNode = routeMap.GetStartingNode();
+            currentNode.visited = true;
+            currentNodeSync = new Vector2(currentNode.x, currentNode.y);
+            Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
+            routeMap.isDirty = true;
+        }
+
+        private void OnBaseCurseSyncedUpdate(float newValue)
+        {
+            syncedBaseCurse = newValue;
+
+            foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
+            {
+                if (cm.playerCharacterMasterController == null) continue;
+                if (cm && cm.GetBody())
+                {
+                    cm.GetBody().RecalculateStats();
+                }
+            }
+        }
 
 
+        public override void OnStartServer()
+        {
+            base.OnStartServer();
+
+            //CreateDirector(Run.instance);
+        }
+
+        //TODO обработка случая когда произошел переход на след стейдж но не поменялся нод
+        private void CreateDirector(Run run)
+        {
+            Log.Info("Run started");
+
+            runArtifactsApplied = GetArtifactsAppliedThisRun();
+
+            Log.Info("Creating route map");
+            routeMap = new RouteMap(run.runRNG);
+
+            currentNode = routeMap.GetStartingNode();
+            currentNode.visited = true;
+            currentNodeSync = new Vector2(currentNode.x, currentNode.y);
+            Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
+            routeMap.isDirty = true;
+
+        }
+
+        public override void OnStartClient()
+        {
+            base.OnStartClient();
+        }
+
+        private void OnEnable()
+        {
+            RoR2.Stage.onStageStartGlobal += OnStageStartClient;
+        }
+
+        private void OnDisable()
+        {
+            RoR2.Stage.onStageStartGlobal -= OnStageStartClient;
+        }
+
+        private void OnStageStartClient(RoR2.Stage obj)
+        {
+            if (!NetworkServer.active)
+            {
+                NetworkUser user = LocalUserManager.GetFirstLocalUser()?.currentNetworkUser;
+                if (user != null)
+                {
+                    RoR2.Console.instance.SubmitCmd(user, "request_map");
+                }
+            }
+        }
+
+        [ConCommand(commandName = "request_map", flags = ConVarFlags.ExecuteOnServer, helpText = "request map sync for clients")]
+        private static void CCRequestMap(ConCommandArgs args)
+        {
+            if (instance != null && instance.routeMap != null)
+            {
+                Log.Info("requested the map");
+
+                instance.routeMap.isDirty = true;
+            }
+        }
+
+
+        protected virtual void FixedUpdate()
+        {
+            Log.Info($"Time spent: {Run.instance.fixedTime - stageEnterTime}");
+            Log.Info($"Punish percent: {(Run.instance.fixedTime - stageEnterTime) / (RiskOfRoutes.RiskOfRoutes.punishmentTimeMinutes.Value * 60f)}");
+            if (NetworkServer.active && routeMap != null && routeMap.isDirty)
+            {
+                UpdateRouteMap();
+                routeMap.isDirty = false;
+            }
+        }
+
+        private void UpdateRouteMap()
+        {
+            Log.Info($"{nameof(UpdateRouteMap)}: Updating route map");
+            int width = routeMap.width;
+            int height = routeMap.height;
+            RouteNodeSync[] mapUpdated = new RouteNodeSync[(width + 1) * height];
+
+            for (int x = 0; x < width + 1; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    int index = x * height + y;
+                    if (routeMap.mapGrid[x, y] != null)
+                        mapUpdated[index] = new RouteNodeSync(routeMap.mapGrid[x, y]);
+                    else
+                        mapUpdated[index] = new RouteNodeSync(new RouteMap.RouteNode(-1, -1));
+                }
+            }
+
+            mapWidth = width;
+            mapHeight = height;
+            isMoonVisited = routeMap.isMoonVisited;
+            RpcReceiveFullMap(mapUpdated, width, height, routeMap.isMoonVisited);
+            routeNodesSynced = new List<RouteNodeSync>(mapUpdated);
+
+        }
+
+        [ClientRpc]
+        private void RpcReceiveFullMap(RouteNodeSync[] map, int width, int height, bool moon)
+        {
+            mapWidth = width;
+            mapHeight = height;
+            isMoonVisited = moon;
+
+            routeNodesSynced = new List<RouteNodeSync>(map);
+            mapState++;
+            Debug.Log($"{nameof(RpcReceiveFullMap)}: Got map on client");
+        }
 
         private void Run_onRunDestroyGlobal(Run obj)
         {
@@ -271,10 +320,12 @@ namespace SamplePlugin
             {
                 modifier.OnStart();
             }
-            OnStageUpdate(currStage);
             activePortalInstances.Clear();
 
+
             SceneDef currentScene = RoR2.SceneCatalog.GetSceneDefForCurrentScene();
+            stageEnterTime = Run.instance.fixedTime;
+            Log.Info($"{nameof(SceneDirector_onPrePopulateSceneServer)}: StageEnterTime: {stageEnterTime}");
             //if (currentScene.sceneType != SceneType.Intermission)
             //    currentNode.visited = true;
 
@@ -292,11 +343,6 @@ namespace SamplePlugin
             return false;
         }
 
-        private void OnStageUpdate(int newValue)
-        {
-            currStage = Run.instance.stageClearCount + 1;
-            Log.Info("Method updating syncvar was called");
-        }
 
         private void Stage_onServerStageComplete(RoR2.Stage obj)
         {
@@ -337,13 +383,11 @@ namespace SamplePlugin
 
             //TODO возможно стоит поменять порядок
             currentNode.visited = true;
-            UpdateSyncedMap();
-
+            routeMap.isDirty = true;
         }
 
         public void GetNextStageModifiers(GameObject portal)
         {
-
             var mg = portal.GetComponent<RoutePortalManager>();
 
             if (mg == null || mg.routeNode == null)
@@ -355,26 +399,32 @@ namespace SamplePlugin
             HashSet<string> bannedFromSelection = new HashSet<string>();
             Dictionary<string, int> modifiers = new Dictionary<string, int>();
 
-            ModifierSlotConfiguration modifierSlots = GetModifierSlots(Run.instance.stageRng,mg.routeNode.portalType);
+            ModifierSlotConfiguration modifierSlots = GetModifierSlots(Run.instance.stageRng, mg.routeNode.portalType);
 
-            if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("lemurianTemple") || mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("habitat")))
+            if (SceneHelper.IsSceneColossus((SceneIndex)mg.destinationSceneIndex, includeFalseSonScene: false))
             {
                 modifiers.Add("Aurelionite", 1);
-                Log.Info("Added aurelionite");
+                Log.Info($"{nameof(GetNextStageModifiers)}: Added aurelionite modifier to colossus portal");
             }
-            if ((mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("conduitcanyon")))
+            if (mg.destinationSceneIndex == (int)SceneCatalog.FindSceneIndex("conduitcanyon"))
             {
                 List<string> canyonMod = new List<string>() { "UpgradeDrones", "DroneBossRed" };
                 modifiers.Add(Run.instance.stageRng.NextElementUniform(canyonMod), 1);
+                Log.Info($"{nameof(GetNextStageModifiers)}: Added rare drone modifier to hardware portal");
             }
             if (mg.routeNode.portalType == RoutePortalType.ChefType)
             {
                 modifiers.Add("WanderingChef", 1);
+                Log.Info($"{nameof(GetNextStageModifiers)}: Added chef modifier to route portal");
             }
             //todo условие можно сделать интереснее
-            if(CheckMountainShrine() && Run.instance.stageRng.nextNormalizedFloat > 0.5f)
+            if (CheckMountainShrine() && Run.instance.stageRng.nextNormalizedFloat > 0.5f)
             {
                 modifiers.Add("Mountain", RoR2.TeleporterInteraction.instance.shrineBonusStacks);
+            }
+            if (CheckPlayersHaveConsumedItems() && Run.instance.stageRng.nextNormalizedFloat > 0.8f)
+            {
+                modifiers.Add("Repair", 1);
             }
 
             //positive
@@ -392,6 +442,7 @@ namespace SamplePlugin
                         foreach (var name in currentModifier.conflictList) bannedFromSelection.Add(name);
                     }
 
+                    //TODO
                     //if(!currentModifier.IsStackable() && currentModifier.)
 
                     int stack = CalculateStack(currentModifier.tier, tier.Key);
@@ -433,10 +484,9 @@ namespace SamplePlugin
             foreach (var mod in modifiers)
             {
                 var modDef = StageModifierCatalog.FindModifier(mod.Key);
-                if (modDef != null)
-                {
-                    res.Add(new ModifierSync(modDef, mod.Value)); //todo
-                }
+                if (modDef == null) return;
+
+                res.Add(new ModifierSync(modDef, mod.Value)); //todo
             }
             mg.stageModifiers.Clear();
             foreach (var mod in res)
@@ -474,7 +524,7 @@ namespace SamplePlugin
         public static ModifierSlotConfiguration GetModifierSlots(Xoroshiro128Plus rng, RoutePortalType type)
         {
             var selection = new WeightedSelection<ModifierSlotConfiguration>();
-            if(type != RoutePortalType.Rare)
+            if (type != RoutePortalType.Rare)
             {
                 selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 1 } }, negative = { { ModifierTier.Tier1, 1 } } }, 1.0f);
                 selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 2 } }, negative = { { ModifierTier.Tier2, 1 } } }, 1.0f);
@@ -500,115 +550,91 @@ namespace SamplePlugin
             return res;
         }
 
-        private static List<string> GetAvailableDefsByPortalType(RoutePortalType portalType)
-        {
-            switch (portalType)
-            {
-                case RoutePortalType.None: return new List<string>();
-                case RoutePortalType.Rare: return new List<string>() { };
-                case RoutePortalType.DroneType: return new List<string>() { };
-                case RoutePortalType.ItemType: return new List<string>() { };
-                default: return new List<string>() { };
-            }
-        }
-
-        //private WeightedSelection<ModifierDef> CreateAvailableModifierSelection()
-        //{
-        //    WeightedSelection<ModifierDef> res = new WeightedSelection<ModifierDef>();
-
-        //    foreach (var modName in StageModifierCatalog.AllDefs.Keys)
-        //    {
-        //        var modDef = StageModifierCatalog.FindModifier(modName);
-        //        if (modDef != null && modDef.isAvailable())
-        //        {
-        //            res.AddChoice(modDef, modDef.selectionWeight);
-        //        }
-        //    }
-
-        //    return res;
-        //}
 
         public void AddRoutePortalInstance(GameObject portal)
         {
-            if (portal != null)
+            if (portal == null)
             {
-                var mg = portal.GetComponent<RoutePortalManager>();
-                if (mg != null)
-                {
-                    activePortalInstances.Add(portal);
-                    Log.Info($"StageModifierDirector: Added portal instance type {mg.routeNode.portalType}");
-                }
-                else
-                {
-                    Log.Error("No route manager for added portal");
-                }
+                Log.Error($"{nameof(AddRoutePortalInstance)}: Route portal is null, cant add instance");
+                return;
             }
-            else
+
+            var mg = portal.GetComponent<RoutePortalManager>();
+            if (mg == null)
             {
-                Log.Error("Portal is null");
+                Log.Error($"{nameof(AddRoutePortalInstance)}: Route portal manager is null, cant add instance");
             }
+
+            activePortalInstances.Add(portal);
+            Log.Info($"{nameof(AddRoutePortalInstance)}: Added portal instance type {mg.routeNode.portalType}");
+
         }
 
         public void GetModifiersFromRandomPortal()
         {
             if (activePortalInstances == null || activePortalInstances.Count == 0)
             {
-                Log.Error("There are no portal instances to get modifiers from");
+                Log.Error($"{nameof(GetModifiersFromRandomPortal)}: There are no portal instances to get modifiers from");
                 return;
             }
             var portal = Run.instance.stageRng.NextElementUniform(activePortalInstances);
-            var mg = portal.GetComponent<RoutePortalManager>();
-            if (mg != null)
-            {
-                reservedModifiers.Clear();
-                foreach (var modStr in mg.stageModifiers)
-                {
-                    string[] parts = modStr.Split('=');
-                    StageModifierDirector.instance.reservedModifiers.Add(new ModifierSync { name = parts[0], stack = int.Parse(parts[1]) });
-                }
 
-                foreach (var p in activePortalInstances)
-                {
-                    var genericInteraction = p.GetComponent<GenericInteraction>();
-                    if (genericInteraction != null)
-                    {
-                        genericInteraction.enabled = false;
-                    }
-                }
-            }
-            else
+            var mg = portal.GetComponent<RoutePortalManager>();
+            if (mg == null)
             {
-                Log.Error("RoutePortalManager wasn available for random portal to get Modifiers");
+                Log.Error($"{nameof(GetModifiersFromRandomPortal)}: Route portal manager is null, cant get modifiers");
+                return;
+            }
+
+            reservedModifiers.Clear();
+            foreach (var modStr in mg.stageModifiers)
+            {
+                string[] parts = modStr.Split('=');
+                StageModifierDirector.instance.reservedModifiers.Add(new ModifierSync { name = parts[0], stack = int.Parse(parts[1]) });
+            }
+
+            foreach (var p in activePortalInstances)
+            {
+                var genericInteraction = p.GetComponent<GenericInteraction>();
+                if (genericInteraction != null)
+                {
+                    genericInteraction.enabled = false;
+                }
             }
         }
 
-        public void GetRouteNodeFromRandomPortal()
+        public RouteMap.RouteNode GetRouteNodeFromRandomPortal()
         {
             if (activePortalInstances == null || activePortalInstances.Count == 0)
             {
-                Log.Error("There are no portal instances to get routeNode from");
-                //TODO взять рандомный
-                return;
+                Log.Error($"{nameof(GetRouteNodeFromRandomPortal)}: There are no portal active instances to get routeNode from");
+                return null;
             }
+
+            Log.Info($"{nameof(GetRouteNodeFromRandomPortal)}: Trying to get routeNode from {activePortalInstances.Count} portal instances");
+
             var portal = Run.instance.stageRng.NextElementUniform(activePortalInstances);
             var mg = portal.GetComponent<RoutePortalManager>();
-            if (mg != null)
+
+            if (mg == null)
             {
-                currentNode = mg.routeNode;
-                currentNodeSync = new Vector2(currentNode.x, currentNode.y);
-                foreach (var p in activePortalInstances)
+                Log.Error($"{nameof(GetRouteNodeFromRandomPortal)}: Selected portal instance missing RoutePortalManager");
+                return null;
+            }
+
+            currentNode = mg.routeNode;
+            currentNodeSync = new Vector2(currentNode.x, currentNode.y); //todo позже убрать после измененной логики смены currentNode
+
+            foreach (var p in activePortalInstances)
+            {
+                var gi = p.GetComponent<GenericInteraction>();
+                if (gi != null)
                 {
-                    var gi = p.GetComponent<GenericInteraction>();
-                    if (gi != null)
-                    {
-                        gi.enabled = false;
-                    }
+                    gi.enabled = false;
                 }
             }
-            else
-            {
-                Log.Error("RoutePortalManager wasn available for random portal to get Node");
-            }
+
+            return currentNode;
         }
 
 
@@ -626,13 +652,13 @@ namespace SamplePlugin
                     {
                         if (itemDef.tier == ItemTier.Tier3)
                         {
-                            redItemCount++;
-                            Log.Info($"Found red item:{itemDef}");
+                            redItemCount += cm.inventory.GetItemCount(item);
+                            Log.Info($"{nameof(CheckPlayersRedItem)}: Found red item:{itemDef}");
                         }
                     }
                 }
             }
-            Log.Info($"Players have {redItemCount} red items right now");
+            Log.Info($"{nameof(CheckPlayersRedItem)}: Players have {redItemCount} red items right now");
 
             return redItemCount > 0;
         }
@@ -652,13 +678,13 @@ namespace SamplePlugin
                     {
                         if (itemDef.tier == ItemTier.Boss)
                         {
-
                             yellowItemCount += cm.inventory.GetItemCount(item);
+                            Log.Info($"{nameof(CheckPlayersYellowItem)}: Found yellow item:{itemDef}");
                         }
                     }
                 }
             }
-            Log.Info($"Players have {yellowItemCount} boss items right now");
+            Log.Info($"{nameof(CheckPlayersYellowItem)}: Players have {yellowItemCount} yellow items right now");
 
             return yellowItemCount > 0;
         }
@@ -708,10 +734,6 @@ namespace SamplePlugin
         [Server]
         public bool CheckArtifactAvailable(string name)
         {
-            if (name == "Mystery")
-            {
-                Log.Info("Mystery:" + !runArtifactsApplied.Contains(name));
-            }
             return (!runArtifactsApplied.Contains(name));
         }
 
@@ -755,39 +777,11 @@ namespace SamplePlugin
                 return currentNode.GetPaths();
             else
             {
-                Log.Error("Current is null");
+                Log.Error($"{nameof(GetAvailableNodes)}: Current node is null");
                 return null;
             }
         }
-
-
     }
 
-    public struct ItemInfo
-    {
-        public string internalName;
-        public int cost;
-        public float weight;
-
-        public ItemInfo(string internalName, int cost, float weight)
-        {
-            this.internalName = internalName;
-            this.cost = cost;
-            this.weight = weight;
-        }
-
-        public ItemInfo(string internalName, ModifierTier tier, float weight)
-        {
-            this.internalName = internalName;
-            this.cost = tier switch
-            {
-                ModifierTier.Tier1 => 30,
-                ModifierTier.Tier2 => 60,
-                ModifierTier.Tier3 => 120,
-                _ => 30,
-            };
-            this.weight = weight;
-        }
-    }
 }
 
