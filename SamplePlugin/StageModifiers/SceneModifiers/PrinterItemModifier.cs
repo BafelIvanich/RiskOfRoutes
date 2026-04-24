@@ -69,11 +69,11 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             //todo вынести
             InteractableSpawnCard card = selectedItem.tier switch
             {
-                ItemTier.Tier1 => RiskOfRoutes.RiskOfRoutes.tier1Printer,
-                ItemTier.Tier2 => RiskOfRoutes.RiskOfRoutes.tier2Printer,
-                ItemTier.Tier3 => RiskOfRoutes.RiskOfRoutes.tier3Printer,
-                ItemTier.Boss => RiskOfRoutes.RiskOfRoutes.bossPrinter,
-                _ => RiskOfRoutes.RiskOfRoutes.tier1Printer,
+                ItemTier.Tier1 => AssetManager.tier1Printer,
+                ItemTier.Tier2 => AssetManager.tier2Printer,
+                ItemTier.Tier3 => AssetManager.tier3Printer,
+                ItemTier.Boss => AssetManager.bossPrinter,
+                _ => AssetManager.tier1Printer,
             };
 
             if (card != null)
