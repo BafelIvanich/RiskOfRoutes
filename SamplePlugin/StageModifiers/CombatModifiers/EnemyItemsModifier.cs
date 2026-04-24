@@ -53,6 +53,19 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                 characterMaster.inventory.AddItemsFrom(StageModifierDirector.instance.monsterTeamInventory);
             }
         }
+
+        //todo на будущее если сделаю стакинг предметов врагов
+        public static int GetItemStack(ItemDef def, int modStack)
+        {
+            switch (def.tier)
+            {
+                case ItemTier.Tier1: return 5;
+                case ItemTier.Tier2: return 3;
+                case ItemTier.Tier3: return 1;
+                default: return 1;
+            }
+
+        }
     }
 
 
