@@ -5,7 +5,6 @@ namespace RiskOfRoutes
 {
     internal class MyNetworkComponent : NetworkBehaviour
     {
-        // We only ever have one instance of the networked behaviour here.
         private static MyNetworkComponent _instance;
 
         private void Awake()
