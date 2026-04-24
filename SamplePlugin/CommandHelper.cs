@@ -1,6 +1,5 @@
 ﻿using RiskOfRoutes;
 using RoR2;
-using RoR2.UI;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -16,7 +15,7 @@ namespace SamplePlugin
         private static void GetNextStagesScenesCommand(ConCommandArgs args)
         {
             Log.Info("Next stages available:");
-            foreach (var scene in RiskOfRoutes.RiskOfRoutes.GetNextStagesScenesList())
+            foreach (var scene in SceneHelper.GetNextStagesScenesList())
             {
                 Log.Info(scene.cachedName);
             }
@@ -90,18 +89,23 @@ namespace SamplePlugin
             //}
             //else
             //{
-            //    Log.Info($"Current node is {node.x},{node.y} with {node.GetPaths().Count} children, visited {node.visited}");
-            //    Log.Info($"\tNext scene:{Run.instance.nextStageScene.cachedName}");
-            //    Log.Info($"\tCurr scene:{Stage.instance.sceneDef.cachedName}");
-            //    Log.Info($"\tLoop clear count:{Run.instance.loopClearCount}");
+
             //}
 
             var nodes = StageModifierDirector.instance.routeNodesSynced;
             if (nodes.Count == 0) Log.Error("none");
-            foreach(var node in nodes)
+            foreach (var node in nodes)
             {
                 Log.Info($"{node.x}.{node.y}:{node.portalType}-{node.visited}");
             }
+
+            var cnode = StageModifierDirector.instance.currentNode;
+
+
+            Log.Info($"Current node is {cnode.x},{cnode.y} with {cnode.GetPaths().Count} children, visited {cnode.visited}");
+            Log.Info($"\tNext scene:{Run.instance.nextStageScene.cachedName}");
+            Log.Info($"\tCurr scene:{Stage.instance.sceneDef.cachedName}");
+            Log.Info($"\tLoop clear count:{Run.instance.loopClearCount}");
         }
 
         [ConCommand(commandName = "availableElites", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
@@ -121,9 +125,7 @@ namespace SamplePlugin
                             Log.Info($"\t {def.name}");
                     }
                 }
-
             }
-
         }
 
         [ConCommand(commandName = "numbers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
@@ -137,6 +139,15 @@ namespace SamplePlugin
             }
 
         }
+
+
+        [ConCommand(commandName = "markDirty", flags = ConVarFlags.ExecuteOnServer, helpText = "Mark map as dirty")]
+        private static void SetMapDirty(ConCommandArgs args)
+        {
+            StageModifierDirector.instance.routeMap.isDirty = true;
+            StageModifierDirector.instance.punishmentFillAmount = Run.instance.stageRng.nextNormalizedFloat;
+        }
+
 
         [ConCommand(commandName = "give_money", flags = ConVarFlags.ExecuteOnServer, helpText = "Gives 1000 gold to the executing player")]
         private static void CCGiveMoney(ConCommandArgs args)
@@ -159,9 +170,9 @@ namespace SamplePlugin
         private static void ItemTags(ConCommandArgs args)
         {
             Log.Info("Items with damage tag");
-            foreach(var item in RoR2.ItemCatalog.allItemDefs)
+            foreach (var item in RoR2.ItemCatalog.allItemDefs)
             {
-                if(item.tags.Contains(ItemTag.Damage) && (item.tier == ItemTier.Tier1 || item.tier == ItemTier.Tier2))
+                if (item.tags.Contains(ItemTag.Damage) && (item.tier == ItemTier.Tier1 || item.tier == ItemTier.Tier2))
                 {
                     Log.Info($"\t{item.name}:{RoR2.Language.GetString(item.nameToken)}");
                 }
@@ -242,7 +253,7 @@ namespace SamplePlugin
             if (StageModifierDirector.instance != null)
             {
                 Log.Info("Modifiers synced");
-                foreach(var mod in StageModifierDirector.instance.modifiersSynced)
+                foreach (var mod in StageModifierDirector.instance.modifiersSynced)
                 {
                     Log.Info($"{mod.name}:{mod.stack}:{mod.isArtifact}");
                 }
