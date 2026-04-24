@@ -1,35 +1,23 @@
-﻿using BepInEx;
-using BepInEx.Configuration;
-using LeTai.Asset.TranslucentImage;
-using R2API;
-using RiskOfOptions;
-using RiskOfOptions.OptionConfigs;
-using RiskOfOptions.Options;
+﻿using LeTai.Asset.TranslucentImage;
 using RiskOfRoutes.StageModifiers;
-using RiskOfRoutes.StageModifiers.SceneModifiers;
 using RoR2;
 using RoR2.UI;
 using SamplePlugin;
-using System.Collections.Generic;
-using System.Reflection;
 using TMPro;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
-using UnityEngine.Networking;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using UnityHotReloadNS;
 using Image = UnityEngine.UI.Image;
 
 namespace RiskOfRoutes
 {
-    public class ModUIManager: MonoBehaviour
+    public class ModUIManager : MonoBehaviour
     {
         public static GameObject routePortalPanel;
         public static GameObject routeMapPanel;
 
         private RoutePortalManager lastViewedManager = null;
         private Vector2 lastViewedNodeCoords = new Vector2(-1, -1);
+        private int lastViewedMapState = -1;
 
         public static void Initialize()
         {
@@ -68,7 +56,7 @@ namespace RiskOfRoutes
                 if (mod.isArtifact) continue;
                 if (mod.name == "Repair" || mod.name.EndsWith("_EnemyItem")) continue; //todo оптимизация?
                 ModifierDef def = StageModifierCatalog.FindModifier(mod.name);
-                if(def == null) continue;
+                if (def == null) continue;
 
                 string iconName = mod.name;
                 Transform container = controller.iconContainer;
@@ -82,12 +70,12 @@ namespace RiskOfRoutes
 
                 if (def.name != "Doppelganger")
                 {
-                    img.sprite = def.icon != null ? def.icon : RiskOfRoutes.placeholderIcon;
+                    img.sprite = def.icon != null ? def.icon : AssetManager.placeholderIcon;
                 }
                 else
                 {
                     img.sprite = GetHostSprite();
-                    img.color = new Color(163f/255f, 61f/255f, 205f/255f, 1f);
+                    img.color = new Color(163f / 255f, 61f / 255f, 205f / 255f, 1f);
                 }
 
                 LayoutElement layout = iconObj.AddComponent<LayoutElement>();
@@ -103,8 +91,9 @@ namespace RiskOfRoutes
 
                 RoR2.UI.TooltipProvider tooltip = iconObj.AddComponent<RoR2.UI.TooltipProvider>();
                 var modDef = StageModifierCatalog.FindModifier(mod.name);
+
                 tooltip.titleToken = RoR2.Language.GetString(modDef.nameToken);
-                tooltip.bodyToken = RiskOfRoutes.GetModifierDescription(mod, modDef);
+                tooltip.bodyToken = StageModifierCatalog.GetModifierDescriptionFormatted(mod, modDef);
                 //tooltip.titleColor = modStr.tooltipColor;
                 tooltip.titleColor = new Color(246f / 255f, 90f / 255f, 58f / 255f);
 
@@ -127,7 +116,7 @@ namespace RiskOfRoutes
             rect.anchorMax = Vector2.one;
             rect.sizeDelta = Vector2.zero;
 
-            textComp.font = RiskOfRoutes.bomb;
+            textComp.font = AssetManager.bomb;
             textComp.fontSize = 12f;
 
             textComp.alignment = TextAlignmentOptions.TopRight;
@@ -137,6 +126,12 @@ namespace RiskOfRoutes
         private static void HUD_Awake(On.RoR2.UI.HUD.orig_Awake orig, HUD self)
         {
             orig(self);
+
+            if (!Run.instance.IsExpansionEnabled(RoutesExpansion.routesExpansion))
+            {
+                Log.Warning($"{nameof(HUD_Awake)}: Expansion is disabled, map ui is not attached");
+                return;
+            }
 
             var uiManager = self.gameObject.AddComponent<ModUIManager>();
             var hud = self;
@@ -206,18 +201,18 @@ namespace RiskOfRoutes
 
             }
 
-            if (RiskOfRoutes.bundle == null)
-            {
-                Log.Error("Assets not loaded");
-                return;
-            }
+            //if (RiskOfRoutes.bundle == null)
+            //{
+            //    Log.Error("Assets not loaded");
+            //    return;
+            //}
 
             routePortalPanel.SetActive(false);
         }
 
         private static void SetupRoutePortalPanel()
         {
-            GameObject prefab = RiskOfRoutes.bundle.LoadAsset<GameObject>("RoutePortalPortraitPanel");
+            GameObject prefab = AssetManager.bundle.LoadAsset<GameObject>("RoutePortalPortraitPanel");
             if (prefab == null)
             {
                 Log.Error("What?");
@@ -235,17 +230,17 @@ namespace RiskOfRoutes
             }
             if (text == null) Log.Error("Not found");
             text.text = "Placeholder";
-            text.font = RiskOfRoutes.bomb;
+            text.font = AssetManager.bomb;
 
             routePortalPanel = Object.Instantiate(prefab);
         }
 
         private static void SetupRouteMapPanel()
         {
-            GameObject prefab = RiskOfRoutes.bundle.LoadAsset<GameObject>("RouteMapPanel");
+            GameObject prefab = AssetManager.bundle.LoadAsset<GameObject>("RouteMapPanel");
             if (prefab == null)
             {
-                Log.Error("Couldnt load RouteMapPanel");
+                Log.Error($"{nameof(SetupRouteMapPanel)}: Couldn't load RouteMapPanel");
                 return;
             }
             routeMapPanel = Object.Instantiate(prefab);
@@ -255,6 +250,9 @@ namespace RiskOfRoutes
             Shader blurShader = Shader.Find("UI/TranslucentImage");
             blur.material = new Material(blurShader);
             blur.color = new Color(0, 0, 0, 0.7f);
+
+            var script = routeMapPanel.GetComponent<RouteMapUI>();
+
         }
 
         private void RoutePortalPanelUpdateText(GameObject routePortalPanel, RoutePortalManager mg)
@@ -312,22 +310,34 @@ namespace RiskOfRoutes
                 if (def == null) continue;
 
                 ModifierSync tempMod = new ModifierSync { name = modName, stack = modStack };
+
+
+                string addedText = "";
+                if (RiskOfRoutes.routePanelShowsOnlyNames.Value)
+                {
+                    addedText = $"- {RoR2.Language.GetString(def.nameToken)} - x{tempMod.stack}";
+                }
+                else
+                {
+                    addedText = $"- {StageModifierCatalog.GetModifierDescriptionFormatted(tempMod, def)}";
+                }
+
                 if (!def.isNegative)
                 {
-                    positiveText = positiveText + $"- {RiskOfRoutes.GetModifierDescription(tempMod, def)}" + '\n';
+                    positiveText = positiveText + addedText + '\n';
                     hasPositive = true;
                 }
                 else
                 {
-                    negativeText = negativeText + $"- {RiskOfRoutes.GetModifierDescription(tempMod, def)}" + '\n';
+                    negativeText = negativeText + addedText + '\n';
                     hasNegative = true;
                 }
 
                 GameObject obj = new GameObject("ModifierIcon");
                 Image img = obj.AddComponent<Image>();
-                if(def.name != "Doppelganger")
+                if (def.name != "Doppelganger")
                 {
-                    img.sprite = def.icon != null ? def.icon : RiskOfRoutes.placeholderIcon;
+                    img.sprite = def.icon != null ? def.icon : AssetManager.placeholderIcon;
 
                 }
                 else
@@ -373,12 +383,14 @@ namespace RiskOfRoutes
                 }
             }
 
-            return RiskOfRoutes.placeholderIcon;
+            return AssetManager.placeholderIcon;
         }
 
         private void Update()
         {
             if (routePortalPanel == null || routeMapPanel == null) return;
+            if (!Run.instance) return;
+            if (!Run.instance.IsExpansionEnabled(RoutesExpansion.routesExpansion)) return;
 
             var localUser = LocalUserManager.GetFirstLocalUser();
             if (localUser != null && localUser.cachedBody != null)
@@ -421,7 +433,9 @@ namespace RiskOfRoutes
 
                 //TODO оптимизация тут карта перерисовывается слишком много раз
                 //карта
-                bool shouldShowMap = isHoldingTab || isLookingAtPortal;
+                bool isStateChanged = lastViewedMapState != StageModifierDirector.instance.mapState;
+
+                bool shouldShowMap = isHoldingTab || isLookingAtPortal || isStateChanged;
 
                 if (shouldShowMap)
                 {
@@ -429,12 +443,15 @@ namespace RiskOfRoutes
 
                     var mapScript = routeMapPanel.GetComponent<RouteMapUI>();
 
+
+
                     bool highlightChanged = targetNodeCoords != lastViewedNodeCoords;
 
-                    if (highlightChanged || !routeMapPanel.activeSelf)
+                    if (highlightChanged || !routeMapPanel.activeSelf || isStateChanged)
                     {
                         mapScript.DrawMap(targetNodeCoords);
                         lastViewedNodeCoords = targetNodeCoords;
+                        lastViewedMapState = StageModifierDirector.instance.mapState;
                     }
 
                     if (!routeMapPanel.activeSelf)
