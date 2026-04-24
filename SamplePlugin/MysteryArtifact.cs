@@ -5,12 +5,13 @@ namespace RiskOfRoutes
     public class MysteryArtifact
     {
         public static ArtifactDef Mystery = ScriptableObject.CreateInstance<ArtifactDef>();
+
         public static void InitializeArtifact()
         {
             Mystery.nameToken = "ARTIFACT_MYSTERY_NAME";
             Mystery.descriptionToken = "ARTIFACT_MYSTERY_DESCRIPTION";
-            Mystery.smallIconDeselectedSprite = RiskOfRoutes.placeholderIcon;
-            Mystery.smallIconSelectedSprite = RiskOfRoutes.placeholderIcon;
+            Mystery.smallIconDeselectedSprite = AssetManager.placeholderIcon;
+            Mystery.smallIconSelectedSprite = AssetManager.placeholderIcon;
             Mystery.cachedName = "Mystery";
             R2API.ContentAddition.AddArtifactDef(Mystery);
 
@@ -19,6 +20,10 @@ namespace RiskOfRoutes
             On.RoR2.GenericPickupController.GetInspectInfoProvider += GenericPickupController_GetInspectInfoProvider;
             On.RoR2.ShopTerminalBehavior.Start += ShopTerminalBehavior_Start;
             On.RoR2.PickupDisplay.Update += PickupDisplay_Update;
+
+
+
+
         }
 
         //TODO Looking glass может показать предмет

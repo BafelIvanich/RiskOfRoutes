@@ -14,14 +14,14 @@ namespace SamplePlugin
         {
             name = mod.name;
             stack = 1;
-            isArtifact = mod.isArtifact; //todo
+            isArtifact = mod.isArtifact;
         }
 
         public ModifierSync(ModifierDef mod, int stack)
         {
             name = mod.name;
             this.stack = stack;
-            isArtifact = mod.isArtifact; //todo
+            isArtifact = mod.isArtifact;
         }
 
         public bool Equals(ModifierSync other)

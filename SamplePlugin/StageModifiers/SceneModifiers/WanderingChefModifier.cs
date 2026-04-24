@@ -26,7 +26,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
         private void SpawnWanderingChef()
         {
-            InteractableSpawnCard card = RiskOfRoutes.RiskOfRoutes.wanderingChefSpawnCard;
+            InteractableSpawnCard card = AssetManager.wanderingChefSpawnCard;
 
             GameObject wanderingChef = TryPlaceObjectOnScene(card, "Wandering Chef");
             if (wanderingChef)
