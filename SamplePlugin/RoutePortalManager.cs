@@ -15,7 +15,7 @@ namespace RiskOfRoutes
 
         [SyncVar]
         public bool isUsingModifiers = false;
-        [SyncVar]
+        [SyncVar(hook = nameof(OnOvalChanged))]
         public bool isOval = false;
         [SyncVar]
         public bool isSeerStation = false;
@@ -59,7 +59,6 @@ namespace RiskOfRoutes
                     return;
                 }
             }
-            UpdateBubbles();
             genericInteraction.onActivation.AddListener(OnPortalActivation);
 
             if (isUsingSceneExit)
@@ -93,10 +92,10 @@ namespace RiskOfRoutes
             base.OnStartClient();
             Log.Info("Called method onStartClient");
 
-            stageModifiers.Callback += OnModifiersChanged;
             stageModifiers.Callback -= OnModifiersChanged;
+            stageModifiers.Callback += OnModifiersChanged;
 
-            if (this.enabled)
+            if (this.enabled && stageModifiers.Count > 0)
             {
                 UpdateBubbles();
             }
@@ -106,6 +105,17 @@ namespace RiskOfRoutes
         {
             Log.Info("Modifiers were changed, updating bubbles");
             UpdateBubbles();
+        }
+
+        private void OnOvalChanged(bool value)
+        {
+            isOval = value;
+            Log.Info("got value for is Oval");
+
+            if (this.enabled && stageModifiers.Count > 0)
+            {
+                UpdateBubbles();
+            }
         }
 
 
@@ -162,12 +172,12 @@ namespace RiskOfRoutes
 
             for (int i = 0; i < stageModifiers.Count; i++)
             {
-                //Log.Info($"act {modDefNames.Count}");
-                if (RiskOfRoutes.iconBubblePrefab == null)
+                if (AssetManager.iconBubblePrefab == null)
                 {
-                    RiskOfRoutes.iconBubblePrefab = RiskOfRoutes.CreateIconBubblePrefab();
+                    Log.Warning($"{nameof(AttachBubblesToPortal)}: Bubble prefab is missing");
+                    AssetManager.iconBubblePrefab = AssetManager.CreateIconBubblePrefab();
                 }
-                var bubble = Object.Instantiate(RiskOfRoutes.iconBubblePrefab);
+                var bubble = Object.Instantiate(AssetManager.iconBubblePrefab);
                 bubble.SetActive(true);
 
                 bubble.transform.SetParent(transform.Find("PortalCenter").transform, false);
@@ -214,7 +224,7 @@ namespace RiskOfRoutes
                         var modDef = StageModifierCatalog.FindModifier(name);
                         if (modDef != null && modDef.icon != null)
                         {
-                            if(modDef.name != "Doppelganger")
+                            if (modDef.name != "Doppelganger")
                             {
                                 tex = modDef.icon.texture;
                             }
@@ -227,12 +237,12 @@ namespace RiskOfRoutes
                         else
                         {
                             Log.Info("Uing placehdolde");
-                            tex = RiskOfRoutes.placeholderIcon.texture;
+                            tex = AssetManager.placeholderIcon.texture;
                         }
                     }
                     else
                     {
-                        tex = RiskOfRoutes.placeholderIcon.texture;
+                        tex = AssetManager.placeholderIcon.texture;
                     }
 
 
