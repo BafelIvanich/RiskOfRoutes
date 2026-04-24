@@ -16,8 +16,11 @@ public class RouteMap
     public RouteNode[,] mapGrid;
     public RouteNode root;
 
+    public bool isDirty = false;
+
     public RouteMap(Xoroshiro128Plus rng)
     {
+
         width = RiskOfRoutes.RiskOfRoutes.routeMapWidth.Value;
         height = 5;
         //+1 к ширине под порталы длс2 длс3
@@ -41,6 +44,7 @@ public class RouteMap
         if (availablePaths.Count >= 3) root.right = availablePaths[2];
         SetupRewards(rng);
 
+        isDirty = true;
     }
 
     public void SetupRewards(Xoroshiro128Plus rng)
@@ -84,6 +88,7 @@ public class RouteMap
         HashSet<Vector2> memory = new HashSet<Vector2>();
         var available = root.GetPaths(); //без доп портала
 
+        CheckNodeCorrect(root, rng, memory);
         foreach (var path in available)
         {
             CheckNodeCorrect(path, rng, memory);
@@ -145,12 +150,12 @@ public class RouteMap
     private RoutePortalType RollPortalType(Xoroshiro128Plus rng, params RoutePortalType[] skipTypes)
     {
         var res = new WeightedSelection<RoutePortalType>();
-        RoutePortalType[] types = { RoutePortalType.ItemType, RoutePortalType.DroneType, RoutePortalType.Rare, RoutePortalType.ChefType };
+        RoutePortalType[] types = { RoutePortalType.Combat, RoutePortalType.Heal, RoutePortalType.Utility, RoutePortalType.DroneType, RoutePortalType.Rare, RoutePortalType.ChefType };
         foreach (var type in types)
         {
             if (skipTypes.Contains(type)) continue;
             if (type == RoutePortalType.Rare || type == RoutePortalType.ChefType)
-                res.AddChoice(type, 10.8f);
+                res.AddChoice(type, 1.0f);
             else
                 res.AddChoice(type, 1.0f);
         }
@@ -226,6 +231,7 @@ public class RouteMap
         int y = currentLayer ? current.y : current.y + 1;
 
         Log.Info("Creating colossus node");
+        isDirty = true;
         //проверка есть ли
         RouteNode colossusNode = null;
         for (int i = 0; i < width + 1; i++)
@@ -287,6 +293,7 @@ public class RouteMap
         int y = current.y + 1;
 
         Log.Info("Creating hardware node");
+        isDirty = true;
 
         RouteNode hardwareNode = null;
         for (int i = 0; i < width + 1; i++)
