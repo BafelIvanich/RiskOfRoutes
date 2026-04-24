@@ -23,7 +23,7 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
 
         public override void OnEnd()
         {
-            if (lunarItem == null || Run.instance == null || PlayerCharacterMasterController.instances == null|| CharacterMaster.readOnlyInstancesList.Count==0)
+            if (lunarItem == null || Run.instance == null || PlayerCharacterMasterController.instances == null || CharacterMaster.readOnlyInstancesList.Count == 0)
             {
                 Log.Error("Lunar item is null");
                 return;
