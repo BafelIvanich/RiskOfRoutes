@@ -1,6 +1,8 @@
 ﻿using RoR2;
+using RoR2.UI;
 using SamplePlugin;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,6 +20,8 @@ namespace RiskOfRoutes
         public GameObject verticalBars;
         public Image barImageHorizontal;
         public Image barImageVertical;
+        public GameObject labelHorizontal;
+        public GameObject labelVertical;
 
         public bool isMapVertical;
         public bool isBarVertical;
@@ -47,26 +51,15 @@ namespace RiskOfRoutes
             DrawMap(new Vector2(-1, -1));
         }
 
-
-        public void DrawMap(Vector2 selectedNodeCoords)
+        public void DrawBar()
         {
-            Log.Info($"{nameof(DrawMap)}: Coords of selected node:{selectedNodeCoords}");
-
-            ClearContainer();
-            MapNodes.Clear();
-
-            //isMapVertical = true;
-
-            int mapWidth = StageModifierDirector.instance.mapWidth;
-            int mapHeight = StageModifierDirector.instance.mapHeight;
-            bool isMoonVisited = StageModifierDirector.instance.isMoonVisited;
-
             isBarVertical = RiskOfRoutes.punishmentBarOrientation.Value == RiskOfRoutes.MapOrientation.Vertical;
 
-            if (!RiskOfRoutes.negativeStackPunishment.Value)
+            if (StageModifierDirector.instance.punishmentTime == -1)
             {
                 verticalBars.SetActive(false);
                 horizontalBars.SetActive(false);
+                return;
             }
             else
             {
@@ -83,13 +76,76 @@ namespace RiskOfRoutes
             }
 
 
-            Log.Info($"Bar Image {barImageVertical.fillAmount}");
-            barImageHorizontal.fillAmount = Run.instance.runRNG.nextNormalizedFloat;
-            barImageVertical.fillAmount = Run.instance.runRNG.nextNormalizedFloat;
+
+            float percentShown = ((Run.instance.fixedTime - StageModifierDirector.instance.stageEnterTime) / (StageModifierDirector.instance.punishmentTime * 60f)) % 1.0f;
+            int punishStack = (int)((Run.instance.fixedTime - StageModifierDirector.instance.stageEnterTime) / (StageModifierDirector.instance.punishmentTime * 60f));
+
+            //Log.Info($"Bar Image {barImageVertical.fillAmount}");
+            //Log.Info($"Current stage enter time: {StageModifierDirector.instance.stageEnterTime}");
+            //Log.Info($"Current punish time in run: {StageModifierDirector.instance.punishmentTime}");
+
+            barImageHorizontal.fillAmount = percentShown;
+            barImageVertical.fillAmount = percentShown;
 
             barImageHorizontal.color = RiskOfRoutes.punishmentBarColor.Value;
             barImageVertical.color = RiskOfRoutes.punishmentBarColor.Value;
 
+            foreach (var image in new Image[] { barImageHorizontal, barImageVertical })
+            {
+                var barTooltip = image.GetComponent<TooltipProvider>();
+                if (barTooltip == null)
+                {
+                    Log.Error($"{nameof(DrawMap)}: No tooltip provider for bar images");
+                    return;
+                }
+                barTooltip.titleToken = "PUNISHMENT_BAR_NAME";
+                barTooltip.bodyToken = RoR2.Language.GetStringFormatted("PUNISHMENT_BAR_DESCRIPTION", (int)StageModifierDirector.instance.punishmentTime);
+                barTooltip.titleColor = RiskOfRoutes.punishmentBarColor.Value;
+            }
+
+            foreach(var label in new GameObject[] { labelHorizontal,labelVertical })
+            {
+                if (label == null)
+                {
+                    Log.Error($"{nameof(DrawMap)}: No label found");
+                    return;
+                }
+                var labelTooltip = label.GetComponent<TooltipProvider>();
+                if (labelTooltip == null)
+                {
+                    Log.Error($"{nameof(DrawMap)}: No tooltip provider for punish label");
+                    return;
+                }
+                labelTooltip.titleToken = RoR2.Language.GetStringFormatted("PUNISHMENT_VALUE_NAME", punishStack);
+                labelTooltip.bodyToken = "PUNISHMENT_VALUE_DESCRIPTION"; 
+                labelTooltip.titleColor = RiskOfRoutes.punishmentBarColor.Value;
+
+                var text = label.GetComponent<TextMeshProUGUI>();
+                if(text == null)
+                {
+                    Log.Error($"{nameof(DrawMap)}: No text component found");
+                    return ;
+                }
+
+                text.text = $"{punishStack}";
+
+            }
+        }
+
+        public void DrawMap(Vector2 selectedNodeCoords)
+        {
+            Log.Info($"{nameof(DrawMap)}: Coords of selected node:{selectedNodeCoords}");
+
+            ClearContainer();
+            MapNodes.Clear();
+
+            //isMapVertical = true;
+
+            int mapWidth = StageModifierDirector.instance.mapWidth;
+            int mapHeight = StageModifierDirector.instance.mapHeight;
+            bool isMoonVisited = StageModifierDirector.instance.isMoonVisited;
+
+            DrawBar();
 
             List<RouteNodeSync> map = StageModifierDirector.instance.routeNodesSynced;
             if (map == null || map.Count == 0)
@@ -364,7 +420,7 @@ namespace RiskOfRoutes
             //Log.Info("Rows that has visible nodes:");
             //foreach (var i in visibleRows)
             //{
-            //    Log.Info($"\t{i}");
+            //    Log.Info($"\barTooltip{i}");
             //}
             return visibleRows;
         }
