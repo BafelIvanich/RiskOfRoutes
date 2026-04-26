@@ -278,7 +278,7 @@ namespace RiskOfRoutes.StageModifiers
             RegEnemy("Hoof", ModifierTier.Tier1);
             RegEnemy("ShieldBooster", ModifierTier.Tier1);
 
-            RegEnemy("Thorns", ModifierTier.Tier2);
+            //RegEnemy("Thorns", ModifierTier.Tier2);
             RegEnemy("SprintOutOfCombat", ModifierTier.Tier2);
             RegEnemy("FragileDamageBonus", ModifierTier.Tier2);
             RegEnemy("CritGlasses", ModifierTier.Tier2);
@@ -286,7 +286,7 @@ namespace RiskOfRoutes.StageModifiers
             RegEnemy("ArmorPlate", ModifierTier.Tier2);
 
             RegEnemy("Behemoth", ModifierTier.Tier3);
-            RegEnemy("CaptainDefensiveMatrix", ModifierTier.Tier3);
+            //RegEnemy("CaptainDefensiveMatrix", ModifierTier.Tier3);
             RegEnemy("ImmuneToDebuff", ModifierTier.Tier3);
             RegEnemy("ExtraLife", ModifierTier.Tier3);
             RegEnemy("ArmorReductionOnHit", ModifierTier.Tier3);
@@ -485,11 +485,11 @@ namespace RiskOfRoutes.StageModifiers
             var pool = GetPool(portalType, isNegative);
             if (pool.Count == 0)
             {
-                Log.Info("Pool is emptyk");
+                Log.Info($"{nameof(SelectModifier)}: Couldnt get { (isNegative ? "negative" : "positive") } pool for portal type - {portalType}");
             }
             else
             {
-                Log.Info($"Got pool with {pool.Count}items");
+                Log.Info($"{nameof(SelectModifier)}: {(isNegative ? "negative" : "positive")}-{portalType} - Got pool with {pool.Count} items");
             }
             WeightedSelection<ModifierDef> selection = new WeightedSelection<ModifierDef>();
 
@@ -500,7 +500,7 @@ namespace RiskOfRoutes.StageModifiers
                 var currentDef = FindModifier(modName);
                 if (currentDef == null)
                 {
-                    Log.Error($"Returning null for name {modName}");
+                    Log.Error($"{nameof(SelectModifier)}: Returning null for name {modName}");
                     return null;
                 }
 
@@ -509,7 +509,7 @@ namespace RiskOfRoutes.StageModifiers
                 if (currentDef.tier == tier || (currentDef.tier < tier && currentDef.IsStackable()))
                 {
                     if (currentDef.tier != tier)
-                        Log.Info($"Modifier {currentDef.name} with default tier {currentDef.tier} needs to be stacked for tier {tier}");
+                        Log.Info($"{nameof(SelectModifier)}: Modifier {currentDef.name} with default tier {currentDef.tier} needs to be stacked for tier {tier}");
                     selection.AddChoice(currentDef, 1f);
                 }
                 else
@@ -531,8 +531,6 @@ namespace RiskOfRoutes.StageModifiers
 
         private static Sprite LoadSprite(string address, bool isArtifact, bool isItem)
         {
-
-
             if (address.Contains("RoR2/"))
             {
                 Log.Info($"Searching for ingame sprite for{address}");
@@ -562,6 +560,11 @@ namespace RiskOfRoutes.StageModifiers
 
             Log.Info($"Not found sprite for {address}");
             return AssetManager.placeholderIcon;
+        }
+
+        public static bool isPortalTypeAvailable(RoutePortalType type)
+        {
+            return true;
         }
 
         public static string GetModifierDescriptionFormatted(ModifierSync mod, ModifierDef def)
