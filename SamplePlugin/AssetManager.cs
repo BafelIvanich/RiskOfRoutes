@@ -108,10 +108,24 @@ namespace RiskOfRoutes
 
             var renderers = routePortal.GetComponentsInChildren<Renderer>();
 
-            //Material mat = SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex).portalMaterial;
+            RoutePortalManager mgr = routePortal.AddComponent<RoutePortalManager>();
+            //Material mat = SceneCatalog.GetSceneDef((SceneIndex)mgr.destinationSceneIndex).portalMaterial;
 
-            var edge = bundle.LoadAsset<Texture2D>("darkerBlueEdge");
-            var center = bundle.LoadAsset<Texture2D>("darkerBlueCenter");
+            Texture2D edge = null;
+            Texture2D center = null;
+
+            if(RiskOfRoutes.usePortalTypeColors.Value)
+            {
+                Log.Info("Using black and white");
+                edge = bundle.LoadAsset<Texture2D>("bwCenter");
+                center = bundle.LoadAsset<Texture2D>("bwEdge");
+            }
+            else
+            {
+                edge = bundle.LoadAsset<Texture2D>("darkerBlueEdge");
+                center = bundle.LoadAsset<Texture2D>("darkerBlueCenter");
+            }
+
             foreach (var renderer in renderers)
             {
                 if (renderer.material.name.Contains("Center"))
@@ -128,7 +142,6 @@ namespace RiskOfRoutes
             }
 
             //создаем интеракцию
-            RoutePortalManager mgr = routePortal.AddComponent<RoutePortalManager>();
             GenericInteraction interaction = routePortal.AddComponent<GenericInteraction>();
             SceneExitController sceneExitController = routePortal.AddComponent<SceneExitController>();
             GenericDisplayNameProvider genericDisplayNameProvider = routePortal.AddComponent<GenericDisplayNameProvider>();
