@@ -1,8 +1,11 @@
-﻿using RiskOfRoutes.StageModifiers;
+﻿using Rewired;
+using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UIElements;
+using UnityEngine.Yoga;
 
 
 namespace RiskOfRoutes
@@ -32,6 +35,12 @@ namespace RiskOfRoutes
         [SyncVar]
         public int destinationSceneIndex;
 
+        public bool isDirty = true;
+
+        public bool usePositiveNegativeColors;
+        public bool usePortalMaterial;
+        public bool usePortalColor;
+
         public void Awake()
         {
             genericInteraction = GetComponent<GenericInteraction>();
@@ -45,6 +54,10 @@ namespace RiskOfRoutes
 
         public void Start()
         {
+            RiskOfRoutes.usePortalTypeColors.SettingChanged += OnConfigChanged;
+            RiskOfRoutes.usePositiveNegativeColors.SettingChanged += OnConfigChanged;
+            RiskOfRoutes.usePortalMaterial.SettingChanged += OnConfigChanged;
+
 
             if (isSeerStation)
             {
@@ -74,6 +87,9 @@ namespace RiskOfRoutes
             //{
             //    stageModifiers.Callback -= OnModifiersChanged;
             //}
+            RiskOfRoutes.usePortalTypeColors.SettingChanged -= OnConfigChanged;
+            RiskOfRoutes.usePositiveNegativeColors.SettingChanged -= OnConfigChanged;
+            RiskOfRoutes.usePortalMaterial.SettingChanged -= OnConfigChanged;
 
             if (genericInteraction != null)
             {
@@ -83,6 +99,21 @@ namespace RiskOfRoutes
             if (purchaseInteraction != null)
             {
                 purchaseInteraction.onPurchase.RemoveListener(OnSeerActivation);
+            }
+        }
+
+        private void OnConfigChanged(object sender, System.EventArgs e)
+        {
+            isDirty = true;
+        }
+
+        protected virtual void Update()
+        {
+            if (isDirty)
+            {
+                UpdateBubbles();
+                UpdatePortalMaterials();
+                isDirty = false;
             }
         }
 
@@ -150,6 +181,115 @@ namespace RiskOfRoutes
             AttachBubblesToPortal();
         }
 
+        public void UpdatePortalMaterials()
+        {
+            GameObject routePortal = this.gameObject;
+            //var renderers = routePortal.GetComponentsInChildren<Renderer>();
+
+            var portalCenter = routePortal.transform.Find("PortalCenter");
+            if (portalCenter == null) Log.Error("Portal center is null");
+            var donut = portalCenter.transform.Find("Donut");
+            var quad = portalCenter.transform.Find("Quad");
+            var edgeRenderer = donut.GetComponent<Renderer>();
+            var centerRenderer = quad.GetComponent<Renderer>();
+
+
+            Texture2D edge = null;
+            Texture2D center = null;
+
+                Log.Info("Using black and white");
+                edge = AssetManager.bundle.LoadAsset<Texture2D>("bwCenter");
+                center = AssetManager.bundle.LoadAsset<Texture2D>("bwEdge");
+            //edge = AssetManager.bundle.LoadAsset<Texture2D>("darkerBlueEdge");
+            //center = AssetManager.bundle.LoadAsset<Texture2D>("darkerBlueCenter");
+
+            foreach (var renderer in new Renderer[]{ edgeRenderer, centerRenderer } )
+            {
+                if (renderer.material.name.Contains("Center"))
+                {
+                    if (RiskOfRoutes.usePortalMaterial.Value)
+                    {
+                        Material mat = SceneCatalog.GetSceneDef((SceneIndex)destinationSceneIndex).portalMaterial;
+                        if (mat == null)
+                        {
+                            Log.Error($"{nameof(UpdatePortalMaterials)}: Couldnt set scene material because mat is null");
+                            return;
+                        }
+                        renderer.material = mat;
+                    }
+                    else
+                    {
+                        renderer.material.SetTexture("_RemapTex", center);
+
+                        if(routeNode == null)
+                        {
+                            Log.Error($"{nameof(UpdatePortalMaterials)}: Couldnt set color for portal because route node is null");
+                            return;
+                        }
+                        if (RiskOfRoutes.usePortalTypeColors.Value)
+                        {
+                            renderer.material.SetColor("_TintColor", GetPortalTypeColor(routeNode.portalType));
+                        }
+                        else
+                        {
+                            renderer.material.SetColor("_TintColor", GetPortalTypeColor(RoutePortalType.None));
+                        }
+                    }
+                }
+                else if(renderer.material.name.Contains("Edge"))
+                {
+                    renderer.material.SetTexture("_RemapTex", edge);
+                    if (RiskOfRoutes.usePortalTypeColors.Value)
+                    {
+                        renderer.material.SetColor("_TintColor", GetPortalTypeColor(routeNode.portalType));
+                    }
+                    else
+                    {
+                        renderer.material.SetColor("_TintColor", GetPortalTypeColor(RoutePortalType.None));
+                    }
+                }
+
+            }
+        }
+
+        private Color GetPortalTypeColor(RoutePortalType type)
+        {
+            switch (type)
+            {
+                case RoutePortalType.Combat:
+                    return GetHDRColor(191, 77, 0, 1.4f);
+
+                case RoutePortalType.Utility:
+                    return GetHDRColor(22, 0, 191, 2.0f);
+
+                case RoutePortalType.Heal:
+                    return GetHDRColor(34, 191, 0, 1.5f);
+
+                case RoutePortalType.ChefType:
+                    return GetHDRColor(121, 191, 10, 1.5f);
+
+                case RoutePortalType.Rare:
+                    return GetHDRColor(191, 8, 0, 2.0f);
+
+                case RoutePortalType.DroneType:
+                    return GetHDRColor(27, 66, 191, 2.0f);
+
+                case RoutePortalType.ItemType:
+                default:
+                    return GetHDRColor(10, 64, 191, 1.0f);
+            }
+        }
+
+        private Color GetHDRColor(int r, int g, int b, float intensity)
+        {
+            float multiplier = Mathf.Pow(2f, intensity);
+            return new Color(
+                (r / 255f) * multiplier,
+                (g / 255f) * multiplier,
+                (b / 255f) * multiplier,
+                1f
+            );
+        }
 
         private void AttachBubblesToPortal()
         {
