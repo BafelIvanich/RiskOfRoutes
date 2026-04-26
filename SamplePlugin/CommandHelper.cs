@@ -145,7 +145,6 @@ namespace SamplePlugin
         private static void SetMapDirty(ConCommandArgs args)
         {
             StageModifierDirector.instance.routeMap.isDirty = true;
-            StageModifierDirector.instance.punishmentFillAmount = Run.instance.stageRng.nextNormalizedFloat;
         }
 
 
