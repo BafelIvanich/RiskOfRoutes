@@ -33,7 +33,7 @@ namespace SamplePlugin
 
         public int mapState = 0;
 
-        float stageEnterTime = 0; //todo
+        public float stageEnterTime = 0; //todo
 
         [SyncVar]
         public int mapWidth;
@@ -45,12 +45,10 @@ namespace SamplePlugin
         public bool isMoonVisited;
 
         [SyncVar]
-        public float punishmentFillAmount;
-
-        [SyncVar]
         public Vector2 currentNodeSync = new Vector2(-1, -1);
 
         public int uniqueModifierLimit = 5;
+        public float punishmentTime = -1;
 
         public Inventory monsterTeamInventory;
 
@@ -70,14 +68,6 @@ namespace SamplePlugin
 
             Log.Info("Called method Awake in StageModifierDirector");
 
-            //todo клиенты не видят это меню
-            var networkedInventoryPrefab = new GameObject("NetworkedInventory", typeof(SetDontDestroyOnLoad));
-            networkedInventoryPrefab.AddComponent<Inventory>();
-            networkedInventoryPrefab.AddComponent<TeamFilter>();
-            networkedInventoryPrefab.AddComponent<EnemyInfoPanelInventoryProvider>();
-            monsterTeamInventory = Instantiate(networkedInventoryPrefab).GetComponent<Inventory>();
-
-
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<ModifierSync>();
             bannedModifiers = new List<ModifierDef>();
@@ -95,9 +85,6 @@ namespace SamplePlugin
             RoR2.Stage.onServerStageComplete += Stage_onServerStageComplete;
 
             //
-            Log.Info("monsterTeamInventory has value: " + monsterTeamInventory);
-            monsterTeamInventory.GetComponent<TeamFilter>().teamIndex = TeamIndex.Monster;
-            NetworkServer.Spawn(monsterTeamInventory.gameObject);
 
         }
 
@@ -113,7 +100,24 @@ namespace SamplePlugin
         {
             Log.Info($"{nameof(Run_onRunStartGlobal)}:Run started");
 
+            if (NetworkServer.active)
+            {
+                var invObj = Instantiate(RiskOfRoutes.RiskOfRoutes.networkedInventoryPrefab);
+                DontDestroyOnLoad(invObj);
+
+                monsterTeamInventory = invObj.GetComponent<Inventory>();
+                invObj.GetComponent<TeamFilter>().teamIndex = TeamIndex.Monster;
+
+                NetworkServer.Spawn(invObj);
+            }
+
             runArtifactsApplied = GetArtifactsAppliedThisRun();
+            if (RiskOfRoutes.RiskOfRoutes.negativeStackPunishment.Value)
+                punishmentTime = RiskOfRoutes.RiskOfRoutes.punishmentTimeMinutes.Value;
+            else
+                punishmentTime = -1;
+
+            Log.Info($"{nameof(Run_onRunStartGlobal)}: Got punishmentTimeMinutes value - {punishmentTime}");
 
             Log.Info("Creating route map");
             routeMap = new RouteMap(run.runRNG);
@@ -206,8 +210,8 @@ namespace SamplePlugin
 
         protected virtual void FixedUpdate()
         {
-            Log.Info($"Time spent: {Run.instance.fixedTime - stageEnterTime}");
-            Log.Info($"Punish percent: {(Run.instance.fixedTime - stageEnterTime) / (RiskOfRoutes.RiskOfRoutes.punishmentTimeMinutes.Value * 60f)}");
+            //Log.Info($"Time spent: {Run.instance.fixedTime - stageEnterTime}");
+            //Log.Info($"Punish percent: {(Run.instance.fixedTime - stageEnterTime) / (RiskOfRoutes.RiskOfRoutes.punishmentTimeMinutes.Value * 60f)}");
             if (NetworkServer.active && routeMap != null && routeMap.isDirty)
             {
                 UpdateRouteMap();
@@ -237,13 +241,13 @@ namespace SamplePlugin
             mapWidth = width;
             mapHeight = height;
             isMoonVisited = routeMap.isMoonVisited;
-            RpcReceiveFullMap(mapUpdated, width, height, routeMap.isMoonVisited);
+            RpcReceiveFullMap(mapUpdated, width, height, routeMap.isMoonVisited, punishmentTime,stageEnterTime  );
             routeNodesSynced = new List<RouteNodeSync>(mapUpdated);
 
         }
 
         [ClientRpc]
-        private void RpcReceiveFullMap(RouteNodeSync[] map, int width, int height, bool moon)
+        private void RpcReceiveFullMap(RouteNodeSync[] map, int width, int height, bool moon, float hostPunishmentTime, float hostStageEnterTime)
         {
             mapWidth = width;
             mapHeight = height;
@@ -251,7 +255,19 @@ namespace SamplePlugin
 
             routeNodesSynced = new List<RouteNodeSync>(map);
             mapState++;
+
+            punishmentTime = hostPunishmentTime;
+            stageEnterTime = hostStageEnterTime;
+
             Debug.Log($"{nameof(RpcReceiveFullMap)}: Got map on client");
+            if(hostPunishmentTime != -1)
+            {
+                Debug.Log($"{nameof(RpcReceiveFullMap)}: Host has punish time of {hostPunishmentTime}");
+            }
+            else
+            {
+                Debug.Log($"{nameof(RpcReceiveFullMap)}: Host has punish disabled");
+            }
         }
 
         private void Run_onRunDestroyGlobal(Run obj)
@@ -302,6 +318,11 @@ namespace SamplePlugin
             foreach (var modifier in reservedModifiers)
             {
                 StageModifier mod = StageModifierCatalog.StageModifierFromDef(modifier.name, modifier.stack);
+                if(mod == null)
+                {
+                    Log.Error($"{nameof(SceneDirector_onPrePopulateSceneServer)}: Modifier with def {modifier.name} is null");
+                    continue;
+                }
                 activeModifiers.Add(mod);
             }
 
@@ -314,7 +335,7 @@ namespace SamplePlugin
                     soulCostStack = mod.stack;
                 }
             }
-            reservedModifiers.Clear();
+
 
             foreach (StageModifier modifier in activeModifiers)
             {
@@ -322,6 +343,8 @@ namespace SamplePlugin
             }
             activePortalInstances.Clear();
 
+
+            reservedModifiers.Clear();
 
             SceneDef currentScene = RoR2.SceneCatalog.GetSceneDefForCurrentScene();
             stageEnterTime = Run.instance.fixedTime;
@@ -382,6 +405,7 @@ namespace SamplePlugin
 
 
             //TODO возможно стоит поменять порядок
+            //todo nullreference и софтлок при переходе на луну
             currentNode.visited = true;
             routeMap.isDirty = true;
         }
@@ -392,7 +416,7 @@ namespace SamplePlugin
 
             if (mg == null || mg.routeNode == null)
             {
-                Log.Error("Portal doesn't have routePortalManager or RouteNode, couldn't get modifiers.");
+                Log.Error($"{nameof(GetNextStageModifiers)}: Portal doesn't have routePortalManager or RouteNode, couldn't get modifiers.");
                 return;
             }
 
@@ -454,7 +478,6 @@ namespace SamplePlugin
             }
 
             //negative
-            //int punishmentStacks = Mathf.FloorToInt(Run.instance.stopwa)
 
             var negative = modifierSlots.negative;
             foreach (var tier in negative)
@@ -471,7 +494,7 @@ namespace SamplePlugin
                     }
 
                     Log.Info($"Modifier to calculate stacks for is {currentModifier.name} with tier {currentModifier.tier}");
-                    int stack = CalculateStack(currentModifier.tier, tier.Key); //+ punishment
+                    int stack = CalculateStack(currentModifier.tier, tier.Key);
                     Log.Info($"\t Stack for {currentModifier.name}:{stack}");
                     if (modifiers.ContainsKey(currentModifier.name))
                         modifiers[currentModifier.name] += stack;
@@ -479,6 +502,13 @@ namespace SamplePlugin
                         modifiers.Add(currentModifier.name, stack);
                 }
             }
+
+            //
+            int punishStack = (int)((Run.instance.fixedTime - stageEnterTime) / (punishmentTime * 60f));
+            Log.Info($"{nameof(GetNextStageModifiers)}: Adding punishment stacks");
+            //среди негативных
+            //если модифаер стакающийся то добавляется
+            //
 
             List<ModifierSync> res = new List<ModifierSync>();
             foreach (var mod in modifiers)
@@ -528,9 +558,10 @@ namespace SamplePlugin
             {
                 selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 1 } }, negative = { { ModifierTier.Tier1, 1 } } }, 1.0f);
                 selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 2 } }, negative = { { ModifierTier.Tier2, 1 } } }, 1.0f);
+                selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier2, 1 } }, negative = { { ModifierTier.Tier1, 2 } } }, 1.0f);
+                //todo верунть
             }
 
-            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier2, 1 } }, negative = { { ModifierTier.Tier1, 2 } } }, 1.0f);
             selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier3, 1 } } }, 0.3f);
             selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier2, 1 }, { ModifierTier.Tier1, 1 } } }, 0.3f);
 

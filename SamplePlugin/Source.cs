@@ -85,6 +85,7 @@ namespace RiskOfRoutes
         //tweaks
         public static ConfigEntry<bool> usePortalMaterial { get; set; }
         public static ConfigEntry<bool> usePositiveNegativeColors { get; set; }
+        public static ConfigEntry<bool> usePortalTypeColors { get; set; }
         public static ConfigEntry<bool> useUniqueDestinations { get; set; }
         public static ConfigEntry<bool> showPortalDestination { get; set; }
         public static ConfigEntry<bool> teleporterUseRandomMods { get; set; }
@@ -125,6 +126,21 @@ namespace RiskOfRoutes
         public static ConfigEntry<int> lunarStackPercent;
         public static ConfigEntry<int> voidStackPercent;
         public static ConfigEntry<int> soulCostStackPercent;
+        //printer item
+        public static ConfigEntry<bool> useDefaultPrinterItems;
+        public static ConfigEntry<string> tier1PrinterItems;
+        public static ConfigEntry<string> tier2PrinterItems;
+        public static ConfigEntry<string> tier3PrinterItems;
+        //enemy item
+        public static ConfigEntry<bool> useDefaultEnemyItems;
+        public static ConfigEntry<string> tier1EnemyItems;
+        public static ConfigEntry<string> tier2EnemyItems;
+        public static ConfigEntry<string> tier3EnemyItems;
+        //lunar item
+        public static ConfigEntry<bool> useDefaultLunarItems;
+        public static ConfigEntry<string> tier1LunarItems;
+        public static ConfigEntry<string> tier2LunarItems;
+        public static ConfigEntry<string> tier3LunarItems;
 
         public static ConfigEntry<int> routeMapWidth;
 
@@ -143,12 +159,22 @@ namespace RiskOfRoutes
 
             var temp = new GameObject("tmpGo");
             temp.AddComponent<NetworkIdentity>();
+
             CentralNetworkObject = PrefabAPI.InstantiateClone(temp, "somethingUnique", false);
 
-            GameObject.Destroy(temp);
             CentralNetworkObject.AddComponent<StageModifierDirector>();
             CentralNetworkObject.AddComponent<MyNetworkComponent>();
             PrefabAPI.RegisterNetworkPrefab(CentralNetworkObject);
+
+            networkedInventoryPrefab = PrefabAPI.InstantiateClone(temp, "monsterInventory", false);
+            networkedInventoryPrefab.AddComponent<Inventory>();
+            networkedInventoryPrefab.AddComponent<TeamFilter>();
+            networkedInventoryPrefab.AddComponent<EnemyInfoPanelInventoryProvider>();
+            PrefabAPI.RegisterNetworkPrefab(networkedInventoryPrefab);
+
+            GameObject.Destroy(temp);
+
+
 
             On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
 
@@ -222,9 +248,6 @@ namespace RiskOfRoutes
                 "General", "Punishment time", 8, "Adds one negative stack per punishment, punishment is given by spending too much time on current stage, by default it's 8 minutes");
             ModSettingsManager.AddOption(new IntSliderOption(punishmentTimeMinutes, new IntSliderConfig() { min = 1, max = 20 }));
 
-            /////////////////////////////////////////////////////////////////
-
-
             //VISUAL ///////////////////////////////////////////////////////
             usePortalMaterial = Config.Bind<bool>(
                 "Visual", "WIP Use Scene Material", false, "[WIP] Sets destination scene portrait as a portal texture");
@@ -257,7 +280,72 @@ namespace RiskOfRoutes
             punishmentBarColor = Config.Bind<Color>(
                 "Visual", "Punishment bar color", Color.white, "Color of progress bar");
             ModSettingsManager.AddOption(new ColorOption(punishmentBarColor));
+
+            usePortalTypeColors = Config.Bind<bool>(
+                "Visual", "Portal color type", false, "Portal color is changed according to it's node type");
+            ModSettingsManager.AddOption(new CheckBoxOption(usePortalTypeColors));
+
             ////////////////////////////////////////////////////////////////
+
+            // PRINTER ITEM MODIFIER/////////////////////////////////////////////////////////////////
+
+            useDefaultPrinterItems = Config.Bind<bool>(
+                "Printer items", "Use default items", true, "Use default configuration of what item printer modifier can have by modifier tier");
+            ModSettingsManager.AddOption(new CheckBoxOption(useDefaultPrinterItems));
+
+            tier1PrinterItems = Config.Bind<string>(
+                "Printer items", "Tier 1 items", "", "Adds item defs to a printer modifier as tier1");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier1PrinterItems));
+
+            tier2PrinterItems = Config.Bind<string>(
+                "Printer items", "Tier 2 items", "", "Adds item defs to a printer modifier as tier2");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier2PrinterItems));
+
+            tier3PrinterItems = Config.Bind<string>(
+                "Printer items", "Tier 3 items", "", "Adds item defs to a printer modifier as tier3");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier3PrinterItems));
+            // ENEMY ITEM MODIFIER/////////////////////////////////////////////////////////////////
+
+            useDefaultEnemyItems = Config.Bind<bool>(
+                "Enemy items", "Use default items", true, "Use default configuration of what item enemy item modifier can have by modifier tier");
+            ModSettingsManager.AddOption(new CheckBoxOption(useDefaultEnemyItems));
+
+            tier1EnemyItems = Config.Bind<string>(
+                "Enemy items", "Tier 1 items", "", "Adds item defs to a enemy item modifier as tier1");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier1EnemyItems));
+
+            tier2EnemyItems = Config.Bind<string>(
+                "Enemy items", "Tier 2 items", "", "Adds item defs to a enemy item modifier as tier2");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier2EnemyItems));
+
+            tier3EnemyItems = Config.Bind<string>(
+                "Enemy items", "Tier 3 items", "", "Adds item defs to a enemy item modifier as tier3");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier3EnemyItems));
+
+            // LUNAR ITEM MODIFIER/////////////////////////////////////////////////////////////////
+
+            useDefaultLunarItems = Config.Bind<bool>(
+                "Lunar items", "Use default items", true, "Use default configuration of what item lunar item modifier can have by modifier tier");
+            ModSettingsManager.AddOption(new CheckBoxOption(useDefaultLunarItems));
+
+            tier1LunarItems = Config.Bind<string>(
+                "Lunar items", "Tier 1 items", "", "Adds item defs to a lunar item modifier as tier1");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier1LunarItems));
+
+            tier2LunarItems = Config.Bind<string>(
+                "Lunar items", "Tier 2 items", "", "Adds item defs to a lunar item modifier as tier2");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier2LunarItems));
+
+            tier3LunarItems = Config.Bind<string>(
+                "Lunar items", "Tier 3 items", "", "Adds item defs to a lunar item modifier as tier3");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier3LunarItems));
+
+
+
+
+
+
+
 
 
 
