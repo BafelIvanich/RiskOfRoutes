@@ -52,15 +52,15 @@ public class RouteMap
         WeightedSelection<RoutePortalType> general = new WeightedSelection<RoutePortalType>();
         //general.AddChoice(RoutePortalType.ItemType, 1f);
         general.AddChoice(RoutePortalType.Heal, 1f);
-        general.AddChoice(RoutePortalType.Combat, 1f);
-        general.AddChoice(RoutePortalType.Utility, 1f);
+        //general.AddChoice(RoutePortalType.Combat, 1f);
+        //general.AddChoice(RoutePortalType.Utility, 1f);
         general.AddChoice(RoutePortalType.DroneType, 1f);
 
         WeightedSelection<RoutePortalType> postOne = new WeightedSelection<RoutePortalType>();
         //postOne.AddChoice(RoutePortalType.ItemType, 1f);
         general.AddChoice(RoutePortalType.Heal, 1f);
-        general.AddChoice(RoutePortalType.Combat, 1f);
-        general.AddChoice(RoutePortalType.Utility, 1f);
+        //general.AddChoice(RoutePortalType.Combat, 1f);
+        //general.AddChoice(RoutePortalType.Utility, 1f);
         postOne.AddChoice(RoutePortalType.DroneType, 1f);
         postOne.AddChoice(RoutePortalType.ChefType, 0.8f);
         postOne.AddChoice(RoutePortalType.Rare, 0.8f);
