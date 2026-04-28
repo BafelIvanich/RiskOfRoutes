@@ -119,7 +119,27 @@ namespace RiskOfRoutes
         public static ConfigEntry<bool> allowSpiteArtifact;
         public static ConfigEntry<bool> allowSwarmsArtifact;
         public static ConfigEntry<bool> allowVengeanceArtifact;
-        //other modifiers
+        //stage modifiers
+        public static ConfigEntry<bool> allowAurelioniteModifier;
+        public static ConfigEntry<bool> allowBossRedItemModifier;
+        public static ConfigEntry<bool> allowBossYellowItemModifier;
+        public static ConfigEntry<bool> allowDroneBossGreenModifier;
+        public static ConfigEntry<bool> allowDroneBossRedModifier;
+        public static ConfigEntry<bool> allowMoreElitesModifier;
+        public static ConfigEntry<bool> allowMoreDronesModifier;
+        public static ConfigEntry<bool> allowUpgradeDronesModifier;
+        public static ConfigEntry<bool> allowLunarEnemiesModifier;
+        public static ConfigEntry<bool> allowVoidEnemiesModifier;
+        public static ConfigEntry<bool> allowYellowPrinterModifier;
+        public static ConfigEntry<bool> allowRedPrinterModifier;
+        public static ConfigEntry<bool> allowOnlyFlyingModifier;
+        public static ConfigEntry<bool> allowPowerfulElitesModifier;
+        public static ConfigEntry<bool> allowRepairModifier;
+        public static ConfigEntry<bool> allowWanderingChefModifier;
+        public static ConfigEntry<bool> allowMountainModifier;
+        public static ConfigEntry<bool> allowSoulCostModifier;
+        public static ConfigEntry<bool> allowDoppelgangerModifier;
+        //modifiers options
         public static ConfigEntry<int> droneStackPercent;
         public static ConfigEntry<int> doppelStackTime;
         public static ConfigEntry<int> elitesStackPercent;
@@ -141,6 +161,7 @@ namespace RiskOfRoutes
         public static ConfigEntry<string> tier1LunarItems;
         public static ConfigEntry<string> tier2LunarItems;
         public static ConfigEntry<string> tier3LunarItems;
+        public static ConfigEntry<bool> lunarTurnToPearl;
 
         public static ConfigEntry<int> routeMapWidth;
 
@@ -224,28 +245,28 @@ namespace RiskOfRoutes
 
             //GENERAL //////////////////////////////////////////////////////
             useUniqueDestinations = Config.Bind<bool>(
-                "General", "Unique Destination", true, "Makes each route portal have unique scene as destination, otherwise they might repeat");
+                "General", "Unique Destinations", true, "Makes each route portal have unique scene as destination, otherwise they might repeat");
             ModSettingsManager.AddOption(new CheckBoxOption(useUniqueDestinations));
 
             teleporterUseRandomMods = Config.Bind<bool>(
-                "General", "Teleporter Use Random mods", true, "Makes teleporter use random modifiers of spawned route portals after interacting with it, set false if you want it not to use any stage modifiers");
+                "General", "Teleporter Use Random mods", true, "Makes teleporter use random modifiers of spawned route portals after interacting with it, set false if you want it to not have any stage modifiers");
             ModSettingsManager.AddOption(new CheckBoxOption(teleporterUseRandomMods));
 
             //todo
             modifiersCanBeBanned = Config.Bind<bool>(
-                "General", "Modifiers can be banned after being used", true, "Prevents some of stage modifiers appearing on the next stage, if they were active on the current stage");
+                "General", "Modifiers Can Be Banned", true, "Prevents some of the stage modifiers appearing on the next stage, if they were active on the current stage");
             ModSettingsManager.AddOption(new CheckBoxOption(modifiersCanBeBanned));
 
             routeMapWidth = Config.Bind<int>(
-                "General", "Route map width", 3, "Width of the map created at the start of each loop");
+                "General", "Route Map Width", 3, "Width of the map created at the start of each loop");
             ModSettingsManager.AddOption(new IntSliderOption(routeMapWidth, new IntSliderConfig() { min = 3, max = 5 }));
 
             negativeStackPunishment = Config.Bind<bool>(
-                "General", "Time spent punishment", true, "Adds one negative stack per punishment, punishment is given by spending too much time on current stage, by default it's 8 minutes");
+                "General", "Time Spent Punishment", true, "Adds one negative stack per punishment, punishment is given by spending too much time on current stage, by default it's 8 minutes");
             ModSettingsManager.AddOption(new CheckBoxOption(negativeStackPunishment));
 
             punishmentTimeMinutes = Config.Bind<int>(
-                "General", "Punishment time", 8, "Adds one negative stack per punishment, punishment is given by spending too much time on current stage, by default it's 8 minutes");
+                "General", "Punishment Time", 8, "Adds one negative stack per punishment, punishment is given by spending too much time on current stage, by default it's 8 minutes");
             ModSettingsManager.AddOption(new IntSliderOption(punishmentTimeMinutes, new IntSliderConfig() { min = 1, max = 20 }));
 
             //VISUAL ///////////////////////////////////////////////////////
@@ -262,92 +283,124 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new CheckBoxOption(showPortalDestination));
 
             routeMapSize = Config.Bind<int>(
-                "Visual", "Route Map panel size", 90, "Size of Route Map panel in percents");
+                "Visual", "Route Map Panel Size", 90, "Size of Route Map panel in percents");
             ModSettingsManager.AddOption(new IntSliderOption(routeMapSize));
 
             routeMapIconSize = Config.Bind<int>(
-                "Visual", "Route Map icons size", 100, "Size of icons on Route Map panel");
+                "Visual", "Route Map Icons Size", 100, "Size of icons on Route Map panel");
             ModSettingsManager.AddOption(new IntSliderOption(routeMapIconSize));
 
             routePanelShowsOnlyNames = Config.Bind<bool>(
-                "Visual", "Route panel shows only names", false, "Makes it so route portal panel shows only names of modifiers, use if descriptions seem too clutered");
+                "Visual", "Route Panel Shows Only Names", false, "Makes route portal panel show only names of modifiers, use if descriptions seem too cluttered");
             ModSettingsManager.AddOption(new CheckBoxOption(routePanelShowsOnlyNames));
 
             punishmentBarOrientation = Config.Bind<MapOrientation>(
-                "Visual", "Progress bar orientation", MapOrientation.Vertical, "Orientation of punishment bar");
+                "Visual", "Punishment Bar Orientation", MapOrientation.Vertical, "Orientation of punishment bar");
             ModSettingsManager.AddOption(new ChoiceOption(punishmentBarOrientation));
 
             punishmentBarColor = Config.Bind<Color>(
-                "Visual", "Punishment bar color", Color.white, "Color of progress bar");
+                "Visual", "Punishment Bar Color", Color.white, "Color of progress bar");
             ModSettingsManager.AddOption(new ColorOption(punishmentBarColor));
 
             usePortalTypeColors = Config.Bind<bool>(
-                "Visual", "Portal color type", false, "Portal color is changed according to it's node type");
+                "Visual", "Portal Color Type", false, "Portal color is changed according to it's node type, otherwise they are just blue");
             ModSettingsManager.AddOption(new CheckBoxOption(usePortalTypeColors));
+
+            //more drones modifier /////////////////////////////////////////////////////////////////
+            droneStackPercent = Config.Bind<int>(
+                "Modifier Options", "Drone Increase", 15, "Percent per stack of initial scene director budget, used only to spawn additional drones");
+            ModSettingsManager.AddOption(new IntFieldOption(droneStackPercent));
+            ////////////////////////////////////////////////////////////////////////////////////////
+
+            //more elites modifier /////////////////////////////////////////////////////////////////
+            elitesStackPercent = Config.Bind<int>(
+                "Modifier Options", "Elite Increase", 33, "Percent of elite discount for director");
+            ModSettingsManager.AddOption(new IntFieldOption(elitesStackPercent));
+            ////////////////////////////////////////////////////////////////////////////////////////
+
+            //doppelganger modifier
+
+            doppelStackTime = Config.Bind<int>(
+                "Modifier Options", "Doppelganger Cooldown Decrease", 30, "Cooldown reducement with one stack in seconds");
+            ModSettingsManager.AddOption(new IntFieldOption(doppelStackTime));
+            //////////////////////////////////////////////////////////////////////////////////////
+
+            //lunar enemies
+            lunarStackPercent = Config.Bind<int>(
+                "Modifier Options", "Lunar Enemies Discount", 15, "Discount on lunar enemies in percents for more than one stack");
+            ModSettingsManager.AddOption(new IntFieldOption(lunarStackPercent));
+            /////////////////////////////////////////////////////////////////////////////////////
+
+            //void enemies
+            voidStackPercent = Config.Bind<int>(
+                "Modifier Options", "Void Enemies Discount", 15, "Discount on lunar enemies in percents for more than one stack");
+            ModSettingsManager.AddOption(new IntFieldOption(voidStackPercent));
+            /////////////////////////////////////////////////////////////////////////////////////
+
+            //soul cost
+            soulCostStackPercent = Config.Bind<int>(
+                "Modifier Options", "Soul Cost Increase", 15, "Percent per stack of initial scene director budget, used only to spawn additional drones");
+            ModSettingsManager.AddOption(new IntFieldOption(soulCostStackPercent));
+            //////////////////////////////////////////////////////////////////////////////////////////
 
             ////////////////////////////////////////////////////////////////
 
             // PRINTER ITEM MODIFIER/////////////////////////////////////////////////////////////////
 
             useDefaultPrinterItems = Config.Bind<bool>(
-                "Printer items", "Use default items", true, "Use default configuration of what item printer modifier can have by modifier tier");
+                "Printer Items", "Use Default Items", true, "Use default configuration of what items printer modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below. ");
             ModSettingsManager.AddOption(new CheckBoxOption(useDefaultPrinterItems));
 
             tier1PrinterItems = Config.Bind<string>(
-                "Printer items", "Tier 1 items", "", "Adds item defs to a printer modifier as tier1");
+                "Printer Items", "Tier 1 Items", "", "Adds item defs to a printer modifier as tier1");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1PrinterItems));
 
             tier2PrinterItems = Config.Bind<string>(
-                "Printer items", "Tier 2 items", "", "Adds item defs to a printer modifier as tier2");
+                "Printer Items", "Tier 2 Items", "", "Adds item defs to a printer modifier as tier2");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2PrinterItems));
 
             tier3PrinterItems = Config.Bind<string>(
-                "Printer items", "Tier 3 items", "", "Adds item defs to a printer modifier as tier3");
+                "Printer Items", "Tier 3 Items", "", "Adds item defs to a printer modifier as tier3");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3PrinterItems));
             // ENEMY ITEM MODIFIER/////////////////////////////////////////////////////////////////
 
             useDefaultEnemyItems = Config.Bind<bool>(
-                "Enemy items", "Use default items", true, "Use default configuration of what item enemy item modifier can have by modifier tier");
+                "Enemy Items", "Use Default Items", true, "Use default configuration of what items enemy item modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below.");
             ModSettingsManager.AddOption(new CheckBoxOption(useDefaultEnemyItems));
 
             tier1EnemyItems = Config.Bind<string>(
-                "Enemy items", "Tier 1 items", "", "Adds item defs to a enemy item modifier as tier1");
+                "Enemy Items", "Tier 1 Items", "", "Adds item defs to a enemy item modifier as tier1");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1EnemyItems));
 
             tier2EnemyItems = Config.Bind<string>(
-                "Enemy items", "Tier 2 items", "", "Adds item defs to a enemy item modifier as tier2");
+                "Enemy Items", "Tier 2 Items", "", "Adds item defs to a enemy item modifier as tier2");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2EnemyItems));
 
             tier3EnemyItems = Config.Bind<string>(
-                "Enemy items", "Tier 3 items", "", "Adds item defs to a enemy item modifier as tier3");
+                "Enemy Items", "Tier 3 Items", "", "Adds item defs to a enemy item modifier as tier3");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3EnemyItems));
 
             // LUNAR ITEM MODIFIER/////////////////////////////////////////////////////////////////
 
             useDefaultLunarItems = Config.Bind<bool>(
-                "Lunar items", "Use default items", true, "Use default configuration of what item lunar item modifier can have by modifier tier");
+                "Lunar Items", "Use Default Items", true, "Use default configuration of what items lunar item modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below. Accepts only lunar itemDefs");
             ModSettingsManager.AddOption(new CheckBoxOption(useDefaultLunarItems));
 
             tier1LunarItems = Config.Bind<string>(
-                "Lunar items", "Tier 1 items", "", "Adds item defs to a lunar item modifier as tier1");
+                "Lunar Items", "Tier 1 Items", "", "Adds item defs to a lunar item modifier as tier1");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1LunarItems));
 
             tier2LunarItems = Config.Bind<string>(
-                "Lunar items", "Tier 2 items", "", "Adds item defs to a lunar item modifier as tier2");
+                "Lunar Items", "Tier 2 Items", "", "Adds item defs to a lunar item modifier as tier2");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2LunarItems));
 
             tier3LunarItems = Config.Bind<string>(
-                "Lunar items", "Tier 3 items", "", "Adds item defs to a lunar item modifier as tier3");
+                "Lunar Items", "Tier 3 Items", "", "Adds item defs to a lunar item modifier as tier3");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3LunarItems));
 
-
-
-
-
-
-
-
-
+            lunarTurnToPearl = Config.Bind<bool>(
+                "Lunar Items", "Purify At The End", true, "By default the lunar item given by modifier is turned into a pearl at the end of the stage");
+            ModSettingsManager.AddOption(new CheckBoxOption(lunarTurnToPearl));
 
             //ARTIFACT MODIFIER
             allowMysteryArtifact = Config.Bind<bool>(
@@ -430,44 +483,84 @@ namespace RiskOfRoutes
                 "Artifacts", "Rebirth", false, "Rebirth artifact available as artifact stage modifier. Not intented to be available");
             ModSettingsManager.AddOption(new CheckBoxOption(allowRebirthArtifact));
 
+            // STAGE MODIFIER TOGGLES /////////////////////////////////////////////////////////
+            allowAurelioniteModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Aurelionite", true, "Aurelionite reward available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowAurelioniteModifier));
+
+            allowBossRedItemModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Boss Red Item", true, "Boss Red Item available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowBossRedItemModifier));
+
+            allowBossYellowItemModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Boss Yellow Item", true, "Boss Yellow Item available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowBossYellowItemModifier));
+
+            allowDroneBossGreenModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Drone Boss Green", true, "Drone Boss Green available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowDroneBossGreenModifier));
+
+            allowDroneBossRedModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Drone Boss Red", true, "Drone Boss Red available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowDroneBossRedModifier));
+
+            allowMoreElitesModifier = Config.Bind<bool>(
+                "Stage Modifiers", "More Elites", true, "More Elites available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowMoreElitesModifier));
+
+            allowMoreDronesModifier = Config.Bind<bool>(
+                "Stage Modifiers", "More Drones", true, "More Drones available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowMoreDronesModifier));
+
+            allowUpgradeDronesModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Upgrade Drones", true, "Upgrade Drones available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowUpgradeDronesModifier));
+
+            allowLunarEnemiesModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Lunar Enemies", true, "Lunar Enemies available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowLunarEnemiesModifier));
+
+            allowVoidEnemiesModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Void Enemies", true, "Void Enemies available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowVoidEnemiesModifier));
+
+            allowYellowPrinterModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Yellow Printers", true, "Yellow Printer available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowYellowPrinterModifier));
+
+            allowRedPrinterModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Red Printers", true, "Red Printer available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowRedPrinterModifier));
+
+            allowOnlyFlyingModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Only Flying", true, "Only Flying enemies available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowOnlyFlyingModifier));
+
+            allowPowerfulElitesModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Powerful Elites", true, "Earlier Tier2 Elites available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowPowerfulElitesModifier));
+
+            allowRepairModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Repair Items", true, "Repair Items available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowRepairModifier));
+
+            allowWanderingChefModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Wandering Chef", true, "Wandering Chef available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowWanderingChefModifier));
+
+            allowMountainModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Mountain Shrine", true, "Mountain Shrine available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowMountainModifier));
+
+            allowSoulCostModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Soul Cost", true, "Soul Cost available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowSoulCostModifier));
+
+            allowDoppelgangerModifier = Config.Bind<bool>(
+                "Stage Modifiers", "Doppelganger", true, "Doppelganger available as a stage modifier");
+            ModSettingsManager.AddOption(new CheckBoxOption(allowDoppelgangerModifier));
+            ////////////////////////////////////////////////////////////////////////////////////////
             /////////////////////////////////////////////////////////////////////
-
-            //more drones modifier /////////////////////////////////////////////////////////////////
-            droneStackPercent = Config.Bind<int>(
-                "Stage modifier tweaks", "Percent", 15, "Percent per stack of initial scene director budget, used only to spawn additional drones");
-            ModSettingsManager.AddOption(new IntFieldOption(droneStackPercent));
-            ////////////////////////////////////////////////////////////////////////////////////////
-
-            //more elites modifier /////////////////////////////////////////////////////////////////
-            elitesStackPercent = Config.Bind<int>(
-                "Stage modifier tweaks", "Elite increase percent", 33, "Percent per stack of modifier");
-            ModSettingsManager.AddOption(new IntFieldOption(elitesStackPercent));
-            ////////////////////////////////////////////////////////////////////////////////////////
-
-            //doppelganger modifier
-
-            doppelStackTime = Config.Bind<int>(
-                "Stage modifier tweaks", "Doppelganger cooldown reduced by stack", 30, "Cooldown reducement with one stack in seconds");
-            ModSettingsManager.AddOption(new IntFieldOption(doppelStackTime));
-            //////////////////////////////////////////////////////////////////////////////////////
-
-            //lunar enemies
-            lunarStackPercent = Config.Bind<int>(
-                "Stage modifier tweaks", "Lunar Enemies percent", 15, "Percent per stack of initial scene director budget, used only to spawn additional drones");
-            ModSettingsManager.AddOption(new IntFieldOption(lunarStackPercent));
-            /////////////////////////////////////////////////////////////////////////////////////
-
-            //void enemies
-            voidStackPercent = Config.Bind<int>(
-                "Stage modifier tweaks", "Void Enemies percent", 15, "Percent per stack of initial scene director budget, used only to spawn additional drones");
-            ModSettingsManager.AddOption(new IntFieldOption(voidStackPercent));
-            /////////////////////////////////////////////////////////////////////////////////////
-
-            //soul cost
-            soulCostStackPercent = Config.Bind<int>(
-                "Stage modifier tweaks", "Soul cost percent", 15, "Percent per stack of initial scene director budget, used only to spawn additional drones");
-            ModSettingsManager.AddOption(new IntFieldOption(soulCostStackPercent));
-            //////////////////////////////////////////////////////////////////////////////////////////
         }
 
         private void Update()
