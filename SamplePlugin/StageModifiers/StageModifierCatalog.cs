@@ -102,85 +102,7 @@ namespace RiskOfRoutes.StageModifiers
             rarePool.AddRange(new string[] { "BossRedItem", "BossYellowItem" });
             droneTypePool.AddRange(new string[] { "DroneBossGreen", "DroneBossRed", "UpgradeDrones", "MoreDrones" });
 
-            void Register(ModifierDef def, string iconAddress, bool isArtifact = false, bool isItem = false)
-            {
-                def.icon = LoadSprite(iconAddress, isArtifact, isItem);
-                def.isArtifact = isArtifact;
-                AllDefs.Add(def.name, def);
 
-                string nameToken = "";
-                string descriptionToken = "";
-
-                if (isArtifact)
-                {
-                    ArtifactDef art = ArtifactCatalog.FindArtifactDef(def.name);
-                    if (art != null)
-                    {
-                        nameToken = art.nameToken;
-                        descriptionToken = (art == RoR2Content.Artifacts.TeamDeath) ? "ARTIFACT_DEATH_DESCRIPTION_SHORT" : art.descriptionToken;
-                        def.nameToken = nameToken;
-                        def.descriptionToken = descriptionToken;
-                    }
-                    else
-                    {
-                        Log.Error($"{nameof(StageModifierCatalog)}: Init - Something went wrong for artifact:{def.name}");
-
-                        nameToken = "MODIFIER_" + def.name.ToUpper() + "_NAME";
-                        descriptionToken = "MODIFIER_" + def.name.ToUpper() + "_DESCRIPTION";
-
-                        def.nameToken = nameToken;
-                        def.descriptionToken = descriptionToken;
-                    }
-                }
-                else if (isItem)
-                {
-                    string itemName = def.name.Split('_')[0];
-                    ItemDef item = PrinterItemModifier.stringToItemDef(itemName);
-                    if (item != null)
-                    {
-                        nameToken = item.nameToken;
-                        descriptionToken = item.nameToken;
-
-                        def.nameToken = nameToken;
-                        def.descriptionToken = descriptionToken;
-                    }
-                    else
-                    {
-                        Log.Error($"Something went wrong for item:{def.name}");
-                        //todo обработка
-                    }
-                }
-                else
-                {
-                    nameToken = "MODIFIER_" + def.name.ToUpper() + "_NAME";
-                    descriptionToken = "MODIFIER_" + def.name.ToUpper() + "_DESCRIPTION";
-
-                    def.nameToken = nameToken;
-                    def.descriptionToken = descriptionToken;
-
-                }
-
-                Log.Info($"Added tokens for modifier {def.name}:NAME - {nameToken}, DESCRIPTION - {descriptionToken}");
-            }
-            void TryRegArtifact(bool isAllowed, string name, ModifierTier tier, bool isNegative)
-            {
-                if (!isAllowed) return;
-
-                Func<bool> isAvailable = (name == "TeamDeath")
-                    ? () => StageModifierDirector.instance?.CheckArtifactOfDeathAvailable() ?? false
-                    : () => StageModifierDirector.instance?.CheckArtifactAvailable(name) ?? false;
-
-                Register(new ModifierDef(name, tier, 1f, isAvailable, stackable: false, isNegative: isNegative), name, isArtifact: true);
-
-                if (isNegative)
-                {
-                    generalNegativePool.Add(name);
-                }
-                else
-                {
-                    rarePool.Add(name);
-                }
-            }
 
             TryRegArtifact(RiskOfRoutes.allowMysteryArtifact.Value, "Mystery", ModifierTier.Tier2, isNegative: true);
             TryRegArtifact(RiskOfRoutes.allowChaosArtifact.Value, "FriendlyFire", ModifierTier.Tier1, isNegative: true);
@@ -236,38 +158,7 @@ namespace RiskOfRoutes.StageModifiers
             Register(new ModifierDef("SoulCost", ModifierTier.Tier2, 1f, true, true), "RoR2/DLC2/texBuffSoulCostIcon.png");
             Register(new ModifierDef("Doppelganger", ModifierTier.Tier2, 1f, true, true), "texAurelioniteIcon");
 
-            void RegEnemy(string itemName, ModifierTier tier)
-            {
-                string modName = itemName + "_EnemyItem";
-                Register(new ModifierDef(modName, tier, 1f, false, true), itemName, false, true);
-                generalNegativePool.Add(modName);
-            }
 
-            void RegPrinter(string itemName, ModifierTier tier)
-            {
-                ItemIndex index = ItemCatalog.FindItemIndex(itemName);
-                ItemDef def = ItemCatalog.GetItemDef(index);
-                if (def == null) return;
-
-                string modName = itemName + "_Printer";
-                Register(new ModifierDef(modName, tier, 1f, false, false), itemName, false, true);
-
-                if (def.tags.Contains(ItemTag.Damage))
-                    combatPool.Add(modName);
-                else if (def.tags.Contains(ItemTag.Healing))
-                    healPool.Add(modName);
-                else if (def.tags.Contains(ItemTag.Utility))
-                    utilityPool.Add(modName);
-
-                itemTypePool.Add(modName);
-            }
-
-            void RegLunar(string itemName, ModifierTier tier)
-            {
-                string modName = itemName + "_LunarItem";
-                Register(new ModifierDef(modName, tier, 1f, false, true), itemName, false, true);
-                generalNegativePool.Add(modName);
-            }
 
             RegEnemy("SlowOnHit", ModifierTier.Tier1);
             RegEnemy("FlatHealth", ModifierTier.Tier1);
@@ -345,6 +236,150 @@ namespace RiskOfRoutes.StageModifiers
 
             RegLunar("LunarBadLuck", ModifierTier.Tier3);
             RegLunar("HalfSpeedDoubleHealth", ModifierTier.Tier3);
+        }
+
+        public static void Register(ModifierDef def, string iconAddress, bool isArtifact = false, bool isItem = false)
+        {
+            if (AllDefs.ContainsKey(def.name))
+            {
+                Log.Warning($"Trying to register modifier {def.name} that already exists, check config");
+                return;
+            }
+            def.icon = LoadSprite(iconAddress, isArtifact, isItem);
+            def.isArtifact = isArtifact;
+            AllDefs.Add(def.name, def);
+
+            string nameToken = "";
+            string descriptionToken = "";
+
+            if (isArtifact)
+            {
+                ArtifactDef art = ArtifactCatalog.FindArtifactDef(def.name);
+                if (art != null)
+                {
+                    nameToken = art.nameToken;
+                    descriptionToken = (art == RoR2Content.Artifacts.TeamDeath) ? "ARTIFACT_DEATH_DESCRIPTION_SHORT" : art.descriptionToken;
+                    def.nameToken = nameToken;
+                    def.descriptionToken = descriptionToken;
+                }
+                else
+                {
+                    Log.Error($"{nameof(StageModifierCatalog)}: Init - Something went wrong for artifact:{def.name}");
+
+                    nameToken = "MODIFIER_" + def.name.ToUpper() + "_NAME";
+                    descriptionToken = "MODIFIER_" + def.name.ToUpper() + "_DESCRIPTION";
+
+                    def.nameToken = nameToken;
+                    def.descriptionToken = descriptionToken;
+                }
+            }
+            else if (isItem)
+            {
+                string itemName = def.name.Split('_')[0];
+                ItemDef item = PrinterItemModifier.stringToItemDef(itemName);
+                if (item != null)
+                {
+                    nameToken = item.nameToken;
+                    descriptionToken = item.nameToken;
+
+                    def.nameToken = nameToken;
+                    def.descriptionToken = descriptionToken;
+                }
+                else
+                {
+                    Log.Error($"Something went wrong for item:{def.name}");
+                    //todo обработка
+                }
+            }
+            else
+            {
+                nameToken = "MODIFIER_" + def.name.ToUpper() + "_NAME";
+                descriptionToken = "MODIFIER_" + def.name.ToUpper() + "_DESCRIPTION";
+
+                def.nameToken = nameToken;
+                def.descriptionToken = descriptionToken;
+
+            }
+
+            Log.Info($"Added tokens for modifier {def.name}:NAME - {nameToken}, DESCRIPTION - {descriptionToken}");
+        }
+        public static void TryRegArtifact(bool isAllowed, string name, ModifierTier tier, bool isNegative)
+        {
+            if (!isAllowed) return;
+
+            Func<bool> isAvailable = (name == "TeamDeath")
+                ? () => StageModifierDirector.instance?.CheckArtifactOfDeathAvailable() ?? false
+                : () => StageModifierDirector.instance?.CheckArtifactAvailable(name) ?? false;
+
+            Register(new ModifierDef(name, tier, 1f, isAvailable, stackable: false, isNegative: isNegative), name, isArtifact: true);
+
+            if (isNegative)
+            {
+                generalNegativePool.Add(name);
+            }
+            else
+            {
+                rarePool.Add(name);
+            }
+        }
+
+        public static void RegEnemy(string itemName, ModifierTier tier)
+        {
+            ItemIndex index = ItemCatalog.FindItemIndex(itemName);
+            ItemDef def = ItemCatalog.GetItemDef(index);
+            if (def == null)
+            {
+                Log.Warning($"{nameof(RegEnemy)}: Tried registering enemy item {itemName} but def is null, check config");
+                return;
+            }
+
+            string modName = itemName + "_EnemyItem";
+            Register(new ModifierDef(modName, tier, 1f, false, true), itemName, false, true);
+            generalNegativePool.Add(modName);
+        }
+
+        public static void RegPrinter(string itemName, ModifierTier tier)
+        {
+            ItemIndex index = ItemCatalog.FindItemIndex(itemName);
+            ItemDef def = ItemCatalog.GetItemDef(index);
+            if (def == null)
+            {
+                Log.Warning($"{nameof(RegPrinter)}: Tried registering printer item {itemName} but def is null, check config");
+                return;
+            }
+
+            string modName = itemName + "_Printer";
+            Register(new ModifierDef(modName, tier, 1f, false, false), itemName, false, true);
+
+            if (def.tags.Contains(ItemTag.Damage))
+                combatPool.Add(modName);
+            else if (def.tags.Contains(ItemTag.Healing))
+                healPool.Add(modName);
+            else if (def.tags.Contains(ItemTag.Utility))
+                utilityPool.Add(modName);
+
+            itemTypePool.Add(modName);
+        }
+
+        public static void RegLunar(string itemName, ModifierTier tier)
+        {
+            ItemIndex index = ItemCatalog.FindItemIndex(itemName);
+            ItemDef def = ItemCatalog.GetItemDef(index);
+            if (def == null)
+            {
+                Log.Warning($"{nameof(RegLunar)}: Tried registering lunar item {itemName} but def is null, check config");
+                return;
+            }
+
+            if (def.tier != ItemTier.Lunar)
+            {
+                Log.Warning($"{nameof(RegLunar)}: Tried registering non-lunar item {itemName} as LunarItemModifier, check config");
+                return;
+            }
+
+            string modName = itemName + "_LunarItem";
+            Register(new ModifierDef(modName, tier, 1f, false, true), itemName, false, true);
+            generalNegativePool.Add(modName);
         }
 
         public static ModifierDef FindModifier(string name)
@@ -485,7 +520,7 @@ namespace RiskOfRoutes.StageModifiers
             var pool = GetPool(portalType, isNegative);
             if (pool.Count == 0)
             {
-                Log.Info($"{nameof(SelectModifier)}: Couldnt get { (isNegative ? "negative" : "positive") } pool for portal type - {portalType}");
+                Log.Info($"{nameof(SelectModifier)}: Couldnt get {(isNegative ? "negative" : "positive")} pool for portal type - {portalType}");
             }
             else
             {
