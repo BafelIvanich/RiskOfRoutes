@@ -103,7 +103,7 @@ namespace RiskOfRoutes
                 barTooltip.titleColor = RiskOfRoutes.punishmentBarColor.Value;
             }
 
-            foreach(var label in new GameObject[] { labelHorizontal,labelVertical })
+            foreach (var label in new GameObject[] { labelHorizontal, labelVertical })
             {
                 if (label == null)
                 {
@@ -117,14 +117,14 @@ namespace RiskOfRoutes
                     return;
                 }
                 labelTooltip.titleToken = RoR2.Language.GetStringFormatted("PUNISHMENT_VALUE_NAME", punishStack);
-                labelTooltip.bodyToken = "PUNISHMENT_VALUE_DESCRIPTION"; 
+                labelTooltip.bodyToken = "PUNISHMENT_VALUE_DESCRIPTION";
                 labelTooltip.titleColor = RiskOfRoutes.punishmentBarColor.Value;
 
                 var text = label.GetComponent<TextMeshProUGUI>();
-                if(text == null)
+                if (text == null)
                 {
                     Log.Error($"{nameof(DrawMap)}: No text component found");
-                    return ;
+                    return;
                 }
 
                 text.text = $"{punishStack}";

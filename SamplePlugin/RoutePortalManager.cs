@@ -1,11 +1,8 @@
-﻿using Rewired;
-using RiskOfRoutes.StageModifiers;
+﻿using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin;
 using UnityEngine;
 using UnityEngine.Networking;
-using UnityEngine.UIElements;
-using UnityEngine.Yoga;
 
 
 namespace RiskOfRoutes
@@ -197,13 +194,13 @@ namespace RiskOfRoutes
             Texture2D edge = null;
             Texture2D center = null;
 
-                Log.Info("Using black and white");
-                edge = AssetManager.bundle.LoadAsset<Texture2D>("bwCenter");
-                center = AssetManager.bundle.LoadAsset<Texture2D>("bwEdge");
+            Log.Info("Using black and white");
+            edge = AssetManager.bundle.LoadAsset<Texture2D>("bwCenter");
+            center = AssetManager.bundle.LoadAsset<Texture2D>("bwEdge");
             //edge = AssetManager.bundle.LoadAsset<Texture2D>("darkerBlueEdge");
             //center = AssetManager.bundle.LoadAsset<Texture2D>("darkerBlueCenter");
 
-            foreach (var renderer in new Renderer[]{ edgeRenderer, centerRenderer } )
+            foreach (var renderer in new Renderer[] { edgeRenderer, centerRenderer })
             {
                 if (renderer.material.name.Contains("Center"))
                 {
@@ -221,7 +218,7 @@ namespace RiskOfRoutes
                     {
                         renderer.material.SetTexture("_RemapTex", center);
 
-                        if(routeNode == null)
+                        if (routeNode == null)
                         {
                             Log.Error($"{nameof(UpdatePortalMaterials)}: Couldnt set color for portal because route node is null");
                             return;
@@ -236,7 +233,7 @@ namespace RiskOfRoutes
                         }
                     }
                 }
-                else if(renderer.material.name.Contains("Edge"))
+                else if (renderer.material.name.Contains("Edge"))
                 {
                     renderer.material.SetTexture("_RemapTex", edge);
                     if (RiskOfRoutes.usePortalTypeColors.Value)
@@ -425,22 +422,8 @@ namespace RiskOfRoutes
         //todo texture clamp
         private Texture2D SpriteToTexture(Sprite sprite)
         {
-            int offsetPix = 3;
-
-            int newWidth = (int)sprite.rect.width + 2 * offsetPix;
-            int newHeight = (int)sprite.rect.width + 2 * offsetPix;
-
-            Color[] spritePixels = sprite.texture.GetPixels((int)sprite.rect.x, (int)sprite.rect.y, (int)sprite.rect.width, (int)sprite.rect.height);
-
-            Texture2D newTexture = new Texture2D(newWidth, newHeight);
-            Color[] pixels = new Color[newWidth * newHeight];
-
-            newTexture.SetPixels(offsetPix, offsetPix, (int)sprite.rect.width, (int)sprite.rect.height, spritePixels);
-
-            return newTexture;
-
+            return null;
         }
-
         //TODO смена портала после активации телепортаци
         public void OnPortalActivation(Interactor interactor)
         {

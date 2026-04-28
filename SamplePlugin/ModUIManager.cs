@@ -255,7 +255,7 @@ namespace RiskOfRoutes
             script.barImageHorizontal.gameObject.AddComponent<TooltipProvider>();
             script.barImageVertical.gameObject.AddComponent<TooltipProvider>();
 
-            foreach (var label in new GameObject[] { script.labelHorizontal, script.labelVertical})
+            foreach (var label in new GameObject[] { script.labelHorizontal, script.labelVertical })
             {
                 if (label == null)
                 {
@@ -453,7 +453,7 @@ namespace RiskOfRoutes
                     Vector2 targetNodeCoords = isLookingAtPortal ? currentManager.nodeSync : StageModifierDirector.instance.currentNodeSync;
 
                     var mapScript = routeMapPanel.GetComponent<RouteMapUI>();
-                    if(StageModifierDirector.instance.punishmentTime != -1)
+                    if (StageModifierDirector.instance.punishmentTime != -1)
                         mapScript.DrawBar();
 
 
