@@ -114,7 +114,7 @@ namespace RiskOfRoutes
             Texture2D edge = null;
             Texture2D center = null;
 
-            if(RiskOfRoutes.usePortalTypeColors.Value)
+            if (RiskOfRoutes.usePortalTypeColors.Value)
             {
                 Log.Info("Using black and white");
                 edge = bundle.LoadAsset<Texture2D>("bwCenter");
