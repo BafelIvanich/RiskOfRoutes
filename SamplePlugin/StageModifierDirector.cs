@@ -3,6 +3,7 @@ using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin.StageModifiers;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -61,12 +62,11 @@ namespace SamplePlugin
         public int soulCostStack = 0;
 
         /////
+
         public void Awake()
         {
             instance = this;
             DontDestroyOnLoad(gameObject);
-
-            Log.Info("Called method Awake in StageModifierDirector");
 
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<ModifierSync>();
@@ -74,9 +74,8 @@ namespace SamplePlugin
             activePortalInstances = new List<GameObject>();
 
             if (!NetworkServer.active) return;
-            //RegisterModDefs();
 
-            Log.Info("StageModifierDirector created");
+            Log.Info($"{nameof(Awake)}:StageModifierDirector created");
 
             RoR2.Run.onRunStartGlobal += Run_onRunStartGlobal;
             RoR2.Run.onRunDestroyGlobal += Run_onRunDestroyGlobal;
@@ -84,21 +83,20 @@ namespace SamplePlugin
             RoR2.SceneDirector.onPrePopulateSceneServer += SceneDirector_onPrePopulateSceneServer;
             RoR2.Stage.onServerStageComplete += Stage_onServerStageComplete;
 
-            //
-
         }
 
         public void OnDestroy()
         {
             RoR2.Run.onRunDestroyGlobal -= Run_onRunDestroyGlobal;
             RoR2.Run.onRunStartGlobal -= Run_onRunStartGlobal;
+
             RoR2.SceneDirector.onPrePopulateSceneServer -= SceneDirector_onPrePopulateSceneServer;
             RoR2.Stage.onServerStageComplete -= Stage_onServerStageComplete;
         }
 
         private void Run_onRunStartGlobal(Run run)
         {
-            Log.Info($"{nameof(Run_onRunStartGlobal)}:Run started");
+            Log.Info($"{nameof(Run_onRunStartGlobal)}: Run started");
 
             if (NetworkServer.active)
             {
@@ -111,11 +109,7 @@ namespace SamplePlugin
                 NetworkServer.Spawn(invObj);
             }
 
-            runArtifactsApplied = GetArtifactsAppliedThisRun();
-            if (RiskOfRoutes.RiskOfRoutes.negativeStackPunishment.Value)
-                punishmentTime = RiskOfRoutes.RiskOfRoutes.punishmentTimeMinutes.Value;
-            else
-                punishmentTime = -1;
+            CreateRunConfiguration();
 
             Log.Info($"{nameof(Run_onRunStartGlobal)}: Got punishmentTimeMinutes value - {punishmentTime}");
 
@@ -127,6 +121,70 @@ namespace SamplePlugin
             currentNodeSync = new Vector2(currentNode.x, currentNode.y);
             Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
             routeMap.isDirty = true;
+        }
+
+        private void CreateRunConfiguration()
+        {
+            runArtifactsApplied = GetArtifactsAppliedThisRun();
+            if (RiskOfRoutes.RiskOfRoutes.negativeStackPunishment.Value)
+                punishmentTime = RiskOfRoutes.RiskOfRoutes.punishmentTimeMinutes.Value;
+            else
+                punishmentTime = -1;
+
+            var enemyTier1Config = RiskOfRoutes.RiskOfRoutes.tier1EnemyItems.Value.Split(",").ToList();
+            var enemyTier2Config = RiskOfRoutes.RiskOfRoutes.tier2EnemyItems.Value.Split(",").ToList();
+            var enemyTier3Config = RiskOfRoutes.RiskOfRoutes.tier3EnemyItems.Value.Split(",").ToList();
+
+            var printerTier1Config = RiskOfRoutes.RiskOfRoutes.tier1PrinterItems.Value.Split(",").ToList();
+            var printerTier2Config = RiskOfRoutes.RiskOfRoutes.tier2PrinterItems.Value.Split(",").ToList();
+            var printerTier3Config = RiskOfRoutes.RiskOfRoutes.tier3PrinterItems.Value.Split(",").ToList();
+
+            var lunarTier1Config = RiskOfRoutes.RiskOfRoutes.tier1LunarItems.Value.Split(",").ToList();
+            var lunarTier2Config = RiskOfRoutes.RiskOfRoutes.tier2LunarItems.Value.Split(",").ToList();
+            var lunarTier3Config = RiskOfRoutes.RiskOfRoutes.tier3LunarItems.Value.Split(",").ToList();
+
+            foreach (var enemyTier1 in enemyTier1Config) { StageModifierCatalog.RegEnemy(enemyTier1, ModifierTier.Tier1); Log.Info($"{enemyTier1} registering as Tier1 enemy item"); }
+            foreach (var enemyTier2 in enemyTier2Config) { StageModifierCatalog.RegEnemy(enemyTier2, ModifierTier.Tier1); Log.Info($"{enemyTier2} registering as Tier2 enemy item"); }
+            foreach (var enemyTier3 in enemyTier3Config) { StageModifierCatalog.RegEnemy(enemyTier3, ModifierTier.Tier1); Log.Info($"{enemyTier3} registering as Tier3 enemy item"); }
+
+            foreach (var printerTier1 in printerTier1Config) { StageModifierCatalog.RegPrinter(printerTier1, ModifierTier.Tier1); Log.Info($"{printerTier1} registering as Tier1 printer item"); }
+            foreach (var printerTier2 in printerTier2Config) { StageModifierCatalog.RegPrinter(printerTier2, ModifierTier.Tier2); Log.Info($"{printerTier2} registering as Tier2 printer item"); }
+            foreach (var printerTier3 in printerTier3Config) { StageModifierCatalog.RegPrinter(printerTier3, ModifierTier.Tier3); Log.Info($"{printerTier3} registering as Tier3 printer item"); }
+
+            foreach (var lunarTier1 in lunarTier1Config) { StageModifierCatalog.RegLunar(lunarTier1, ModifierTier.Tier1); Log.Info($"{lunarTier1} registering as Tier1 lunar item"); }
+            foreach (var lunarTier2 in lunarTier1Config) { StageModifierCatalog.RegLunar(lunarTier2, ModifierTier.Tier2); Log.Info($"{lunarTier2} registering as Tier2 lunar item"); }
+            foreach (var lunarTier3 in lunarTier1Config) { StageModifierCatalog.RegLunar(lunarTier3, ModifierTier.Tier3); Log.Info($"{lunarTier3} registering as Tier3 lunar item"); }
+        }
+
+        private void Run_onRunDestroyGlobal(Run obj)
+        {
+            Log.Info($"{nameof(Run_onRunDestroyGlobal)}: Run ended, clearing {activeModifiers.Count} modifiers");
+
+            foreach (StageModifier modifier in activeModifiers)
+            {
+                if (modifier == null)
+                {
+                    Log.Error($"{nameof(Run_onRunDestroyGlobal)}: Some active modifier is null");
+                    continue;
+                }
+                modifier.OnEnd();
+            }
+            reservedModifiers.Clear();
+            runArtifactsApplied.Clear();
+            modifiersSynced.Clear();
+            routeNodesSynced.Clear();
+            if (this.gameObject)
+            {
+                Destroy(this.gameObject);
+                Log.Info($"{nameof(Run_onRunDestroyGlobal)}: StageModifierDirector destroyed");
+            }
+
+            if (monsterTeamInventory)
+            {
+                NetworkServer.Destroy(monsterTeamInventory.gameObject);
+            }
+            monsterTeamInventory = null;
+
         }
 
         private void OnBaseCurseSyncedUpdate(float newValue)
@@ -169,11 +227,6 @@ namespace SamplePlugin
 
         }
 
-        public override void OnStartClient()
-        {
-            base.OnStartClient();
-        }
-
         private void OnEnable()
         {
             RoR2.Stage.onStageStartGlobal += OnStageStartClient;
@@ -188,11 +241,10 @@ namespace SamplePlugin
         {
             if (!NetworkServer.active)
             {
+                Log.Info($"{nameof(OnStageStartClient)}: on client");
                 NetworkUser user = LocalUserManager.GetFirstLocalUser()?.currentNetworkUser;
-                if (user != null)
-                {
-                    RoR2.Console.instance.SubmitCmd(user, "request_map");
-                }
+                if (user == null) return;
+                RoR2.Console.instance.SubmitCmd(user, "request_map");
             }
         }
 
@@ -201,8 +253,7 @@ namespace SamplePlugin
         {
             if (instance != null && instance.routeMap != null)
             {
-                Log.Info("requested the map");
-
+                Log.Info($"{nameof(CCRequestMap)}: requested the map");
                 instance.routeMap.isDirty = true;
             }
         }
@@ -210,8 +261,6 @@ namespace SamplePlugin
 
         protected virtual void FixedUpdate()
         {
-            //Log.Info($"Time spent: {Run.instance.fixedTime - stageEnterTime}");
-            //Log.Info($"Punish percent: {(Run.instance.fixedTime - stageEnterTime) / (RiskOfRoutes.RiskOfRoutes.punishmentTimeMinutes.Value * 60f)}");
             if (NetworkServer.active && routeMap != null && routeMap.isDirty)
             {
                 UpdateRouteMap();
@@ -241,8 +290,8 @@ namespace SamplePlugin
             mapWidth = width;
             mapHeight = height;
             isMoonVisited = routeMap.isMoonVisited;
-            RpcReceiveFullMap(mapUpdated, width, height, routeMap.isMoonVisited, punishmentTime,stageEnterTime  );
             routeNodesSynced = new List<RouteNodeSync>(mapUpdated);
+            RpcReceiveFullMap(mapUpdated, width, height, routeMap.isMoonVisited, punishmentTime, stageEnterTime);
 
         }
 
@@ -260,7 +309,7 @@ namespace SamplePlugin
             stageEnterTime = hostStageEnterTime;
 
             Debug.Log($"{nameof(RpcReceiveFullMap)}: Got map on client");
-            if(hostPunishmentTime != -1)
+            if (hostPunishmentTime != -1)
             {
                 Debug.Log($"{nameof(RpcReceiveFullMap)}: Host has punish time of {hostPunishmentTime}");
             }
@@ -270,32 +319,6 @@ namespace SamplePlugin
             }
         }
 
-        private void Run_onRunDestroyGlobal(Run obj)
-        {
-            Log.Info($"Run ended, clearing {activeModifiers.Count} modifiers");
-
-            foreach (StageModifier modifier in activeModifiers)
-            {
-                modifier.OnEnd();
-            }
-            reservedModifiers.Clear();
-            runArtifactsApplied.Clear();
-            modifiersSynced.Clear();
-            routeNodesSynced.Clear();
-            if (this.gameObject)
-            {
-                Destroy(this.gameObject);
-                Log.Info("\tStageModifierDirector destroyed");
-            }
-
-            if (monsterTeamInventory)
-            {
-                NetworkServer.Destroy(monsterTeamInventory.gameObject);
-            }
-
-            monsterTeamInventory = null;
-
-        }
 
         public List<string> GetArtifactsAppliedThisRun()
         {
@@ -318,7 +341,7 @@ namespace SamplePlugin
             foreach (var modifier in reservedModifiers)
             {
                 StageModifier mod = StageModifierCatalog.StageModifierFromDef(modifier.name, modifier.stack);
-                if(mod == null)
+                if (mod == null)
                 {
                     Log.Error($"{nameof(SceneDirector_onPrePopulateSceneServer)}: Modifier with def {modifier.name} is null");
                     continue;
@@ -354,16 +377,6 @@ namespace SamplePlugin
 
 
             //todo
-        }
-
-        public bool IsModifierActive(string name)
-        {
-            //Log.Info($"Checking for {name} active");
-            foreach (var modifier in modifiersSynced)
-            {
-                if (modifier.name == name) return true;
-            }
-            return false;
         }
 
 
@@ -581,6 +594,15 @@ namespace SamplePlugin
             return res;
         }
 
+        public bool IsModifierActive(string name)
+        {
+            //Log.Info($"Checking for {name} active");
+            foreach (var modifier in modifiersSynced)
+            {
+                if (modifier.name == name) return true;
+            }
+            return false;
+        }
 
         public void AddRoutePortalInstance(GameObject portal)
         {
