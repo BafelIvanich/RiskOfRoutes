@@ -128,6 +128,15 @@ namespace SamplePlugin
             }
         }
 
+        [ConCommand(commandName = "availableItemDefs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all")]
+        private static void GetItemDefs(ConCommandArgs args)
+        {
+            foreach(var itemDef in RoR2.ItemCatalog.allItemDefs)
+            {
+                Log.Info($"\t{itemDef.name}");
+            }
+        }
+
         [ConCommand(commandName = "numbers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
         private static void GetCoeff(ConCommandArgs args)
         {
