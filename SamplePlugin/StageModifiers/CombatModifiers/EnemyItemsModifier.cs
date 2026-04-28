@@ -9,9 +9,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     public class EnemyItemsModifier : StageModifier
     {
         ItemDef selectedItem;
-        int commonCount = 5;
-        int uncommonCount = 3;
-        int legendaryCount = 1;
 
         public EnemyItemsModifier(string internalName)
         {
@@ -32,15 +29,8 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         public override void OnStart()
         {
             Log.Info("EnemyItems on start");
-            int count = 1;
-            switch (selectedItem.tier)
-            {
-                case ItemTier.Tier1: count = commonCount; break;
-                case ItemTier.Tier2: count = uncommonCount; break;
-                case ItemTier.Tier3: count = legendaryCount; break;
-                default: count = 1; break;
-            }
-            StageModifierDirector.instance.monsterTeamInventory.GiveItemPermanent(selectedItem, count);
+            int itemStack = GetItemStack(selectedItem, 1);
+            StageModifierDirector.instance.monsterTeamInventory.GiveItemPermanent(selectedItem, itemStack);
 
             SpawnCard.onSpawnedServerGlobal += SpawnCard_onSpawnedServerGlobal;
         }
@@ -62,6 +52,11 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                 case ItemTier.Tier1: return 5;
                 case ItemTier.Tier2: return 3;
                 case ItemTier.Tier3: return 1;
+                case ItemTier.Boss: return 1;
+                case ItemTier.VoidTier1: return 5;
+                case ItemTier.VoidTier2: return 3;
+                case ItemTier.VoidTier3: return 1;
+                case ItemTier.VoidBoss: return 1;
                 default: return 1;
             }
 
