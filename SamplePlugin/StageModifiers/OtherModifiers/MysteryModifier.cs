@@ -10,7 +10,6 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
     {
         public MysteryModifier()
         {
-            stackable = false;
         }
 
         public override void OnEnd()

@@ -10,7 +10,6 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
 
         public RepairConsumedItemsModifier()
         {
-            stackable = false;
         }
 
         public override void OnEnd()

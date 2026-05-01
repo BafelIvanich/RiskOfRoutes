@@ -2,6 +2,7 @@
 using RoR2;
 using System;
 using System.Reflection;
+using UnityEngine;
 
 namespace SamplePlugin.StageModifiers.CombatModifiers
 {
@@ -13,6 +14,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public Tier2ElitesEarlierModifier()
         {
+            //todo stack
         }
 
         public override void OnEnd()
@@ -32,6 +34,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public override void OnStart()
         {
+            //todo they might remain permanent
             Log.Info("Tier2 elites start");
             FieldInfo eliteTiersField = typeof(CombatDirector).GetField("eliteTiers", BindingFlags.NonPublic | BindingFlags.Static);
             if (eliteTiersField != null)
@@ -45,14 +48,16 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                     {
                         if (elite != null && elite.name.Contains("Poison"))
                         {
-                            Log.Info("Malachhite");
 
                             modifiedTier = eliteTier;
                             modifiedAvailability = eliteTier.isAvailable;
                             modifiedCostMultiplier = eliteTier.costMultiplier;
 
                             eliteTier.isAvailable = (SpawnCard.EliteRules rules) => true;
-                            eliteTier.costMultiplier = 6f;
+                            //
+                            //eliteTier.costMultiplier = 6f;
+                            float coeff = Mathf.Max(0.1f, 1f - ((RiskOfRoutes.RiskOfRoutes.tier2ElitesStackPercent.Value * (stack - 1)) / 100f));
+                            eliteTier.costMultiplier = Math.Max(6f*coeff,1f);
                             return;
                         }
                     }

@@ -2,9 +2,9 @@
 {
     public class NoOneShotProtectionModifier : StageModifier
     {
+        //not used for now
         public NoOneShotProtectionModifier()
         {
-            stackable = false;
         }
 
         public override void OnEnd()

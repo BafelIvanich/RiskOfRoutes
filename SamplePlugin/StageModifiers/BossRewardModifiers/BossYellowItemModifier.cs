@@ -16,7 +16,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
         public BossYellowItemModifier()
         {
-            stackable = false;
         }
         public override void OnEnd()
         {

@@ -1,6 +1,7 @@
 ﻿using RoR2;
 using RoR2.Artifacts;
 using RoR2.CharacterAI;
+using SamplePlugin;
 using SamplePlugin.StageModifiers;
 using System;
 using UnityEngine;
@@ -12,7 +13,7 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
     {
         float coolDown = 0;
 
-        float defaultTime = 240f;
+        static float defaultTime = 240f;
 
         //TODO можно добавить стаки
         public DoppelgangerAttackModifier(int stack)
@@ -27,7 +28,7 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
 
         public override void OnStart()
         {
-            coolDown = RoR2.Run.instance.time + defaultTime;
+            coolDown = RoR2.Run.instance.GetRunStopwatch() + defaultTime;
             On.RoR2.Run.FixedUpdate += Run_FixedUpdate;
         }
 
@@ -42,9 +43,22 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
             {
                 Log.Info("Here doppel");
                 PerformInvasion();
-                coolDown = self.fixedTime + Mathf.Max(defaultTime - (float)(RiskOfRoutes.doppelStackTime.Value), 60f);
+                coolDown = self.fixedTime + Mathf.Max(defaultTime - (float)(RiskOfRoutes.doppelStackTime.Value*(stack-1)), 60f);
             }
 
+        }
+
+        public static string GetCooldownString(int stack)
+        {
+            float calculatedTime = Mathf.Max(defaultTime - (float)(StageModifierDirector.instance.doppelStackTime * (stack-1)), 60f);
+            int time = Mathf.RoundToInt(calculatedTime);
+            int minutes = time / 60;
+            int seconds = time % 60;
+
+            if(seconds > 0)
+                return RoR2.Language.GetStringFormatted("DOPPELGANGER_TIME", minutes, seconds);
+            else
+                return RoR2.Language.GetStringFormatted("DOPPELGANGER_TIME_MINUTE", minutes);
         }
 
 

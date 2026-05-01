@@ -10,7 +10,6 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
         public ArtifactModifier(ArtifactDef artifact, bool isPositive)
         {
             currentArtifact = artifact;
-            stackable = false;
         }
 
         public ArtifactModifier(string name, bool isPositive)
@@ -22,7 +21,6 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
                 return;
             }
             name = currentArtifact.cachedName;
-            stackable = false;
         }
 
         public ArtifactModifier()
@@ -34,7 +32,6 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
                 return;
             }
 
-            stackable = false;
         }
 
 

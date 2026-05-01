@@ -10,8 +10,8 @@ namespace RiskOfRoutes
         {
             Mystery.nameToken = "ARTIFACT_MYSTERY_NAME";
             Mystery.descriptionToken = "ARTIFACT_MYSTERY_DESCRIPTION";
-            Mystery.smallIconDeselectedSprite = AssetManager.placeholderIcon;
-            Mystery.smallIconSelectedSprite = AssetManager.placeholderIcon;
+            Mystery.smallIconDeselectedSprite = AssetManager.mysteryDisabled;
+            Mystery.smallIconSelectedSprite = AssetManager.mysteryEnabled;
             Mystery.cachedName = "Mystery";
             R2API.ContentAddition.AddArtifactDef(Mystery);
 

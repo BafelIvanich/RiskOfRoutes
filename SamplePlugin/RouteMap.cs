@@ -52,15 +52,15 @@ public class RouteMap
         WeightedSelection<RoutePortalType> general = new WeightedSelection<RoutePortalType>();
         //general.AddChoice(RoutePortalType.ItemType, 1f);
         general.AddChoice(RoutePortalType.Heal, 1f);
-        //general.AddChoice(RoutePortalType.Combat, 1f);
-        //general.AddChoice(RoutePortalType.Utility, 1f);
+        general.AddChoice(RoutePortalType.Combat, 1f);
+        general.AddChoice(RoutePortalType.Utility, 1f);
         general.AddChoice(RoutePortalType.DroneType, 1f);
 
         WeightedSelection<RoutePortalType> postOne = new WeightedSelection<RoutePortalType>();
         //postOne.AddChoice(RoutePortalType.ItemType, 1f);
         general.AddChoice(RoutePortalType.Heal, 1f);
-        //general.AddChoice(RoutePortalType.Combat, 1f);
-        //general.AddChoice(RoutePortalType.Utility, 1f);
+        general.AddChoice(RoutePortalType.Combat, 1f);
+        general.AddChoice(RoutePortalType.Utility, 1f);
         postOne.AddChoice(RoutePortalType.DroneType, 1f);
         postOne.AddChoice(RoutePortalType.ChefType, 0.8f);
         postOne.AddChoice(RoutePortalType.Rare, 0.8f);
@@ -274,9 +274,12 @@ public class RouteMap
             colossusNode.portalType = y != 3 ? RoutePortalType.Colossus : RoutePortalType.FalseSon;
             current.portalNode = colossusNode;
 
-            ConnectToRandomNodeNextFloor(colossusNode);
+            if (colossusNode.portalType == RoutePortalType.FalseSon)
+                ConnectToRandomNode(colossusNode, thisLayer: true);
+            else
+                ConnectToRandomNode(colossusNode, thisLayer: false);
 
-            return colossusNode;
+                return colossusNode;
         }
         else
         {
@@ -346,14 +349,15 @@ public class RouteMap
 
 
 
-    private void ConnectToRandomNodeNextFloor(RouteNode node)
+    private void ConnectToRandomNode(RouteNode node, bool thisLayer = false)
     {
         int y = node.y;
+        int my = thisLayer ? y : y + 1;
         for (int x = 0; x < width; x++)
         {
-            if (mapGrid[x, y + 1] != null && mapGrid[x, y + 1].portalType != RoutePortalType.None)
+            if (mapGrid[x, my] != null && mapGrid[x, my].portalType != RoutePortalType.None)
             {
-                node.front = mapGrid[x, y + 1];
+                node.front = mapGrid[x, my];
             }
         }
     }

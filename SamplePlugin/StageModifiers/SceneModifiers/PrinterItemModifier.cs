@@ -16,7 +16,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             selectedItem = stringToItemDef(internalName);
             if (selectedItem == null) return;
 
-            stackable = false;
             CreatePrinterSpawnCard();
         }
 

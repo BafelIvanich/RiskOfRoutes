@@ -101,6 +101,7 @@ namespace RiskOfRoutes.StageModifiers
 
             rarePool.AddRange(new string[] { "BossRedItem", "BossYellowItem" });
             droneTypePool.AddRange(new string[] { "DroneBossGreen", "DroneBossRed", "UpgradeDrones", "MoreDrones" });
+            chefPool.AddRange(new string[] { "RedPrinter_FoodRelated", "YellowPrinter_FoodRelated" });
 
 
 
@@ -142,16 +143,18 @@ namespace RiskOfRoutes.StageModifiers
             Register(new ModifierDef("RedPrinter", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinter");
 
             Register(new ModifierDef("YellowPrinter_Damage", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinterDamage");
-            Register(new ModifierDef("YellowPrinter_Healing", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinterHealing");
+            Register(new ModifierDef("YellowPrinter_Healing", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinterHeal");
             Register(new ModifierDef("YellowPrinter_Utility", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinterUtility");
+            Register(new ModifierDef("YellowPrinter_FoodRelated", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersYellowItem() ?? false, true, false), "yellowPrinterFood");
             Register(new ModifierDef("RedPrinter_Damage", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinterDamage");
             Register(new ModifierDef("RedPrinter_Healing", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinterHealing");
             Register(new ModifierDef("RedPrinter_Utility", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinterUtility");
+            Register(new ModifierDef("RedPrinter_FoodRelated", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckPlayersRedItem() ?? false, true, false), "redPrinterFood");
 
 
             Register(new ModifierDef("OnlyFlying", ModifierTier.Tier2, 1f, false, true), "onlyFlying");
             Register(new ModifierDef("PowerfulElites", ModifierTier.Tier3, 1f, true, true), "tier2elites");
-            Register(new ModifierDef("Repair", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckPlayersHaveConsumedItems() ?? false, false, false), "texAurelioniteIcon");
+            Register(new ModifierDef("Repair", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckPlayersHaveConsumedItems() ?? false, false, false), "repair");
             Register(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false, false), "RoR2/DLC3/MealPrep/texMealPrepIcon.png");
 
             Register(new ModifierDef("Mountain", ModifierTier.Tier1, 1f, () => StageModifierDirector.instance?.CheckMountainShrine() ?? false, false, false), "mountIcon");
@@ -203,6 +206,8 @@ namespace RiskOfRoutes.StageModifiers
             RegPrinter("AttackSpeedOnCrit", ModifierTier.Tier2);
             RegPrinter("Bandolier", ModifierTier.Tier2);
             RegPrinter("BarrierOnKill", ModifierTier.Tier2);
+            RegPrinter("Infusion", ModifierTier.Tier2);
+            RegPrinter("Seed", ModifierTier.Tier2);
             RegPrinter("ChainLightning", ModifierTier.Tier2);
             RegPrinter("CritAtLowerElevation", ModifierTier.Tier2);
             RegPrinter("EquipmentMagazine", ModifierTier.Tier2);
@@ -358,6 +363,12 @@ namespace RiskOfRoutes.StageModifiers
             else if (def.tags.Contains(ItemTag.Utility))
                 utilityPool.Add(modName);
 
+
+            //todo под вопросом
+            if(def.tags.Contains(ItemTag.FoodRelated))
+                chefPool.Add(modName);
+            //
+
             itemTypePool.Add(modName);
         }
 
@@ -412,11 +423,13 @@ namespace RiskOfRoutes.StageModifiers
                 case "YellowPrinter_Damage": return new YellowPrinterModifier(stack, ItemTag.Damage);
                 case "YellowPrinter_Healing": return new YellowPrinterModifier(stack, ItemTag.Healing);
                 case "YellowPrinter_Utility": return new YellowPrinterModifier(stack, ItemTag.Utility);
+                case "YellowPrinter_FoodRelated": return new YellowPrinterModifier(stack, ItemTag.FoodRelated);
 
                 case "RedPrinter": return new RedPrinterModifier(stack);
                 case "RedPrinter_Damage": return new RedPrinterModifier(stack, ItemTag.Damage);
                 case "RedPrinter_Healing": return new RedPrinterModifier(stack, ItemTag.Healing);
                 case "RedPrinter_Utility": return new RedPrinterModifier(stack, ItemTag.Utility);
+                case "RedPrinter_FoodRelated": return new RedPrinterModifier(stack, ItemTag.FoodRelated);
 
                 case "OnlyFlying": return new OnlyFlyingEnemiesModifier();
                 case "PowerfulElites": return new Tier2ElitesEarlierModifier();
@@ -484,7 +497,7 @@ namespace RiskOfRoutes.StageModifiers
                             ItemIndex itemIndex = RoR2.ItemCatalog.FindItemIndex(itemName);
                             if (itemIndex == ItemIndex.None)
                             {
-                                Log.Error($"Could not find item by the name {itemName}");
+                                Log.Error($"Could not find lunar item by the name {itemName}");
                                 return null;
                             }
                             LunarItemsModifier mod = new LunarItemsModifier(itemName);
@@ -506,13 +519,29 @@ namespace RiskOfRoutes.StageModifiers
             {
                 case RoutePortalType.ItemType: return itemTypePool;
                 case RoutePortalType.DroneType: return droneTypePool;
-                case RoutePortalType.ChefType: return new List<string>() { "YellowPrinter" };
                 case RoutePortalType.Rare: return rarePool;
                 case RoutePortalType.Combat: return combatPool;
                 case RoutePortalType.Heal: return healPool;
                 case RoutePortalType.Utility: return utilityPool;
-                default: return new List<string>() { "Mountain" }; //placeholder
+                case RoutePortalType.ChefType: return chefPool;
+                case RoutePortalType.Colossus: return GetRandomPool();
+                default: return itemTypePool; //placeholder
             }
+        }
+
+        private static List<string> GetRandomPool()
+        {
+            var pools = new List<string>[]
+            {
+                droneTypePool,
+                rarePool,
+                combatPool,
+                healPool,
+                utilityPool
+            };
+            var res = Run.instance.stageRng.NextElementUniform(pools);
+            Log.Info($"{nameof(GetRandomPool)}: For collosus got random pool {nameof(res)}");
+            return res;
         }
 
         public static ModifierDef SelectModifier(HashSet<string> banned, RoutePortalType portalType, ModifierTier tier, bool isNegative = false)
@@ -524,7 +553,7 @@ namespace RiskOfRoutes.StageModifiers
             }
             else
             {
-                Log.Info($"{nameof(SelectModifier)}: {(isNegative ? "negative" : "positive")}-{portalType} - Got pool with {pool.Count} items");
+                Log.Info($"{nameof(SelectModifier)}: {(isNegative ? "negative" : "positive")}-{portalType} - Got pool with {pool.Count} modifiers");
             }
             WeightedSelection<ModifierDef> selection = new WeightedSelection<ModifierDef>();
 
@@ -559,7 +588,11 @@ namespace RiskOfRoutes.StageModifiers
             }
             else
             {
-                Log.Error("Error in select modifier");
+                Log.Warning($"{nameof(SelectModifier)}: Selection is empty for Type: {portalType}, Tier: {tier}, banlist:");
+                foreach (var modName in banned)
+                {
+                    Log.Warning($"\t{modName}");
+                }
                 return null;
             }
         }
@@ -597,9 +630,72 @@ namespace RiskOfRoutes.StageModifiers
             return AssetManager.placeholderIcon;
         }
 
+        //todo
         public static bool isPortalTypeAvailable(RoutePortalType type)
         {
             return true;
+        }
+
+        public static string GetModifierNameFormatted(ModifierSync mod, ModifierDef def)
+        {
+            string stackText = mod.stack > 1 ? $" - x{mod.stack}" : "";
+
+            if (def.name.Contains("_Printer") || def.name.Contains("_EnemyItem") || def.name.Contains("_LunarItem"))
+            {
+                string itemName = def.name.Split('_')[0];
+                ItemIndex itemIndex = ItemCatalog.FindItemIndex(itemName);
+                ItemDef itemDef = ItemCatalog.GetItemDef(itemIndex);
+
+                string localizedName = itemName;
+
+                if (itemDef != null)
+                {
+                    string defaultName = RoR2.Language.GetString(itemDef.nameToken);
+                    string colorHex = "#FFFFFF";
+
+                    switch (itemDef.tier)
+                    {
+                        case ItemTier.Tier1:
+                            colorHex = "#FFFFFF";
+                            break;
+                        case ItemTier.Tier2:
+                            colorHex = "#72ff13";
+                            break;
+                        case ItemTier.Tier3:
+                            colorHex = "#e65541";
+                            break;
+                        case ItemTier.Boss:
+                            colorHex = "#E4C415";
+                            break;
+                        case ItemTier.Lunar:
+                            colorHex = "#4AE2F7";
+                            break;
+                    }
+
+                    localizedName = $"<color={colorHex}>{defaultName}</color>";
+                }
+
+                if (def.name.Contains("_Printer"))
+                {
+                    return RoR2.Language.GetStringFormatted("PRINTER_ITEMS_MODIFIER_NAME", localizedName);
+                }
+                else if (def.name.Contains("_EnemyItem"))
+                {
+                    if (itemDef != null)
+                    {
+                        int enemyItemStack = EnemyItemsModifier.GetItemStack(itemDef, mod.stack);
+                        return RoR2.Language.GetStringFormatted("ENEMY_ITEMS_MODIFIER_NAME", localizedName, enemyItemStack);
+                    }
+
+                    return RoR2.Language.GetStringFormatted("ENEMY_ITEMS_MODIFIER_NAME", localizedName, mod.stack);
+                }
+                else if (def.name.Contains("_LunarItem"))
+                {
+                    return RoR2.Language.GetStringFormatted("LUNAR_ITEMS_MODIFIER_NAME", localizedName);
+                }
+            }
+
+            return RoR2.Language.GetString(def.nameToken) + stackText;
         }
 
         public static string GetModifierDescriptionFormatted(ModifierSync mod, ModifierDef def)
@@ -634,7 +730,7 @@ namespace RiskOfRoutes.StageModifiers
                             colorHex = "#E4C415";
                             break;
                         case ItemTier.Lunar:
-                            colorHex = "#3168c0";
+                            colorHex = "#4AE2F7";
                             break;
                     }
 
@@ -657,12 +753,26 @@ namespace RiskOfRoutes.StageModifiers
                 }
                 else if (def.name.Contains("_LunarItem"))
                 {
-                    return RoR2.Language.GetStringFormatted("LUNAR_ITEMS_MODIFIER_DESCRIPTION", localizedName);
+                    if(StageModifierDirector.instance.purifyLunarItemModifier)
+                    {
+                        return RoR2.Language.GetStringFormatted("LUNAR_ITEMS_MODIFIER_DESCRIPTION_PURIFY", localizedName);
+                    }
+                    else
+                    {
+                        return RoR2.Language.GetStringFormatted("LUNAR_ITEMS_MODIFIER_DESCRIPTION_PURIFY", localizedName);
+                    }
                 }
+
             }
             else if (def.isArtifact)
             {
                 return $"<style=cWorldEvent>{RoR2.Language.GetStringFormatted(def.descriptionToken)}</style>";
+            }
+            else if(def.name == "Doppelganger")
+            {
+                string time = DoppelgangerAttackModifier.GetCooldownString(mod.stack);
+
+                return RoR2.Language.GetStringFormatted("MODIFIER_DOPPELGANGER_DESCRIPTION", time);
             }
 
             return RoR2.Language.GetString(def.descriptionToken) + stackText;

@@ -28,6 +28,12 @@ namespace RiskOfRoutes
         public static TMP_FontAsset bomb;
 
         public static Sprite placeholderIcon;
+        public static Sprite expansionIcon;
+        public static Sprite modIcon;
+        public static Sprite lockedIcon;
+
+        public static Sprite mysteryEnabled;
+        public static Sprite mysteryDisabled;
 
         public static ObjectScaleCurve pingCurve;
 
@@ -51,13 +57,20 @@ namespace RiskOfRoutes
             bossPrinter = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/DuplicatorWild/iscDuplicatorWild.asset").WaitForCompletion();
             CreateChefSpawnCard();
 
+            mysteryEnabled = bundle.LoadAsset<Sprite>("texArtifactMysteryEnabled");
+            mysteryDisabled = bundle.LoadAsset<Sprite>("texArtifactMysteryDisabled");
+
             bomb = Addressables.LoadAssetAsync<TMP_FontAsset>("RoR2/Base/Common/Fonts/Bombardier/tmpBombDropShadow.asset").WaitForCompletion();
 
             placeholderIcon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texMysteryIcon.png").WaitForCompletion();
+            expansionIcon = bundle.LoadAsset<Sprite>("routesExpansionIcon");
+            modIcon = bundle.LoadAsset<Sprite>("modIcon");
+            lockedIcon = Addressables.LoadAssetAsync<Sprite>("RoR2/Base/Common/MiscIcons/texUnlockIcon.png").WaitForCompletion();
 
             GameObject pingPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Common/PingIndicator.prefab").WaitForCompletion();
             PingIndicator pingIndicator = pingPrefab.GetComponent<PingIndicator>();
             pingCurve = pingIndicator.pingObjectScaleCurve;
+
 
 
             CheckAssetsLoaded();
@@ -151,7 +164,7 @@ namespace RiskOfRoutes
             mgr.genericInteraction = interaction;
             mgr.sceneExitController = sceneExitController;
 
-            interaction.contextToken = "Enter Route Portal";
+            interaction.contextToken = RoR2.Language.GetString("ENTER_ROUTE_PORTAL");
 
             //routePortal.GetComponent<Highlight>().targetRenderer = routePortal.GetComponentInChildren<SkinnedMeshRenderer>();
             //GameObject trigger = Instantiate(new GameObject("Trigger"), routePortal.transform);

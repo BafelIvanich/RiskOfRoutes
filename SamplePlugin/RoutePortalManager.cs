@@ -180,6 +180,8 @@ namespace RiskOfRoutes
 
         public void UpdatePortalMaterials()
         {
+            //Log.Info($"Portal name:{this.name}");
+            if (!this.name.Contains("Route")) return;
             GameObject routePortal = this.gameObject;
             //var renderers = routePortal.GetComponentsInChildren<Renderer>();
 
@@ -357,7 +359,7 @@ namespace RiskOfRoutes
                         string[] parts = stageModifiers[i].Split('=');
                         string name = parts[0];
 
-                        Log.Info($"StageModfieir:{name}");
+                        //Log.Info($"StageModfieir:{name}");
                         var modDef = StageModifierCatalog.FindModifier(name);
                         if (modDef != null && modDef.icon != null)
                         {
@@ -390,7 +392,7 @@ namespace RiskOfRoutes
 
                 if (portalEdges && donut != null && RiskOfRoutes.usePositiveNegativeColors.Value)
                 {
-                    Log.Info("Changing colors");
+                    //Log.Info("Changing colors");
                     Color positive = new Color(36f / 255f, 191f / 255f, 0f, 1f);
                     Color negative = new Color(255f / 255f, 0f / 255f, 0f / 255f, 1f) * 1.8f;
 
@@ -410,7 +412,7 @@ namespace RiskOfRoutes
                         {
                             donutMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
                             edgesMat.SetColor("_TintColor", modDef.isNegative ? negative : positive);
-                            Log.Info("Succesfully changed colors");
+                            //Log.Info("Succesfully changed colors");
                         }
                     }
 
@@ -424,6 +426,7 @@ namespace RiskOfRoutes
         {
             return null;
         }
+
         //TODO смена портала после активации телепортаци
         public void OnPortalActivation(Interactor interactor)
         {
@@ -433,14 +436,14 @@ namespace RiskOfRoutes
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
                 StageModifierDirector.instance.reservedModifiers.Clear();
+                StageModifierDirector.instance.bannedModifiers.Clear();
                 foreach (var modStr in stageModifiers)
                 {
                     string[] parts = modStr.Split('=');
                     StageModifierDirector.instance.reservedModifiers.Add(new ModifierSync { name = parts[0], stack = int.Parse(parts[1]), isArtifact = bool.Parse(parts[2]) });
+                    StageModifierDirector.instance.bannedModifiers.Add(parts[0]);
                 }
             }
-
-            Log.Info($"Trying {StageModifierDirector.instance.activeModifiers.Count}");
 
             if (routeNode != null)
             {
@@ -454,7 +457,7 @@ namespace RiskOfRoutes
                     if (targetSceneDef != null && targetSceneDef.sceneType == SceneType.Stage)
                     {
                         Run.instance.nextStageScene = targetSceneDef;
-                        Log.Info($"inside RPM: updated nextStageScene to {Run.instance.nextStageScene.cachedName}");
+                        Log.Info($"{nameof(OnPortalActivation)}: updated nextStageScene to {Run.instance.nextStageScene.cachedName}");
                     }
 
                     //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("ai_test");
@@ -472,7 +475,7 @@ namespace RiskOfRoutes
             else
             {
                 genericInteraction.enabled = false;
-                Log.Info("Interacting with vanilla portal");
+                Log.Info($"{nameof(OnPortalActivation)}: Interacting with vanilla portal");
                 var mg = StageModifierDirector.activePortalInstances[0].GetComponent<RoutePortalManager>();
                 if (mg != null)
                 {
@@ -484,11 +487,7 @@ namespace RiskOfRoutes
 
         public void OnSeerActivation(Interactor interactor)
         {
-            if (!NetworkServer.active)
-            {
-                Log.Warning("[Server] function 'RoutePortalManager::OnPurchase(RoR2.Interactor)' called on client");
-                return;
-            }
+            if (!NetworkServer.active) return;
 
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
@@ -504,7 +503,7 @@ namespace RiskOfRoutes
                 {
                     Run.instance.nextStageScene = targetSceneDef;
                 }
-                Log.Info("Seer got modifiers");
+                Log.Info($"{nameof(OnSeerActivation)}: Seer got modifiers");
             }
         }
 

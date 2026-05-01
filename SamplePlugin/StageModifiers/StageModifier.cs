@@ -11,8 +11,6 @@ namespace SamplePlugin.StageModifiers
     {
         public int stack = 1;
 
-        public bool stackable = true;
-
         public abstract void OnStart();
 
         public abstract void OnEnd();

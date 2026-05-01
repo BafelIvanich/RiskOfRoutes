@@ -180,7 +180,7 @@ namespace RiskOfRoutes
                 var mapScript = routeMapPanel.GetComponent<RouteMapUI>();
                 if (scoreboardJuice != null)
                 {
-                    Log.Info("Juice not null");
+                    //Log.Info("Juice not null");
                     panelUiJuice.transitionDuration = 0.2f;
                     panelUiJuice.panningMagnitude = scoreboardJuice.panningMagnitude;
 
@@ -292,8 +292,17 @@ namespace RiskOfRoutes
 
             if (panelText == null || sceneImage == null) return;
 
-            var tex = SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex).portalMaterial;
-            sceneImage.texture = tex.mainTexture;
+            //Material tex = SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex).portalMaterial;
+            if(mg.destinationSceneIndex != -1)
+            {
+                SceneDef sceneDef = SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex);
+
+                if(sceneDef != null && sceneDef.portalMaterial != null)
+                {
+                    sceneImage.texture = sceneDef.portalMaterial.mainTexture;
+                }
+            }
+            //todo nullcheck
 
             string positiveText = $"<style=cIsHealing>{RoR2.Language.GetString("POSITIVE")}</style>" + '\n';
             string negativeText = $"<style=cDeath>{RoR2.Language.GetString("NEGATIVE")}</style>" + '\n';
@@ -326,7 +335,8 @@ namespace RiskOfRoutes
                 string addedText = "";
                 if (RiskOfRoutes.routePanelShowsOnlyNames.Value)
                 {
-                    addedText = $"- {RoR2.Language.GetString(def.nameToken)} - x{tempMod.stack}";
+                    //addedText = $"- {RoR2.Language.GetString(def.nameToken)} - x{tempMod.stack}";
+                    addedText = $"- {StageModifierCatalog.GetModifierNameFormatted(tempMod, def)}";
                 }
                 else
                 {

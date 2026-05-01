@@ -17,8 +17,8 @@ namespace RiskOfRoutes
         {
             routesExpansion.nameToken = "EXPANSION_ROUTES_NAME";
             routesExpansion.descriptionToken = "EXPANSION_ROUTES_DESCRIPTION";
-            routesExpansion.iconSprite = AssetManager.placeholderIcon;
-            routesExpansion.disabledIconSprite = AssetManager.placeholderIcon;
+            routesExpansion.iconSprite = AssetManager.expansionIcon;
+            routesExpansion.disabledIconSprite = AssetManager.lockedIcon;
             routesExpansion.runBehaviorPrefab = networkedObj;
 
             R2API.ContentAddition.AddExpansionDef(routesExpansion);
@@ -94,7 +94,7 @@ namespace RiskOfRoutes
             {
                 Log.Info($"{nameof(TeleporterGetRoutePortal)}: Trying to get node and modifiers from random portal");
 
-                StageModifierDirector.instance.currentNode = StageModifierDirector.instance.GetRouteNodeFromRandomPortal();
+                StageModifierDirector.instance.GetRouteNodeFromRandomPortal();
                 if (RiskOfRoutes.teleporterUseRandomMods.Value)
                     StageModifierDirector.instance.GetModifiersFromRandomPortal(); //todo пересмотреть
             }
@@ -430,8 +430,9 @@ namespace RiskOfRoutes
             }
             else if (spawnCardName == "iscDestinationPortal")
             {
+                mgr.destinationSceneIndex = (int)Run.instance.nextStageScene.sceneDefIndex;
                 mgr.isOval = false;
-                mgr.isUsingModifiers = false;
+                mgr.isUsingModifiers = true;
                 mgr.routeNode = StageModifierDirector.instance.GetAvailableNodes()[0]; //TODO
             }
 

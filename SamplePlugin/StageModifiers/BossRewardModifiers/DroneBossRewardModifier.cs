@@ -22,7 +22,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
         public DroneBossRewardModifier(bool dropLegendary = false)
         {
             this.dropLegendary = dropLegendary;
-            stackable = false;
 
         }
 
@@ -68,7 +67,11 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                         if (dropLegendary)
                             reward = Run.instance.stageRng.NextElementUniform(Run.instance.availableTier3DroneList);
                         else
-                            reward = Run.instance.stageRng.NextElementUniform(Run.instance.availableTier2DroneList);
+                        {
+                            var pool = Run.instance.availableTier2DroneList;
+                            pool.Remove(RoR2.RoR2Content.DroneDefs.EquipmentDrone.droneIndex);
+                            reward = Run.instance.stageRng.NextElementUniform(pool);
+                        }
                         var pickupIndex = PickupCatalog.FindPickupIndex(reward);
                         if (pickupIndex == null)
                         {

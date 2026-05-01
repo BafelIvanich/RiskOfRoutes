@@ -77,8 +77,8 @@ namespace RiskOfRoutes
 
 
 
-            float percentShown = ((Run.instance.fixedTime - StageModifierDirector.instance.stageEnterTime) / (StageModifierDirector.instance.punishmentTime * 60f)) % 1.0f;
-            int punishStack = (int)((Run.instance.fixedTime - StageModifierDirector.instance.stageEnterTime) / (StageModifierDirector.instance.punishmentTime * 60f));
+            float percentShown = ((Run.instance.GetRunStopwatch() - StageModifierDirector.instance.stageEnterTime) / (StageModifierDirector.instance.punishmentTime * 60f)) % 1.0f;
+            int punishStack = (int)((Run.instance.GetRunStopwatch() - StageModifierDirector.instance.stageEnterTime) / (StageModifierDirector.instance.punishmentTime * 60f));
 
             //Log.Info($"Bar Image {barImageVertical.fillAmount}");
             //Log.Info($"Current stage enter time: {StageModifierDirector.instance.stageEnterTime}");
@@ -127,7 +127,9 @@ namespace RiskOfRoutes
                     return;
                 }
 
-                text.text = $"{punishStack}";
+                if(label == labelVertical)
+                    text.text = $"{punishStack}";
+                else text.text = RoR2.Language.GetStringFormatted("PUNISHMENT_VALUE_NAME", punishStack);
 
             }
         }
@@ -144,6 +146,8 @@ namespace RiskOfRoutes
             int mapWidth = StageModifierDirector.instance.mapWidth;
             int mapHeight = StageModifierDirector.instance.mapHeight;
             bool isMoonVisited = StageModifierDirector.instance.isMoonVisited;
+
+            bool isFalseSonVisited = false;
 
             DrawBar();
 
@@ -169,6 +173,8 @@ namespace RiskOfRoutes
             linesContainer.SetParent(nodeContainer, false);
             Transform nodesContainer = new GameObject("Nodes", typeof(RectTransform)).transform;
             nodesContainer.SetParent(nodeContainer, false);
+
+            var pingCurve = AssetManager.pingCurve;
 
             GameObject objectiveNode = Instantiate(nodePrefab, nodesContainer);
             RectTransform objectiveRect = objectiveNode.GetComponent<RectTransform>();
@@ -214,6 +220,9 @@ namespace RiskOfRoutes
                 {
 
                     var currentNode = GetNode(mx, my, map, mapHeight);
+
+                    if (currentNode.portalType == RoutePortalType.FalseSon && currentNode.visited) isFalseSonVisited = true;
+
                     bool isSpecialHidden = (currentNode.portalType == RoutePortalType.Colossus ||
                         currentNode.portalType == RoutePortalType.FalseSon ||
                         currentNode.portalType == RoutePortalType.Hardware ||
@@ -224,11 +233,7 @@ namespace RiskOfRoutes
 
                     if (currentNode.x == -1 || currentNode.y == -1) continue;
                     if (currentNode.portalType == RoutePortalType.None && my != 0) continue;
-                    if (isSpecialHidden && (currentNode.visited == false && !currentNode.Equals(selectedNode)))
-                    {
-                        Log.Info("Skipping this node");
-                        continue;
-                    }
+                    if (isSpecialHidden && (currentNode.visited == false && !currentNode.Equals(selectedNode))) continue;
 
                     float xPos;
                     float yPos;
@@ -267,8 +272,7 @@ namespace RiskOfRoutes
                     //TODO если выбранный
 
 
-                    var pingCurve = AssetManager.pingCurve;
-                    if (currentNode.Equals(selectedNode) && pingCurve != null)
+                    if (currentNode.Equals(selectedNode) && pingCurve != null && !isMoonVisited)
                     {
                         //Log.Info("Curve is not null");
                         var curve = routeNode.AddComponent<ObjectScaleCurve>();
@@ -297,6 +301,22 @@ namespace RiskOfRoutes
                 }
             }
 
+            if (isMoonVisited)
+            {
+                //Log.Info("Curve is not null");
+                var curve = objectiveNode.AddComponent<ObjectScaleCurve>();
+                curve.useOverallCurveOnly = pingCurve.useOverallCurveOnly;
+                curve.overallCurve = pingCurve.overallCurve;
+                curve.curveX = pingCurve.curveX;
+                curve.curveY = pingCurve.curveY;
+                curve.curveZ = pingCurve.curveZ;
+                curve.timeMax = pingCurve.timeMax;
+
+                curve.enabled = false;
+                curve.enabled = true;
+
+            }
+
             foreach (var pair in MapNodes)
             {
                 var parentNode = pair.Key;
@@ -312,6 +332,9 @@ namespace RiskOfRoutes
                 foreach (var childNode in GetChildren(parentNode, map, mapHeight, true))
                 {
                     if ((parentNode.portalType == RoutePortalType.Colossus || parentNode.portalType == RoutePortalType.FalseSon) && !(childNode.visited || childNode.Equals(selectedNode))) continue;
+
+                    //todo пиздец нагромождение, фикс бага с двумя ребрами идущими от коллосуса и фолс сана
+                    if (parentNode.portalType == RoutePortalType.Colossus && childNode.portalType != RoutePortalType.Colossus && childNode.portalType != RoutePortalType.FalseSon && isFalseSonVisited) continue;
 
 
                     if (MapNodes.TryGetValue(childNode, out RectTransform endRect))
