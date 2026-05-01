@@ -13,7 +13,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
     {
         public AurelioniteRewardModifier()
         {
-            stackable = false;
         }
 
         public override void OnEnd()
@@ -50,18 +49,61 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                 {
                     RoR2.GenericPickupController.CreatePickupInfo pickup;
 
-                    var droneMod = StageModifierDirector.instance.activeModifiers.OfType<DroneBossRewardModifier>().FirstOrDefault();
-                    if (droneMod != null)
+                    var greenDrone = StageModifierDirector.instance.IsModifierActive("DroneBossGreen");
+                    var redDrone = StageModifierDirector.instance.IsModifierActive("DroneBossRed");
+
+                    var bossYellowItem = StageModifierDirector.instance.IsModifierActive("BossYellowItem");
+                    var bossRedItem = StageModifierDirector.instance.IsModifierActive("BossRedItem");
+                    if (greenDrone || redDrone)
                     {
+                        Log.Info($"{nameof(BossGroup_DropRewards)}: Dropping drone reward");
                         List<UniquePickup> pickups = new List<UniquePickup>();
 
-                        var all = Run.instance.availableTier2DroneList;
-                        foreach (var drone in all)
+                        List<DroneIndex> droneRewardPool = new List<DroneIndex>();
+                        if (greenDrone)
+                        {
+                            droneRewardPool = Run.instance.availableTier2DroneList;
+                            droneRewardPool.Remove(RoR2.RoR2Content.DroneDefs.EquipmentDrone.droneIndex);
+                        }
+                        else
+                            droneRewardPool = Run.instance.availableTier3DroneList;
+
+                        foreach (var drone in droneRewardPool)
                         {
                             var pickIndex = PickupCatalog.FindPickupIndex(drone);
                             if (pickIndex != null)
                             {
                                 pickups.Add(new UniquePickup(PickupCatalog.FindPickupIndex(drone)));
+                            }
+                        }
+                        Util.ShuffleList(pickups);
+                        pickup = new GenericPickupController.CreatePickupInfo
+                        {
+                            pickup = new UniquePickup(PickupCatalog.FindPickupIndex(ItemTier.Tier1)),
+                            pickerOptions = PickupPickerController.GenerateOptionsFromList(pickups.Take(5).ToList()),
+                            rotation = Quaternion.identity,
+                            position = position,
+                            prefabOverride = rewardPickupPrefab
+                        };
+                    }
+                    else if(bossYellowItem || bossRedItem)
+                    {
+                        Log.Info($"{nameof(BossGroup_DropRewards)}: Dropping boss or red reward");
+                        List<UniquePickup> pickups = new List<UniquePickup>();
+
+                        List<PickupIndex> itemRewardPool = new List<PickupIndex>();
+                        if (bossYellowItem)
+                        {
+                            itemRewardPool = Run.instance.availableBossDropList;
+                        }
+                        else
+                            itemRewardPool = Run.instance.availableTier3DropList;
+
+                        foreach (var pickIndex in itemRewardPool)
+                        {
+                            if (pickIndex != null)
+                            {
+                                pickups.Add(new UniquePickup(pickIndex));
                             }
                         }
                         Util.ShuffleList(pickups);
