@@ -131,10 +131,22 @@ namespace SamplePlugin
         [ConCommand(commandName = "availableItemDefs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all")]
         private static void GetItemDefs(ConCommandArgs args)
         {
-            foreach(var itemDef in RoR2.ItemCatalog.allItemDefs)
+            foreach (var itemDef in RoR2.ItemCatalog.allItemDefs)
             {
                 Log.Info($"\t{itemDef.name}");
             }
+        }
+
+
+        [ConCommand(commandName = "punish", flags = ConVarFlags.ExecuteOnServer, helpText = "punish <i>")]
+        private static void CCSetPunish(ConCommandArgs args)
+        {
+            if (!NetworkServer.active) return;
+
+            int i = (int)args.TryGetArgInt(0);
+
+            StageModifierDirector.instance.commandAddedStack = i;
+            Log.Info($"Set additional punish to {i}");
         }
 
         [ConCommand(commandName = "numbers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
