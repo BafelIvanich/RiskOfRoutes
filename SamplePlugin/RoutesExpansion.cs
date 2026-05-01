@@ -430,10 +430,10 @@ namespace RiskOfRoutes
             }
             else if (spawnCardName == "iscDestinationPortal")
             {
-                mgr.destinationSceneIndex = (int)Run.instance.nextStageScene.sceneDefIndex;
-                mgr.isOval = false;
+                mgr.isOval = true;
                 mgr.isUsingModifiers = true;
                 mgr.routeNode = StageModifierDirector.instance.GetAvailableNodes()[0]; //TODO
+                mgr.destinationSceneIndex = (int)Run.instance.nextStageScene.sceneDefIndex;
             }
 
             if (mgr.isUsingModifiers)
@@ -441,7 +441,7 @@ namespace RiskOfRoutes
 
             Log.Info($"{nameof(OnVanillaPortalSpawn)}: Enabled manager for portal - {spawnCardName}");
             mgr.enabled = true;
-            mgr.nodeSync = new Vector2(mgr.routeNode.x, mgr.routeNode.y); //на всякий случай
+            mgr.nodeSync = new Vector2(mgr.routeNode.x, mgr.routeNode.y); //todo убатьвапть на всякий случай
 
             return obj;
         }
@@ -516,6 +516,7 @@ namespace RiskOfRoutes
                 }
 
                 mg.routeNode = node;
+                mg.portalType = (int)node.portalType;
                 mg.nodeSync = new Vector2(node.x, node.y);
                 Log.Info($"MG route node:{mg.routeNode.portalType}:{mg.routeNode.x},{mg.routeNode.y}");
 
