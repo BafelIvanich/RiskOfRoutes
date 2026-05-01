@@ -32,6 +32,9 @@ namespace RiskOfRoutes
         [SyncVar]
         public int destinationSceneIndex;
 
+        [SyncVar(hook = nameof(OnTypeChanged))]
+        public int portalType;
+
         public bool isDirty = true;
 
         public bool usePositiveNegativeColors;
@@ -131,19 +134,27 @@ namespace RiskOfRoutes
 
         private void OnModifiersChanged(SyncListString.Operation op, int itemIndex)
         {
-            Log.Info("Modifiers were changed, updating bubbles");
+            //Log.Info("Modifiers were changed, updating bubbles");
             UpdateBubbles();
         }
 
         private void OnOvalChanged(bool value)
         {
             isOval = value;
-            Log.Info("got value for is Oval");
+            //Log.Info("got value for is Oval");
 
             if (this.enabled && stageModifiers.Count > 0)
             {
                 UpdateBubbles();
             }
+        }
+
+        private void OnTypeChanged(int value)
+        {
+            portalType = value;
+            Log.Info("got value for type");
+
+            UpdatePortalMaterials();
         }
 
 
@@ -196,11 +207,32 @@ namespace RiskOfRoutes
             Texture2D edge = null;
             Texture2D center = null;
 
-            Log.Info("Using black and white");
-            edge = AssetManager.bundle.LoadAsset<Texture2D>("bwCenter");
-            center = AssetManager.bundle.LoadAsset<Texture2D>("bwEdge");
-            //edge = AssetManager.bundle.LoadAsset<Texture2D>("darkerBlueEdge");
-            //center = AssetManager.bundle.LoadAsset<Texture2D>("darkerBlueCenter");
+            if (RiskOfRoutes.usePortalTypeColors.Value)
+            {
+                edge = AssetManager.bundle.LoadAsset<Texture2D>("bwCenter");
+                center = AssetManager.bundle.LoadAsset<Texture2D>("bwEdge");
+            }
+            else
+            {
+
+                edge = AssetManager.bundle.LoadAsset<Texture2D>("darkerBlueEdge");
+                center = AssetManager.bundle.LoadAsset<Texture2D>("darkerBlueCenter");
+            }
+
+            var map = StageModifierDirector.instance.routeNodesSynced;
+            if (map == null)
+            {
+                Log.Error($"{nameof(UpdatePortalMaterials)}: Map is null, couldnt get portal type to update material");
+                return;
+            }
+
+            //int x = (int)nodeSync.x;
+            //int y = (int)nodeSync.y;
+            //int mapHeight = StageModifierDirector.instance.mapHeight;
+
+            //проверить
+            //var currentNode = map[x * mapHeight + y];
+
 
             foreach (var renderer in new Renderer[] { edgeRenderer, centerRenderer })
             {
@@ -220,31 +252,37 @@ namespace RiskOfRoutes
                     {
                         renderer.material.SetTexture("_RemapTex", center);
 
-                        if (routeNode == null)
+                        if (portalType == (int)RoutePortalType.None)
                         {
                             Log.Error($"{nameof(UpdatePortalMaterials)}: Couldnt set color for portal because route node is null");
                             return;
                         }
                         if (RiskOfRoutes.usePortalTypeColors.Value)
                         {
-                            renderer.material.SetColor("_TintColor", GetPortalTypeColor(routeNode.portalType));
+                            renderer.material.SetColor("_TintColor", GetPortalTypeColor((RoutePortalType)portalType));
                         }
                         else
                         {
-                            renderer.material.SetColor("_TintColor", GetPortalTypeColor(RoutePortalType.None));
+                            renderer.material.SetColor("_TintColor", Color.white);
                         }
                     }
                 }
                 else if (renderer.material.name.Contains("Edge"))
                 {
                     renderer.material.SetTexture("_RemapTex", edge);
+
+                    if (portalType == (int)RoutePortalType.None)
+                    {
+                        Log.Error($"{nameof(UpdatePortalMaterials)}: Couldnt set color for portal because route node is null");
+                        return;
+                    }
                     if (RiskOfRoutes.usePortalTypeColors.Value)
                     {
-                        renderer.material.SetColor("_TintColor", GetPortalTypeColor(routeNode.portalType));
+                        renderer.material.SetColor("_TintColor", GetPortalTypeColor((RoutePortalType)portalType));
                     }
                     else
                     {
-                        renderer.material.SetColor("_TintColor", GetPortalTypeColor(RoutePortalType.None));
+                        renderer.material.SetColor("_TintColor", Color.white);
                     }
                 }
 
@@ -430,6 +468,7 @@ namespace RiskOfRoutes
         //TODO смена портала после активации телепортаци
         public void OnPortalActivation(Interactor interactor)
         {
+            if (!Run.instance.IsExpansionEnabled(RoutesExpansion.routesExpansion)) return;
             genericInteraction.interactability = Interactability.Disabled;
             if (!NetworkServer.active) return;
 
@@ -457,7 +496,7 @@ namespace RiskOfRoutes
                     if (targetSceneDef != null && targetSceneDef.sceneType == SceneType.Stage)
                     {
                         Run.instance.nextStageScene = targetSceneDef;
-                        Log.Info($"{nameof(OnPortalActivation)}: updated nextStageScene to {Run.instance.nextStageScene.cachedName}");
+                        //Log.Info($"{nameof(OnPortalActivation)}: updated nextStageScene to {Run.instance.nextStageScene.cachedName}");
                     }
 
                     //Run.instance.nextStageScene = SceneCatalog.GetSceneDefFromSceneName("ai_test");
