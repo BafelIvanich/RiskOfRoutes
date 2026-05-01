@@ -54,7 +54,7 @@ namespace RiskOfRoutes
             foreach (var mod in StageModifierDirector.instance.modifiersSynced)
             {
                 if (mod.isArtifact) continue;
-                if (mod.name == "Repair" || mod.name.EndsWith("_EnemyItem")) continue; //todo оптимизация?
+                if (mod.name.EndsWith("_EnemyItem")) continue; //todo оптимизация?
                 ModifierDef def = StageModifierCatalog.FindModifier(mod.name);
                 if (def == null) continue;
 
@@ -166,7 +166,7 @@ namespace RiskOfRoutes
                 var mapCanvasGroup = routeMapPanel.GetComponent<CanvasGroup>();
                 if (mapCanvasGroup == null)
                 {
-                    Log.Info("Map canvas group is null");
+                    //Log.Info("Map canvas group is null");
                     mapCanvasGroup = routeMapPanel.AddComponent<CanvasGroup>();
                 }
 
@@ -292,12 +292,22 @@ namespace RiskOfRoutes
 
             if (panelText == null || sceneImage == null) return;
 
+            //var sceneRect = routePortalPanel.transform.Find("PortraitRect");
+            //if(sceneRect != null)
+            //{
+            //    if (RiskOfRoutes.showPortalDestination.Value)
+            //    {
+            //        sceneRect.gameObject.SetActive(true);
+            //    }
+            //    else sceneRect.gameObject.SetActive(false);
+            //}
+
             //Material tex = SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex).portalMaterial;
-            if(mg.destinationSceneIndex != -1)
+            if (mg.destinationSceneIndex != -1)
             {
                 SceneDef sceneDef = SceneCatalog.GetSceneDef((SceneIndex)mg.destinationSceneIndex);
 
-                if(sceneDef != null && sceneDef.portalMaterial != null)
+                if (sceneDef != null && sceneDef.portalMaterial != null)
                 {
                     sceneImage.texture = sceneDef.portalMaterial.mainTexture;
                 }
