@@ -10,12 +10,12 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     {
         ItemDef selectedItem;
 
-        public EnemyItemsModifier(string internalName)
+        public EnemyItemsModifier(string internalName, int stack = 1)
         {
             selectedItem = PrinterItemModifier.stringToItemDef(internalName);
             if (selectedItem == null) return;
 
-            stackable = false;
+            this.stack = stack;
         }
 
 
@@ -29,7 +29,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         public override void OnStart()
         {
             Log.Info("EnemyItems on start");
-            int itemStack = GetItemStack(selectedItem, 1);
+            int itemStack = GetItemStack(selectedItem, stack);
             StageModifierDirector.instance.monsterTeamInventory.GiveItemPermanent(selectedItem, itemStack);
 
             SpawnCard.onSpawnedServerGlobal += SpawnCard_onSpawnedServerGlobal;
@@ -49,14 +49,14 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         {
             switch (def.tier)
             {
-                case ItemTier.Tier1: return 5;
-                case ItemTier.Tier2: return 3;
-                case ItemTier.Tier3: return 1;
-                case ItemTier.Boss: return 1;
-                case ItemTier.VoidTier1: return 5;
-                case ItemTier.VoidTier2: return 3;
-                case ItemTier.VoidTier3: return 1;
-                case ItemTier.VoidBoss: return 1;
+                case ItemTier.Tier1: return (5*modStack);
+                case ItemTier.Tier2: return (3*modStack);
+                case ItemTier.Tier3: return (1 * modStack);
+                case ItemTier.Boss: return (1 * modStack);
+                case ItemTier.VoidTier1: return (5 * modStack);
+                case ItemTier.VoidTier2: return (3 * modStack);
+                case ItemTier.VoidTier3: return (1 * modStack);
+                case ItemTier.VoidBoss: return (1 * modStack);
                 default: return 1;
             }
 
