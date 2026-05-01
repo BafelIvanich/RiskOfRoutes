@@ -43,7 +43,7 @@ namespace RiskOfRoutes
                 bool isRewardYellowActive = StageModifierDirector.instance.IsModifierActive("BossYellowItem");
                 bool isRewardRedActive = StageModifierDirector.instance.IsModifierActive("BossRedItem");
 
-                Log.Info($"isAurelioniteActive:{isAurelioniteActive}");
+                //Log.Info($"isAurelioniteActive:{isAurelioniteActive}");
 
                 if (isAurelioniteActive) SetAurelioniteIconActive(true);
                 if (isDroneGreenActive) SetDroneIconActive(true);

@@ -57,7 +57,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                             //
                             //eliteTier.costMultiplier = 6f;
                             float coeff = Mathf.Max(0.1f, 1f - ((RiskOfRoutes.RiskOfRoutes.tier2ElitesStackPercent.Value * (stack - 1)) / 100f));
-                            eliteTier.costMultiplier = Math.Max(6f*coeff,1f);
+                            eliteTier.costMultiplier = Math.Max(6f * coeff, 1f);
                             return;
                         }
                     }

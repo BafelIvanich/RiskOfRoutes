@@ -60,7 +60,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
                 if (redPrinter)
                 {
-                    Log.Info($"printer appeared at {redPrinter.transform.position} on stage");
+                    //Log.Info($"printer appeared at {redPrinter.transform.position} on stage");
 
                     ShopTerminalBehavior shop = redPrinter.GetComponent<ShopTerminalBehavior>();
 
@@ -82,12 +82,12 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
             if (card != null)
             {
-                Log.Info("Red printer spawncard created succesfully");
+                //Log.Info("Red printer spawncard created succesfully");
                 redPrinterSpawnCard = card;
             }
             else
             {
-                Log.Info("Asset path is invalid");
+                //Log.Info("Asset path is invalid");
             }
         }
 

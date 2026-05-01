@@ -10,7 +10,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     {
         ItemDef selectedItem;
 
-        public EnemyItemsModifier(string internalName, int stack = 1)
+        public EnemyItemsModifier(string internalName, int stack)
         {
             selectedItem = PrinterItemModifier.stringToItemDef(internalName);
             if (selectedItem == null) return;
@@ -31,6 +31,8 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             Log.Info("EnemyItems on start");
             int itemStack = GetItemStack(selectedItem, stack);
             StageModifierDirector.instance.monsterTeamInventory.GiveItemPermanent(selectedItem, itemStack);
+            //Log.Info($"MonsterItem modifier {itemStack}");
+            //Log.Info($"Stack modifier {stack}");
 
             SpawnCard.onSpawnedServerGlobal += SpawnCard_onSpawnedServerGlobal;
         }
@@ -49,8 +51,8 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         {
             switch (def.tier)
             {
-                case ItemTier.Tier1: return (5*modStack);
-                case ItemTier.Tier2: return (3*modStack);
+                case ItemTier.Tier1: return (5 * modStack);
+                case ItemTier.Tier2: return (3 * modStack);
                 case ItemTier.Tier3: return (1 * modStack);
                 case ItemTier.Boss: return (1 * modStack);
                 case ItemTier.VoidTier1: return (5 * modStack);

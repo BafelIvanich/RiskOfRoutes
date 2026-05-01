@@ -1,4 +1,5 @@
 using RoR2;
+using SamplePlugin;
 using SamplePlugin.StageModifiers;
 using SamplePlugin.StageModifiers.SceneModifiers;
 using UnityEngine;
@@ -40,8 +41,11 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
                     if (cm.inventory.GetItemCountEffective(lunarItem) > 0)
                     {
                         cm.inventory.RemoveItemPermanent(lunarItem);
-                        cm.inventory.GiveItemPermanent(pearl);
-                        Log.Info($"LunarItemModifier Gave player {cm.playerCharacterMasterController.GetDisplayName()} a {pearl.name}");
+                        if (StageModifierDirector.instance.purifyLunarItemModifier)
+                        {
+                            cm.inventory.GiveItemPermanent(pearl);
+                            Log.Info($"LunarItemModifier Gave player {cm.playerCharacterMasterController.GetDisplayName()} a {pearl.name}");
+                        }
                     }
                 }
             }

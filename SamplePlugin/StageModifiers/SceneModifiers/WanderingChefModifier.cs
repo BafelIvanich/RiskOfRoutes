@@ -16,7 +16,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
         public override void OnEnd()
         {
-            Log.Info("Gi");
+            //Log.Info("Gi");
         }
 
         public override void OnStart()
@@ -31,7 +31,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             GameObject wanderingChef = TryPlaceObjectOnScene(card, "Wandering Chef");
             if (wanderingChef)
             {
-                Log.Info($"Wandering Chef appeared at {wanderingChef.transform.position} on stage");
+                //Log.Info($"Wandering Chef appeared at {wanderingChef.transform.position} on stage");
 
                 wanderingChef.transform.position += wanderingChef.transform.up * 1.0f;
             }

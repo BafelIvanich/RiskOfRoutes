@@ -106,6 +106,7 @@ namespace SamplePlugin
             Log.Info($"\tNext scene:{Run.instance.nextStageScene.cachedName}");
             Log.Info($"\tCurr scene:{Stage.instance.sceneDef.cachedName}");
             Log.Info($"\tLoop clear count:{Run.instance.loopClearCount}");
+            Log.Info($"Child node: {cnode.GetPaths()[0].x}.{cnode.GetPaths()[0].y}: {cnode.GetPaths()[0].portalType}");
         }
 
         [ConCommand(commandName = "availableElites", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
@@ -156,6 +157,7 @@ namespace SamplePlugin
             {
                 args.senderMaster.GetBody().inventory.GiveItemPermanent(RoR2.RoR2Content.Items.AlienHead);
                 args.senderMaster.GetBody().inventory.GiveItemPermanent(RoR2.RoR2Content.Items.Knurl);
+                args.senderMaster.GetBody().inventory.GiveItemPermanent(RoR2.RoR2Content.Items.ExtraLifeConsumed);
                 Log.Info($"Red:{StageModifierDirector.instance.CheckPlayersRedItem()}, yellow:{StageModifierDirector.instance.CheckPlayersYellowItem()}");
             }
 

@@ -86,7 +86,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                             prefabOverride = rewardPickupPrefab
                         };
                     }
-                    else if(bossYellowItem || bossRedItem)
+                    else if (bossYellowItem || bossRedItem)
                     {
                         Log.Info($"{nameof(BossGroup_DropRewards)}: Dropping boss or red reward");
                         List<UniquePickup> pickups = new List<UniquePickup>();

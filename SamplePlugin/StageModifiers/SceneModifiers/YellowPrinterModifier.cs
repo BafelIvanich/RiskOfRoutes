@@ -58,13 +58,13 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
             for (int i = 0; i < stack; i++)
             {
-                GameObject redPrinter = TryPlaceObjectOnScene(yellowPrinterSpawnCard, "Yellow item printer");
+                GameObject yellowPrinter = TryPlaceObjectOnScene(yellowPrinterSpawnCard, "Yellow item printer");
 
-                if (redPrinter)
+                if (yellowPrinter)
                 {
-                    Log.Info($"printer appeared at {redPrinter.transform.position} on stage");
+                    //Log.Info($"printer appeared at {yellowPrinter.transform.position} on stage");
 
-                    ShopTerminalBehavior shop = redPrinter.GetComponent<ShopTerminalBehavior>();
+                    ShopTerminalBehavior shop = yellowPrinter.GetComponent<ShopTerminalBehavior>();
 
                     shop.dropTable = null;
                     shop.selfGeneratePickup = false;
@@ -83,7 +83,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
             if (card != null)
             {
-                Log.Info("Yellow printer spawncard created succesfully");
+                //Log.Info("Yellow printer spawncard created succesfully");
                 yellowPrinterSpawnCard = card;
             }
             else

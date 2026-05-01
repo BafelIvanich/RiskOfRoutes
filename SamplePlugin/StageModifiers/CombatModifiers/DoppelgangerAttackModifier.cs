@@ -43,19 +43,19 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
             {
                 Log.Info("Here doppel");
                 PerformInvasion();
-                coolDown = self.fixedTime + Mathf.Max(defaultTime - (float)(RiskOfRoutes.doppelStackTime.Value*(stack-1)), 60f);
+                coolDown = self.fixedTime + Mathf.Max(defaultTime - (float)(RiskOfRoutes.doppelStackTime.Value * (stack - 1)), 60f);
             }
 
         }
 
         public static string GetCooldownString(int stack)
         {
-            float calculatedTime = Mathf.Max(defaultTime - (float)(StageModifierDirector.instance.doppelStackTime * (stack-1)), 60f);
+            float calculatedTime = Mathf.Max(defaultTime - (float)(StageModifierDirector.instance.doppelStackTime * (stack - 1)), 60f);
             int time = Mathf.RoundToInt(calculatedTime);
             int minutes = time / 60;
             int seconds = time % 60;
 
-            if(seconds > 0)
+            if (seconds > 0)
                 return RoR2.Language.GetStringFormatted("DOPPELGANGER_TIME", minutes, seconds);
             else
                 return RoR2.Language.GetStringFormatted("DOPPELGANGER_TIME_MINUTE", minutes);
