@@ -58,9 +58,9 @@ public class RouteMap
 
         WeightedSelection<RoutePortalType> postOne = new WeightedSelection<RoutePortalType>();
         //postOne.AddChoice(RoutePortalType.ItemType, 1f);
-        general.AddChoice(RoutePortalType.Heal, 1f);
-        general.AddChoice(RoutePortalType.Combat, 1f);
-        general.AddChoice(RoutePortalType.Utility, 1f);
+        postOne.AddChoice(RoutePortalType.Heal, 1f);
+        postOne.AddChoice(RoutePortalType.Combat, 1f);
+        postOne.AddChoice(RoutePortalType.Utility, 1f);
         postOne.AddChoice(RoutePortalType.DroneType, 1f);
         postOne.AddChoice(RoutePortalType.ChefType, 0.8f);
         postOne.AddChoice(RoutePortalType.Rare, 0.8f);
@@ -155,7 +155,7 @@ public class RouteMap
         {
             if (skipTypes.Contains(type)) continue;
             if (type == RoutePortalType.Rare || type == RoutePortalType.ChefType)
-                res.AddChoice(type, 1.0f);
+                res.AddChoice(type, 0.8f);
             else
                 res.AddChoice(type, 1.0f);
         }
@@ -279,7 +279,7 @@ public class RouteMap
             else
                 ConnectToRandomNode(colossusNode, thisLayer: false);
 
-                return colossusNode;
+            return colossusNode;
         }
         else
         {
@@ -353,12 +353,26 @@ public class RouteMap
     {
         int y = node.y;
         int my = thisLayer ? y : y + 1;
+
+        List<RouteNode> validNodes = new List<RouteNode>();
+
         for (int x = 0; x < width; x++)
         {
-            if (mapGrid[x, my] != null && mapGrid[x, my].portalType != RoutePortalType.None)
+            RouteNode targetNode = mapGrid[x, my];
+
+            if (targetNode != null && targetNode.portalType != RoutePortalType.None && targetNode != node)
             {
-                node.front = mapGrid[x, my];
+                validNodes.Add(targetNode);
             }
+        }
+
+        if (validNodes.Count > 0)
+        {
+            node.front = RoR2.Run.instance.stageRng.NextElementUniform(validNodes);
+        }
+        else
+        {
+            Log.Warning($"{nameof(ConnectToRandomNode)}: No valid target nodes to connect");
         }
     }
 
@@ -417,7 +431,7 @@ public class RouteMap
 
         public override string ToString()
         {
-            return $"Node:{x},{y} with {GetPaths().Count} paths";
+            return $"Node:{x}.{y} with {GetPaths().Count} paths";
         }
     }
 
