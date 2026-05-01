@@ -29,10 +29,15 @@ namespace RiskOfRoutes.StageModifiers
         public static List<string> rarePool = new List<string>();
         public static List<string> chefPool = new List<string>();
 
-        public static List<string> itemTypePool = new List<string>();
         public static List<string> combatPool = new List<string>();
         public static List<string> healPool = new List<string>();
         public static List<string> utilityPool = new List<string>();
+
+        public static List<string> additionalDefs = new List<string>();
+
+        public static List<string> itemTypePool = new List<string>();
+        public static List<string> enemyItemPool = new List<string>();
+        public static List<string> lunarItemPool = new List<string>();
 
 
         public static readonly List<string> AllDefNames = new List<string>
@@ -171,6 +176,7 @@ namespace RiskOfRoutes.StageModifiers
             RegEnemy("PersonalShield", ModifierTier.Tier1);
             RegEnemy("Hoof", ModifierTier.Tier1);
             RegEnemy("ShieldBooster", ModifierTier.Tier1);
+            RegEnemy("FlatHealth", ModifierTier.Tier1);
 
             //RegEnemy("Thorns", ModifierTier.Tier2);
             RegEnemy("SprintOutOfCombat", ModifierTier.Tier2);
@@ -190,6 +196,7 @@ namespace RiskOfRoutes.StageModifiers
             //принтеры
 
             RegPrinter("ArmorPlate", ModifierTier.Tier1);
+            RegPrinter("FlatHealth", ModifierTier.Tier1);
             RegPrinter("Crowbar", ModifierTier.Tier1);
             RegPrinter("DeathMark", ModifierTier.Tier1);
             RegPrinter("DelayedDamage", ModifierTier.Tier1);
@@ -243,13 +250,92 @@ namespace RiskOfRoutes.StageModifiers
             RegLunar("HalfSpeedDoubleHealth", ModifierTier.Tier3);
         }
 
-        public static void Register(ModifierDef def, string iconAddress, bool isArtifact = false, bool isItem = false)
+        //todo убрать брутфорс из всех пуллов, сделать единый для удаления
+        public static void CleanAdditionalDefs()
+        {
+            Log.Info($"{nameof(CleanAdditionalDefs)}: Removing added defs from pools");
+
+            List<string> toRemove = new List<string>();
+            foreach (var pair in AllDefs)
+            {
+                if (additionalDefs.Contains(pair.Key))
+                {
+                    toRemove.Add(pair.Key);
+                }
+            }
+
+            //todo убрать
+            Log.Info($"{nameof(CleanAdditionalDefs)}: Defs to remove:");
+            foreach (var additionalDef in toRemove)
+            {
+                Log.Info($"\t{additionalDef}");
+            }
+            //
+
+            foreach (var def in toRemove)
+            {
+                AllDefs.Remove(def);
+            }
+
+            generalNegativePool.RemoveAll(def => toRemove.Contains(def));
+
+            utilityPool.RemoveAll(def => toRemove.Contains(def));
+            healPool.RemoveAll(def => toRemove.Contains(def));
+            combatPool.RemoveAll(def => toRemove.Contains(def));
+            chefPool.RemoveAll(def => toRemove.Contains(def));
+
+
+        }
+
+        public static void DisableDefaultPools(bool disablePrinter, bool disableEnemy, bool disableLunar)
+        {
+            if (disablePrinter)
+            {
+                Log.Info($"{nameof(DisableDefaultPools)}: Default printer modifier configuration is disabled");
+
+                var defaults = itemTypePool;
+                foreach (var defName in defaults) AllDefs.Remove(defName);
+
+                itemTypePool.Clear();
+                combatPool.Clear();
+                healPool.Clear();
+                utilityPool.Clear();
+
+                chefPool.RemoveAll(def => def.EndsWith("_Printer"));
+            }
+            if (disableEnemy)
+            {
+                Log.Info($"{nameof(DisableDefaultPools)}: Default enemy item modifier configuration is disabled");
+
+                var defaults = enemyItemPool;
+                foreach (var defName in defaults) AllDefs.Remove(defName);
+
+                generalNegativePool.RemoveAll(x => x.EndsWith("_EnemyItem"));
+            }
+            if (disableLunar)
+            {
+                Log.Info($"{nameof(DisableDefaultPools)}: Default lunar item modifier configuration is disabled");
+
+                var defaults = lunarItemPool;
+
+                foreach (var defName in defaults) AllDefs.Remove(defName);
+
+                generalNegativePool.RemoveAll(x => x.EndsWith("_LunarItem"));
+
+
+            }
+        }
+
+        public static void Register(ModifierDef def, string iconAddress, bool isArtifact = false, bool isItem = false, bool isAdditional = false)
         {
             if (AllDefs.ContainsKey(def.name))
             {
                 Log.Warning($"Trying to register modifier {def.name} that already exists, check config");
                 return;
             }
+
+            if (isAdditional) additionalDefs.Add(def.name);
+
             def.icon = LoadSprite(iconAddress, isArtifact, isItem);
             def.isArtifact = isArtifact;
             AllDefs.Add(def.name, def);
@@ -292,7 +378,7 @@ namespace RiskOfRoutes.StageModifiers
                 }
                 else
                 {
-                    Log.Error($"Something went wrong for item:{def.name}");
+                    Log.Error($"{nameof(StageModifierCatalog)}: Init - Something went wrong for item:{def.name}");
                     //todo обработка
                 }
             }
@@ -306,9 +392,9 @@ namespace RiskOfRoutes.StageModifiers
 
             }
 
-            Log.Info($"Added tokens for modifier {def.name}:NAME - {nameToken}, DESCRIPTION - {descriptionToken}");
+            //Log.Info($"Added tokens for modifier {def.name}:NAME - {nameToken}, DESCRIPTION - {descriptionToken}");
         }
-        public static void TryRegArtifact(bool isAllowed, string name, ModifierTier tier, bool isNegative)
+        public static void TryRegArtifact(bool isAllowed, string name, ModifierTier tier, bool isNegative, bool isAdditional = false)
         {
             if (!isAllowed) return;
 
@@ -316,7 +402,7 @@ namespace RiskOfRoutes.StageModifiers
                 ? () => StageModifierDirector.instance?.CheckArtifactOfDeathAvailable() ?? false
                 : () => StageModifierDirector.instance?.CheckArtifactAvailable(name) ?? false;
 
-            Register(new ModifierDef(name, tier, 1f, isAvailable, stackable: false, isNegative: isNegative), name, isArtifact: true);
+            Register(new ModifierDef(name, tier, 1f, isAvailable, stackable: false, isNegative: isNegative), name, isArtifact: true, isAdditional);
 
             if (isNegative)
             {
@@ -328,7 +414,7 @@ namespace RiskOfRoutes.StageModifiers
             }
         }
 
-        public static void RegEnemy(string itemName, ModifierTier tier)
+        public static void RegEnemy(string itemName, ModifierTier tier, bool isAdditional = false)
         {
             ItemIndex index = ItemCatalog.FindItemIndex(itemName);
             ItemDef def = ItemCatalog.GetItemDef(index);
@@ -339,11 +425,19 @@ namespace RiskOfRoutes.StageModifiers
             }
 
             string modName = itemName + "_EnemyItem";
-            Register(new ModifierDef(modName, tier, 1f, false, true), itemName, false, true);
+            if(StageModifierDirector.instance!=null)
+            {
+                Register(new ModifierDef(modName, tier, 1f, stackable: StageModifierDirector.instance.enemyItemsModifierCanStack, true), itemName, false, true, isAdditional);
+            }
+            else
+            {
+                Register(new ModifierDef(modName, tier, 1f, stackable: RiskOfRoutes.enemyItemsModifierCanStack.Value, true), itemName, false, true, isAdditional);
+            }
             generalNegativePool.Add(modName);
+            enemyItemPool.Add(modName);
         }
 
-        public static void RegPrinter(string itemName, ModifierTier tier)
+        public static void RegPrinter(string itemName, ModifierTier tier, bool isAdditional = false)
         {
             ItemIndex index = ItemCatalog.FindItemIndex(itemName);
             ItemDef def = ItemCatalog.GetItemDef(index);
@@ -354,7 +448,7 @@ namespace RiskOfRoutes.StageModifiers
             }
 
             string modName = itemName + "_Printer";
-            Register(new ModifierDef(modName, tier, 1f, false, false), itemName, false, true);
+            Register(new ModifierDef(modName, tier, 1f, false, false), itemName, false, true, isAdditional);
 
             if (def.tags.Contains(ItemTag.Damage))
                 combatPool.Add(modName);
@@ -365,14 +459,14 @@ namespace RiskOfRoutes.StageModifiers
 
 
             //todo под вопросом
-            if(def.tags.Contains(ItemTag.FoodRelated))
+            if (def.tags.Contains(ItemTag.FoodRelated))
                 chefPool.Add(modName);
             //
 
             itemTypePool.Add(modName);
         }
 
-        public static void RegLunar(string itemName, ModifierTier tier)
+        public static void RegLunar(string itemName, ModifierTier tier, bool isAdditional = false)
         {
             ItemIndex index = ItemCatalog.FindItemIndex(itemName);
             ItemDef def = ItemCatalog.GetItemDef(index);
@@ -389,8 +483,10 @@ namespace RiskOfRoutes.StageModifiers
             }
 
             string modName = itemName + "_LunarItem";
-            Register(new ModifierDef(modName, tier, 1f, false, true), itemName, false, true);
+            Register(new ModifierDef(modName, tier, 1f, false, true), itemName, isArtifact: false, isItem: true, isAdditional);
             generalNegativePool.Add(modName);
+
+            lunarItemPool.Add(modName);
         }
 
         public static ModifierDef FindModifier(string name)
@@ -401,7 +497,37 @@ namespace RiskOfRoutes.StageModifiers
             }
             else
             {
+                //todo клиенту может понадобиться знать тир модифаера если от этого будет зависеть UI
+                Log.Warning($"{nameof(FindModifier)}: Host has modifier with name {name}");
+                //var itemName = name.Split('_')[0];
+                //ItemIndex itemIndex = RoR2.ItemCatalog.FindItemIndex(itemName);
+                //if (itemIndex == ItemIndex.None)
+                //{
+                //    Log.Error($"Could not find item by the name {itemName}");
+                //    return null;
+                //}
+
+                //if(name.EndsWith("_Printer"))
+                //{
+                //    RegPrinter(itemName, ModifierTier.Tier1, true);
+                //}
+                //else if(name.EndsWith("_EnemyItem"))
+                //{
+                //    RegEnemy(itemName, ModifierTier.Tier1, true);
+                //}
+                //else if(name.EndsWith("_LunarItem"))
+                //{
+                //    RegLunar(itemName, ModifierTier.Tier1, true);
+                //}
+
+                //if (AllDefs.TryGetValue(name, out ModifierDef itemDef))
+                //{
+                //    return itemDef;
+                //}
+                //else return null;
+
                 return null;
+
             }
         }
 
@@ -488,7 +614,7 @@ namespace RiskOfRoutes.StageModifiers
                                 Log.Error($"Could not find item by the name {itemName}");
                                 return null;
                             }
-                            EnemyItemsModifier mod = new EnemyItemsModifier(itemName);
+                            EnemyItemsModifier mod = new EnemyItemsModifier(itemName, stack);
                             return mod;
                         }
                         else if (def.Contains("LunarItem"))
@@ -511,7 +637,7 @@ namespace RiskOfRoutes.StageModifiers
             }
         }
 
-        private static List<string> GetPool(RoutePortalType routePortalType, bool isNegative = false)
+        public static List<string> GetPool(RoutePortalType routePortalType, bool isNegative = false)
         {
             if (isNegative) return generalNegativePool;
 
@@ -529,7 +655,7 @@ namespace RiskOfRoutes.StageModifiers
             }
         }
 
-        private static List<string> GetRandomPool()
+        public static List<string> GetRandomPool()
         {
             var pools = new List<string>[]
             {
@@ -540,20 +666,20 @@ namespace RiskOfRoutes.StageModifiers
                 utilityPool
             };
             var res = Run.instance.stageRng.NextElementUniform(pools);
-            Log.Info($"{nameof(GetRandomPool)}: For collosus got random pool {nameof(res)}");
+            Log.Info($"{nameof(GetRandomPool)}: For collosus got random pool with {res[0]}");
             return res;
         }
 
-        public static ModifierDef SelectModifier(HashSet<string> banned, RoutePortalType portalType, ModifierTier tier, bool isNegative = false)
+        public static ModifierDef SelectModifier(HashSet<string> banned, RoutePortalType portalType, ModifierTier tier, List<string> typePool)
         {
-            var pool = GetPool(portalType, isNegative);
+            var pool = typePool;
             if (pool.Count == 0)
             {
-                Log.Info($"{nameof(SelectModifier)}: Couldnt get {(isNegative ? "negative" : "positive")} pool for portal type - {portalType}");
+                Log.Warning($"{nameof(SelectModifier)}: Couldnt get pool for portal type - {portalType}");
             }
             else
             {
-                Log.Info($"{nameof(SelectModifier)}: {(isNegative ? "negative" : "positive")}-{portalType} - Got pool with {pool.Count} modifiers");
+                Log.Info($"{nameof(SelectModifier)}: {portalType} - Got pool with {pool.Count} modifiers");
             }
             WeightedSelection<ModifierDef> selection = new WeightedSelection<ModifierDef>();
 
@@ -572,8 +698,8 @@ namespace RiskOfRoutes.StageModifiers
 
                 if (currentDef.tier == tier || (currentDef.tier < tier && currentDef.IsStackable()))
                 {
-                    if (currentDef.tier != tier)
-                        Log.Info($"{nameof(SelectModifier)}: Modifier {currentDef.name} with default tier {currentDef.tier} needs to be stacked for tier {tier}");
+                    //if (currentDef.tier != tier)
+                    //Log.Info($"{nameof(SelectModifier)}: Modifier {currentDef.name} with default tier {currentDef.tier} needs to be stacked for tier {tier}");
                     selection.AddChoice(currentDef, 1f);
                 }
                 else
@@ -753,13 +879,13 @@ namespace RiskOfRoutes.StageModifiers
                 }
                 else if (def.name.Contains("_LunarItem"))
                 {
-                    if(StageModifierDirector.instance.purifyLunarItemModifier)
+                    if (StageModifierDirector.instance.purifyLunarItemModifier)
                     {
                         return RoR2.Language.GetStringFormatted("LUNAR_ITEMS_MODIFIER_DESCRIPTION_PURIFY", localizedName);
                     }
                     else
                     {
-                        return RoR2.Language.GetStringFormatted("LUNAR_ITEMS_MODIFIER_DESCRIPTION_PURIFY", localizedName);
+                        return RoR2.Language.GetStringFormatted("LUNAR_ITEMS_MODIFIER_DESCRIPTION_DEFAULT", localizedName);
                     }
                 }
 
@@ -768,7 +894,7 @@ namespace RiskOfRoutes.StageModifiers
             {
                 return $"<style=cWorldEvent>{RoR2.Language.GetStringFormatted(def.descriptionToken)}</style>";
             }
-            else if(def.name == "Doppelganger")
+            else if (def.name == "Doppelganger")
             {
                 string time = DoppelgangerAttackModifier.GetCooldownString(mod.stack);
 
