@@ -2,6 +2,7 @@
 using RiskOfRoutes.StageModifiers;
 using RoR2;
 using SamplePlugin.StageModifiers;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -26,7 +27,7 @@ namespace SamplePlugin
 
         public List<StageModifier> activeModifiers { get; set; }
         public List<ModifierSync> reservedModifiers { get; set; }
-        public List<ModifierDef> bannedModifiers { get; set; }
+        public HashSet<string> bannedModifiers { get; set; }
         public List<string> runArtifactsApplied;
 
         public SyncListModifier modifiersSynced = new SyncListModifier();
@@ -49,7 +50,6 @@ namespace SamplePlugin
         public Vector2 currentNodeSync = new Vector2(-1, -1);
 
         public int uniqueModifierLimit = 5;
-        public float punishmentTime = -1;
 
         public Inventory monsterTeamInventory;
 
@@ -61,6 +61,14 @@ namespace SamplePlugin
         [SyncVar]
         public int soulCostStack = 0;
 
+
+        //
+        public int commandAddedStack = 0;
+
+        // run configuration
+        public float punishmentTime = -1;
+        public bool purifyLunarItemModifier;
+        public int doppelStackTime = 30;
         /////
 
         public void Awake()
@@ -70,12 +78,12 @@ namespace SamplePlugin
 
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<ModifierSync>();
-            bannedModifiers = new List<ModifierDef>();
+            bannedModifiers = new HashSet<string>();
             activePortalInstances = new List<GameObject>();
 
-            if (!NetworkServer.active) return;
+            Log.Info($"{nameof(Awake)}: StageModifierDirector created");
 
-            Log.Info($"{nameof(Awake)}:StageModifierDirector created");
+            if (!NetworkServer.active) return;
 
             RoR2.Run.onRunStartGlobal += Run_onRunStartGlobal;
             RoR2.Run.onRunDestroyGlobal += Run_onRunDestroyGlobal;
@@ -98,18 +106,16 @@ namespace SamplePlugin
         {
             Log.Info($"{nameof(Run_onRunStartGlobal)}: Run started");
 
-            if (NetworkServer.active)
-            {
-                var invObj = Instantiate(RiskOfRoutes.RiskOfRoutes.networkedInventoryPrefab);
-                DontDestroyOnLoad(invObj);
+            var invObj = Instantiate(RiskOfRoutes.RiskOfRoutes.networkedInventoryPrefab);
+            DontDestroyOnLoad(invObj);
 
-                monsterTeamInventory = invObj.GetComponent<Inventory>();
-                invObj.GetComponent<TeamFilter>().teamIndex = TeamIndex.Monster;
+            monsterTeamInventory = invObj.GetComponent<Inventory>();
+            invObj.GetComponent<TeamFilter>().teamIndex = TeamIndex.Monster;
 
-                NetworkServer.Spawn(invObj);
-            }
+            NetworkServer.Spawn(invObj);
 
             CreateRunConfiguration();
+
 
             Log.Info($"{nameof(Run_onRunStartGlobal)}: Got punishmentTimeMinutes value - {punishmentTime}");
 
@@ -130,6 +136,10 @@ namespace SamplePlugin
                 punishmentTime = RiskOfRoutes.RiskOfRoutes.punishmentTimeMinutes.Value;
             else
                 punishmentTime = -1;
+
+            purifyLunarItemModifier = RiskOfRoutes.RiskOfRoutes.lunarTurnToPearl.Value;
+            doppelStackTime = RiskOfRoutes.RiskOfRoutes.doppelStackTime.Value;
+            //enemyItemsModifierCanStack = RiskOfRoutes.RiskOfRoutes.enemyItemsModifierCanStack;
 
             var enemyTier1Config = RiskOfRoutes.RiskOfRoutes.tier1EnemyItems.Value.Split(",").ToList();
             var enemyTier2Config = RiskOfRoutes.RiskOfRoutes.tier2EnemyItems.Value.Split(",").ToList();
@@ -158,6 +168,10 @@ namespace SamplePlugin
 
         private void Run_onRunDestroyGlobal(Run obj)
         {
+            //ClearCatalog();
+
+            //if (!NetworkServer.active) return;
+
             Log.Info($"{nameof(Run_onRunDestroyGlobal)}: Run ended, clearing {activeModifiers.Count} modifiers");
 
             foreach (StageModifier modifier in activeModifiers)
@@ -291,12 +305,12 @@ namespace SamplePlugin
             mapHeight = height;
             isMoonVisited = routeMap.isMoonVisited;
             routeNodesSynced = new List<RouteNodeSync>(mapUpdated);
-            RpcReceiveFullMap(mapUpdated, width, height, routeMap.isMoonVisited, punishmentTime, stageEnterTime);
+            RpcReceiveFullMap(mapUpdated, width, height, routeMap.isMoonVisited, punishmentTime, stageEnterTime, purifyLunarItemModifier, doppelStackTime);
 
         }
 
         [ClientRpc]
-        private void RpcReceiveFullMap(RouteNodeSync[] map, int width, int height, bool moon, float hostPunishmentTime, float hostStageEnterTime)
+        private void RpcReceiveFullMap(RouteNodeSync[] map, int width, int height, bool moon, float hostPunishmentTime, float hostStageEnterTime, bool lunarConfig, int doppel)
         {
             mapWidth = width;
             mapHeight = height;
@@ -307,6 +321,8 @@ namespace SamplePlugin
 
             punishmentTime = hostPunishmentTime;
             stageEnterTime = hostStageEnterTime;
+            purifyLunarItemModifier = lunarConfig;
+            doppelStackTime = doppel;
 
             Debug.Log($"{nameof(RpcReceiveFullMap)}: Got map on client");
             if (hostPunishmentTime != -1)
@@ -370,7 +386,7 @@ namespace SamplePlugin
             reservedModifiers.Clear();
 
             SceneDef currentScene = RoR2.SceneCatalog.GetSceneDefForCurrentScene();
-            stageEnterTime = Run.instance.fixedTime;
+            stageEnterTime = Run.instance.GetRunStopwatch();
             Log.Info($"{nameof(SceneDirector_onPrePopulateSceneServer)}: StageEnterTime: {stageEnterTime}");
             //if (currentScene.sceneType != SceneType.Intermission)
             //    currentNode.visited = true;
@@ -433,10 +449,10 @@ namespace SamplePlugin
                 return;
             }
 
-            HashSet<string> bannedFromSelection = new HashSet<string>();
+            HashSet<string> bannedFromCurrentSelection = new HashSet<string>();
             Dictionary<string, int> modifiers = new Dictionary<string, int>();
 
-            ModifierSlotConfiguration modifierSlots = GetModifierSlots(Run.instance.stageRng, mg.routeNode.portalType);
+            ModifierSlotConfiguration modifierSlots = GetModifierSlots(Run.instance.stageRng, mg.routeNode.portalType, bannedFromCurrentSelection);
 
             if (SceneHelper.IsSceneColossus((SceneIndex)mg.destinationSceneIndex, includeFalseSonScene: false))
             {
@@ -464,19 +480,20 @@ namespace SamplePlugin
                 modifiers.Add("Repair", 1);
             }
 
+
             //positive
             var positive = modifierSlots.positive;
             foreach (var tier in positive)
             {
                 for (int i = 0; i < tier.Value; i++)
                 {
-                    ModifierDef currentModifier = StageModifierCatalog.SelectModifier(bannedFromSelection, mg.routeNode.portalType, tier.Key);
+                    ModifierDef currentModifier = StageModifierCatalog.SelectModifier(bannedFromCurrentSelection, mg.routeNode.portalType, tier.Key);
                     if (currentModifier == null) continue;
                     //точно
-                    bannedFromSelection.Add(currentModifier.name);
+                    bannedFromCurrentSelection.Add(currentModifier.name);
                     if (currentModifier.conflictList != null)
                     {
-                        foreach (var name in currentModifier.conflictList) bannedFromSelection.Add(name);
+                        foreach (var name in currentModifier.conflictList) bannedFromCurrentSelection.Add(name);
                     }
 
                     //TODO
@@ -493,17 +510,19 @@ namespace SamplePlugin
             //negative
 
             var negative = modifierSlots.negative;
+            var selectedNegativeDefs = new List<ModifierDef>();
+
             foreach (var tier in negative)
             {
                 for (int i = 0; i < tier.Value; i++)
                 {
-                    ModifierDef currentModifier = StageModifierCatalog.SelectModifier(bannedFromSelection, mg.routeNode.portalType, tier.Key, isNegative: true);
+                    ModifierDef currentModifier = StageModifierCatalog.SelectModifier(bannedFromCurrentSelection, mg.routeNode.portalType, tier.Key, isNegative: true);
                     if (currentModifier == null) continue;
                     //точно выбран
-                    bannedFromSelection.Add(currentModifier.name);
+                    bannedFromCurrentSelection.Add(currentModifier.name);
                     if (currentModifier.conflictList != null)
                     {
-                        foreach (var name in currentModifier.conflictList) bannedFromSelection.Add(name);
+                        foreach (var name in currentModifier.conflictList) bannedFromCurrentSelection.Add(name);
                     }
 
                     Log.Info($"Modifier to calculate stacks for is {currentModifier.name} with tier {currentModifier.tier}");
@@ -512,18 +531,63 @@ namespace SamplePlugin
                     if (modifiers.ContainsKey(currentModifier.name))
                         modifiers[currentModifier.name] += stack;
                     else
+                    {
                         modifiers.Add(currentModifier.name, stack);
+                        selectedNegativeDefs.Add(currentModifier);
+                    }
                 }
             }
 
             //
-            int punishStack = (int)((Run.instance.fixedTime - stageEnterTime) / (punishmentTime * 60f));
-            Log.Info($"{nameof(GetNextStageModifiers)}: Adding punishment stacks");
+            int punishStack = (int)((Run.instance.GetRunStopwatch() - stageEnterTime) / (punishmentTime * 60f));
+            //test
+            punishStack += commandAddedStack;
+            Log.Info($"{nameof(GetNextStageModifiers)}: Adding {punishStack} punishment stacks");
             //среди негативных
             //если модифаер стакающийся то добавляется
-            //
+            var stackableNegatives = selectedNegativeDefs.Where(s => s.IsStackable());
+            if (punishStack > 0)
+            {
+                if (stackableNegatives.Count() == 0)
+                {
+                    Log.Warning($"{nameof(GetNextStageModifiers)}: There are no stackable negative modifiers to apply punish, adding new");
+                    if (punishStack >= 3)
+                    {
+                        var tier3Stackable = StageModifierCatalog.SelectModifier(bannedFromCurrentSelection,mg.routeNode.portalType, ModifierTier.Tier3, isNegative: true);
+                        //
+                        modifiers.Add(tier3Stackable.name, 1);
 
-            List<ModifierSync> res = new List<ModifierSync>();
+                        punishStack -= 3;
+                    }
+                    else if (punishStack >= 2)
+                    {
+                        var tier2Stackable = StageModifierCatalog.SelectModifier(bannedFromCurrentSelection, mg.routeNode.portalType, ModifierTier.Tier2, isNegative: true);
+                        modifiers.Add(tier2Stackable.name, 1);
+
+                    }
+                    else
+                    {
+                        var tier1Stackable = StageModifierCatalog.SelectModifier(bannedFromCurrentSelection, mg.routeNode.portalType, ModifierTier.Tier1, isNegative: true);
+                        modifiers.Add(tier1Stackable.name, 1);
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < punishStack; i++)
+                    {
+                        var randStackable = Run.instance.stageRng.NextElementUniform(stackableNegatives.ToArray());
+                        if (modifiers.ContainsKey(randStackable.name))
+                        {
+                            modifiers[randStackable.name] += 1;
+                            Log.Info($"{nameof(GetNextStageModifiers)}: Added 1 additional stack to {randStackable.name}");
+                        }
+                    }
+                }
+            }
+     
+
+
+        List<ModifierSync> res = new List<ModifierSync>();
             foreach (var mod in modifiers)
             {
                 var modDef = StageModifierCatalog.FindModifier(mod.Key);
@@ -546,7 +610,7 @@ namespace SamplePlugin
                 Log.Info("RETURNING 1");
                 return 1;
             }
-            if (currentTier == ModifierTier.Tier1 && targetTier == ModifierTier.Tier2)
+            if (currentTier == ModifierTier.Tier1 && targetTier == ModifierTier.Tier2 || currentTier == ModifierTier.Tier2 && targetTier == ModifierTier.Tier3)
             {
                 Log.Info("RETURNING 2");
                 return 2;
@@ -564,32 +628,46 @@ namespace SamplePlugin
 
         }
 
-        public static ModifierSlotConfiguration GetModifierSlots(Xoroshiro128Plus rng, RoutePortalType type)
+        public static ModifierSlotConfiguration GetModifierSlots(Xoroshiro128Plus rng, RoutePortalType type, HashSet<string> banned)
         {
             var selection = new WeightedSelection<ModifierSlotConfiguration>();
             if (type != RoutePortalType.Rare)
             {
-                selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 1 } }, negative = { { ModifierTier.Tier1, 1 } } }, 1.0f);
-                selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 2 } }, negative = { { ModifierTier.Tier2, 1 } } }, 1.0f);
-                selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier2, 1 } }, negative = { { ModifierTier.Tier1, 2 } } }, 1.0f);
+                //selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 1 } }, negative = { { ModifierTier.Tier1, 1 } } }, 1.0f);
+                //selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 2 } }, negative = { { ModifierTier.Tier2, 1 } } }, 1.0f);
+                //selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier2, 1 } }, negative = { { ModifierTier.Tier1, 2 } } }, 1.0f);
                 //todo верунть
             }
 
             selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier3, 1 } } }, 0.3f);
-            selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier2, 1 }, { ModifierTier.Tier1, 1 } } }, 0.3f);
+            //selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier2, 1 }, { ModifierTier.Tier1, 1 } } }, 0.3f);
 
             var res = selection.Evaluate(rng.nextNormalizedFloat);
-            Log.Info("\tSelected slots:");
-            Log.Info("\t\tPositive:");
+
+            if (res.positive.ContainsKey(ModifierTier.Tier3))
+            {
+                var isTier3Available = (StageModifierCatalog.SelectModifier(banned, type, ModifierTier.Tier3) != null);
+                if (!isTier3Available)
+                {
+                    Log.Warning($"{nameof(GetModifierSlots)}: Couldnt get Tier3 modifier for node type {type}, using Tier2");
+                    res.positive.Remove(ModifierTier.Tier2);
+                    if (res.positive.ContainsKey(ModifierTier.Tier2))
+                        res.positive[ModifierTier.Tier2] = res.positive[ModifierTier.Tier2] + 1;
+                    else
+                        res.positive.Add(ModifierTier.Tier2, 2);
+                }
+            }
+
             foreach (var tier in res.positive)
             {
                 Log.Info($"\t\t\tTier:{tier.Key}, amount: {tier.Value}");
             }
-            Log.Info("\t\tNegative");
+
             foreach (var tier in res.negative)
             {
                 Log.Info($"\t\t\tTier:{tier.Key}, amount: {tier.Value}");
             }
+
 
             return res;
         }
@@ -656,12 +734,12 @@ namespace SamplePlugin
             }
         }
 
-        public RouteMap.RouteNode GetRouteNodeFromRandomPortal()
+        public void GetRouteNodeFromRandomPortal()
         {
             if (activePortalInstances == null || activePortalInstances.Count == 0)
             {
                 Log.Error($"{nameof(GetRouteNodeFromRandomPortal)}: There are no portal active instances to get routeNode from");
-                return null;
+                return;
             }
 
             Log.Info($"{nameof(GetRouteNodeFromRandomPortal)}: Trying to get routeNode from {activePortalInstances.Count} portal instances");
@@ -672,7 +750,7 @@ namespace SamplePlugin
             if (mg == null)
             {
                 Log.Error($"{nameof(GetRouteNodeFromRandomPortal)}: Selected portal instance missing RoutePortalManager");
-                return null;
+                return;
             }
 
             currentNode = mg.routeNode;
@@ -687,7 +765,7 @@ namespace SamplePlugin
                 }
             }
 
-            return currentNode;
+
         }
 
 
