@@ -127,7 +127,7 @@ namespace RiskOfRoutes
                     return;
                 }
 
-                if(label == labelVertical)
+                if (label == labelVertical)
                     text.text = $"{punishStack}";
                 else text.text = RoR2.Language.GetStringFormatted("PUNISHMENT_VALUE_NAME", punishStack);
 
@@ -136,7 +136,7 @@ namespace RiskOfRoutes
 
         public void DrawMap(Vector2 selectedNodeCoords)
         {
-            Log.Info($"{nameof(DrawMap)}: Coords of selected node:{selectedNodeCoords}");
+            //Log.Info($"{nameof(DrawMap)}: Coords of selected node:{selectedNodeCoords}");
 
             ClearContainer();
             MapNodes.Clear();
@@ -167,7 +167,7 @@ namespace RiskOfRoutes
             var iconsSize = 48f * (RiskOfRoutes.routeMapIconSize.Value / 100f);
 
             var selectedNode = GetNode((int)selectedNodeCoords.x, (int)selectedNodeCoords.y, map, mapHeight);
-            Log.Info($"{nameof(DrawMap)}: Selected node:{selectedNode.x}:{selectedNode.y}:{selectedNode.portalType}-{selectedNode.visited}");
+            //Log.Info($"{nameof(DrawMap)}: Selected node:{selectedNode.x}:{selectedNode.y}:{selectedNode.portalType}-{selectedNode.visited}");
 
             Transform linesContainer = new GameObject("Lines", typeof(RectTransform)).transform;
             linesContainer.SetParent(nodeContainer, false);
