@@ -79,10 +79,10 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
             if (newItemIndex == lunarItem.itemIndex)
             {
                 self.image.color = new Color(0.3f, 0.3f, 0.3f, 1f);
-                self.tooltipProvider.bodyToken = "SMTH";
+                //self.tooltipProvider.bodyToken = "SMTH";
             }
 
-            Log.Info($"Set item index intfloat{newItemIndex}");
+            //Log.Info($"Set item index intfloat{newItemIndex}");
         }
     }
 }

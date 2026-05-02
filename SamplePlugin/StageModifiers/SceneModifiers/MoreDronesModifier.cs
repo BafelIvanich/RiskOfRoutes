@@ -95,7 +95,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
                     //Log.Info("ADDED CHOICE");
                 }
             }
-            Log.Info("SEELCTOR " + cardSelector.Count);
+            //Log.Info("SEELCTOR " + cardSelector.Count);
             if (cardSelector.Count == 0)
             {
                 return null;
