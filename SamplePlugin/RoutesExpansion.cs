@@ -328,7 +328,7 @@ namespace RiskOfRoutes
                 return obj;
             }
 
-            Log.Info($"{nameof(OnVanillaPortalSpawn)}: Is manager enabled for {spawnCardName} - {mgr.enabled}");
+            //Log.Info($"{nameof(OnVanillaPortalSpawn)}: Is manager enabled for {spawnCardName} - {mgr.enabled}");
 
             if (spawnCardName == "iscRoutePortal") return obj;
 
@@ -439,7 +439,7 @@ namespace RiskOfRoutes
             if (mgr.isUsingModifiers)
                 StageModifierDirector.instance.GetNextStageModifiers(obj);
 
-            Log.Info($"{nameof(OnVanillaPortalSpawn)}: Enabled manager for portal - {spawnCardName}");
+            //Log.Info($"{nameof(OnVanillaPortalSpawn)}: Enabled manager for portal - {spawnCardName}");
             mgr.enabled = true;
             mgr.nodeSync = new Vector2(mgr.routeNode.x, mgr.routeNode.y); //todo убатьвапть на всякий случай
 

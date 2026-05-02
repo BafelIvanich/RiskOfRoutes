@@ -106,8 +106,8 @@ public class RouteMap
         var children = node.GetPaths();
         if (children.Count == 0) return;
 
-        if (node.portalType == RoutePortalType.Rare || node.portalType == RoutePortalType.ChefType)
-        {
+        //if (node.portalType == RoutePortalType.Rare || node.portalType == RoutePortalType.ChefType)
+        //{
             toSkip = node.portalType;
             foreach (var child in children)
             {
@@ -116,7 +116,7 @@ public class RouteMap
                     child.portalType = RollPortalType(rng, node.portalType);
                 }
             }
-        }
+        //}
 
         if (children.Count > 1)
         {
@@ -174,7 +174,7 @@ public class RouteMap
         for (int i = 0; i < startingRoutes; i++)
         {
             if (nums.Count == 0) break;
-            Log.Info("Nums" + nums.Count);
+            //Log.Info("Nums" + nums.Count);
             int num = rng.NextElementUniform(nums);
             nums.Remove(num);
 

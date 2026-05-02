@@ -92,8 +92,15 @@ namespace RiskOfRoutes.StageModifiers
             generalPositivePool.Clear();
             generalNegativePool.Clear();
             itemTypePool.Clear();
+            enemyItemPool.Clear();
+            lunarItemPool.Clear();
             rarePool.Clear();
             droneTypePool.Clear();
+            chefPool.Clear();
+            combatPool.Clear();
+            healPool.Clear();
+            utilityPool.Clear();
+            additionalDefs.Clear();
 
             generalPositivePool.AddRange(new string[] { });
             generalNegativePool.AddRange(new string[] { "Doppelganger", "SoulCost", "VoidEnemies", "MoreElites", "LunarEnemies", "PowerfulElites", "OnlyFlying" });
@@ -138,8 +145,9 @@ namespace RiskOfRoutes.StageModifiers
             Register(new ModifierDef("DroneBossGreen", ModifierTier.Tier1, 1f, false, false), "uncommonDroneReward");
             Register(new ModifierDef("DroneBossRed", ModifierTier.Tier3, 1f, false, false), "legendaryDroneReward");
 
-            Register(new ModifierDef("MoreElites", ModifierTier.Tier1, 1f, true, true), "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveBossIcon.png");
-            Register(new ModifierDef("MoreDrones", ModifierTier.Tier1, 1f, true, false), "RoR2/Base/Common/MiscIcons/texDroneIconOutlined.png");
+            //Register(new ModifierDef("MoreElites", ModifierTier.Tier1, 1f, true, true), "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveBossIcon.png");
+            Register(new ModifierDef("MoreElites", ModifierTier.Tier1, 1f, true, true), "moreElitesIcon");
+            Register(new ModifierDef("MoreDrones", ModifierTier.Tier1, 1f, true, false), "texMoreDronesModifier");
             Register(new ModifierDef("UpgradeDrones", ModifierTier.Tier3, 1f, true, false), "RoR2/DLC3/UI/texUIdroneupgradeIcon.png");
             Register(new ModifierDef("LunarEnemies", ModifierTier.Tier3, 1f, true, true), "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveLunarIcon.png");
             Register(new ModifierDef("VoidEnemies", ModifierTier.Tier3, 1f, true, true), "RoR2/DLC1/GameModes/InfiniteTowerRun/ITAssets/texITWaveVoidIcon.png");
@@ -158,7 +166,7 @@ namespace RiskOfRoutes.StageModifiers
 
 
             Register(new ModifierDef("OnlyFlying", ModifierTier.Tier2, 1f, false, true), "onlyFlying");
-            Register(new ModifierDef("PowerfulElites", ModifierTier.Tier3, 1f, true, true), "tier2elites");
+            Register(new ModifierDef("PowerfulElites", ModifierTier.Tier3, 1f, true, true), "tier2ElitesIcon");
             Register(new ModifierDef("Repair", ModifierTier.Tier3, 1f, () => StageModifierDirector.instance?.CheckPlayersHaveConsumedItems() ?? false, false, false), "repair");
             Register(new ModifierDef("WanderingChef", ModifierTier.Tier3, 1f, false, false), "RoR2/DLC3/MealPrep/texMealPrepIcon.png");
 
@@ -433,8 +441,8 @@ namespace RiskOfRoutes.StageModifiers
             {
                 Register(new ModifierDef(modName, tier, 1f, stackable: RiskOfRoutes.enemyItemsModifierCanStack.Value, true), itemName, false, true, isAdditional);
             }
-            generalNegativePool.Add(modName);
-            enemyItemPool.Add(modName);
+            if (!generalNegativePool.Contains(modName)) generalNegativePool.Add(modName);
+            if (!enemyItemPool.Contains(modName)) enemyItemPool.Add(modName);
         }
 
         public static void RegPrinter(string itemName, ModifierTier tier, bool isAdditional = false)
@@ -450,20 +458,17 @@ namespace RiskOfRoutes.StageModifiers
             string modName = itemName + "_Printer";
             Register(new ModifierDef(modName, tier, 1f, false, false), itemName, false, true, isAdditional);
 
-            if (def.tags.Contains(ItemTag.Damage))
+            if (def.tags.Contains(ItemTag.Damage) && !combatPool.Contains(modName))
                 combatPool.Add(modName);
-            else if (def.tags.Contains(ItemTag.Healing))
+            else if (def.tags.Contains(ItemTag.Healing) && !healPool.Contains(modName))
                 healPool.Add(modName);
-            else if (def.tags.Contains(ItemTag.Utility))
+            else if (def.tags.Contains(ItemTag.Utility) && !utilityPool.Contains(modName))
                 utilityPool.Add(modName);
 
-
-            //todo под вопросом
-            if (def.tags.Contains(ItemTag.FoodRelated))
+            if (def.tags.Contains(ItemTag.FoodRelated) && !chefPool.Contains(modName))
                 chefPool.Add(modName);
-            //
 
-            itemTypePool.Add(modName);
+            if (!itemTypePool.Contains(modName)) itemTypePool.Add(modName);
         }
 
         public static void RegLunar(string itemName, ModifierTier tier, bool isAdditional = false)
@@ -484,9 +489,9 @@ namespace RiskOfRoutes.StageModifiers
 
             string modName = itemName + "_LunarItem";
             Register(new ModifierDef(modName, tier, 1f, false, true), itemName, isArtifact: false, isItem: true, isAdditional);
-            generalNegativePool.Add(modName);
 
-            lunarItemPool.Add(modName);
+            if (!generalNegativePool.Contains(modName)) generalNegativePool.Add(modName);
+            if (!lunarItemPool.Contains(modName)) lunarItemPool.Add(modName);
         }
 
         public static ModifierDef FindModifier(string name)
@@ -727,20 +732,20 @@ namespace RiskOfRoutes.StageModifiers
         {
             if (address.Contains("RoR2/"))
             {
-                Log.Info($"Searching for ingame sprite for{address}");
+                //Log.Info($"Searching for ingame sprite for{address}");
                 return Addressables.LoadAssetAsync<Sprite>(address).WaitForCompletion();
             }
 
             if (isArtifact)
             {
-                Log.Info($"Searching for artifact sprite for{address}");
+                //Log.Info($"Searching for artifact sprite for{address}");
                 ArtifactDef art = ArtifactCatalog.FindArtifactDef(address);
                 return art != null ? art.smallIconSelectedSprite : AssetManager.placeholderIcon;
             }
 
             if (isItem)
             {
-                Log.Info($"Searching for item sprite for {address}");
+                //Log.Info($"Searching for item sprite for {address}");
                 ItemIndex itemIndex = ItemCatalog.FindItemIndex(address);
                 if (itemIndex != ItemIndex.None)
                     return ItemCatalog.GetItemDef(itemIndex).pickupIconSprite;
@@ -748,11 +753,11 @@ namespace RiskOfRoutes.StageModifiers
 
             if (assetBundle != null && assetBundle.Contains(address))
             {
-                Log.Info($"Searching for assetBundle sprite for{address}");
+                //Log.Info($"Searching for assetBundle sprite for{address}");
                 return assetBundle.LoadAsset<Sprite>(address);
             }
 
-            Log.Info($"Not found sprite for {address}");
+            Log.Warning($"Not found sprite for {address}");
             return AssetManager.placeholderIcon;
         }
 

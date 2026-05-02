@@ -1034,6 +1034,7 @@ namespace SamplePlugin
                 RoR2.DLC1Content.Items.MushroomVoid
 
             };
+            
             int foodItems = 0;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {

@@ -78,7 +78,7 @@ namespace RiskOfRoutes
         public const string PluginGUID = PluginAuthor + "." + PluginName;
         public const string PluginAuthor = "burboni4";
         public const string PluginName = "RiskOfRoutes";
-        public const string PluginVersion = "1.0.0";
+        public const string PluginVersion = "1.0.1";
 
         //tweaks
         public static ConfigEntry<bool> usePortalMaterial { get; set; }
@@ -265,7 +265,7 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new CheckBoxOption(useUniqueDestinations));
 
             teleporterUseRandomMods = Config.Bind<bool>(
-                "General", "Teleporter Use Random mods", true, "Makes teleporter use random modifiers of spawned route portals after interacting with it, set false if you want it to not have any stage modifiers.");
+                "General", "Teleporter Use Random mods", true, "Makes the teleporter use random modifiers of spawned route portals after interacting with it, set false if you want it to not have any stage modifiers.");
             ModSettingsManager.AddOption(new CheckBoxOption(teleporterUseRandomMods));
 
             //todo
@@ -274,11 +274,11 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new CheckBoxOption(modifiersCanBeBanned));
 
             routeMapWidth = Config.Bind<int>(
-                "General", "Route Map Width", 3, "Width of the map created at the start of each loop.");
+                "General", "Route Map Width", 4, "Width of the map created at the start of each loop.");
             ModSettingsManager.AddOption(new IntSliderOption(routeMapWidth, new IntSliderConfig() { min = 3, max = 5 }));
 
             negativeStackPunishment = Config.Bind<bool>(
-                "General", "Time Spent Punishment", true, "Adds one negative stack per punishment, punishment is given by spending too much time on current stage, by default it's 8 minutes.");
+                "General", "Time Spent Punishment", true, "Adds one negative stack per punishment. Punishment is given by spending too much time on current stage, by default it's 8 minutes.");
             ModSettingsManager.AddOption(new CheckBoxOption(negativeStackPunishment));
 
             punishmentTimeMinutes = Config.Bind<int>(
@@ -289,11 +289,11 @@ namespace RiskOfRoutes
 
 
             usePositiveNegativeColors = Config.Bind<bool>(
-                "Visual", "Use Positive/Negative colors", false, "Makes bubbles on portals red and green, otherwise they are just blue.");
+                "Visual", "Use Positive/Negative colors", true, "Makes bubbles on portals red and green, otherwise they are just blue.");
             ModSettingsManager.AddOption(new CheckBoxOption(usePositiveNegativeColors));
 
             usePortalTypeColors = Config.Bind<bool>(
-    "Visual", "Portal Color Type", false, "Portal color is changed according to it's node type, otherwise they are just blue.");
+    "Visual", "Portal Color Type", true, "Portal color is changed according to its node type, otherwise they are just blue.");
             ModSettingsManager.AddOption(new CheckBoxOption(usePortalTypeColors));
 
             //showPortalDestination = Config.Bind<bool>(
@@ -309,7 +309,7 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new IntSliderOption(routeMapIconSize));
 
             routePanelShowsOnlyNames = Config.Bind<bool>(
-                "Visual", "Route Panel Shows Only Names", false, "Makes route portal panel show only names of modifiers, use if descriptions seem too cluttered.");
+                "Visual", "Route Panel Shows Only Names", false, "Makes route portal panel show only names of modifiers. Use if descriptions seem too cluttered.");
             ModSettingsManager.AddOption(new CheckBoxOption(routePanelShowsOnlyNames));
 
             punishmentBarOrientation = Config.Bind<MapOrientation>(
@@ -317,7 +317,7 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new ChoiceOption(punishmentBarOrientation));
 
             punishmentBarColor = Config.Bind<Color>(
-                "Visual", "Punishment Bar Color", Color.white, "Color of punishment bar.");
+                "Visual", "Punishment Bar Color", Color.red, "Color of punishment bar.");
             ModSettingsManager.AddOption(new ColorOption(punishmentBarColor));
 
             usePortalMaterial = Config.Bind<bool>(
@@ -326,7 +326,7 @@ namespace RiskOfRoutes
 
             //more drones modifier /////////////////////////////////////////////////////////////////
             droneStackPercent = Config.Bind<int>(
-                "Modifier Options", "Drone Increase", 33, "Percent per stack of initial scene director budget, used only to spawn additional drones. By default its 33%.");
+                "Modifier Options", "Drone Increase", 33, "Percent per stack of initial scene director budget, used only to spawn additional drones. By default it's 33%.");
             ModSettingsManager.AddOption(new IntFieldOption(droneStackPercent));
             ////////////////////////////////////////////////////////////////////////////////////////
 
@@ -339,7 +339,7 @@ namespace RiskOfRoutes
             //doppelganger modifier
 
             doppelStackTime = Config.Bind<int>(
-                "Modifier Options", "Doppelganger Cooldown Decrease", 30, "Cooldown reducement with one stack in seconds. By default it's 30s.");
+                "Modifier Options", "Doppelganger Cooldown Decrease", 30, "Cooldown reduction with one stack in seconds. By default it's 30s.");
             ModSettingsManager.AddOption(new IntFieldOption(doppelStackTime));
             //////////////////////////////////////////////////////////////////////////////////////
 
@@ -474,39 +474,39 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new CheckBoxOption(allowVengeanceArtifact));
 
             allowCommandArtifact = Config.Bind<bool>(
-                "Artifacts", "Command", false, "Command artifact available as artifact stage modifier. Not intented to be available.");
+                "Artifacts", "Command", false, "Command artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowCommandArtifact));
 
             allowDelusionArtifact = Config.Bind<bool>(
-                "Artifacts", "Delusion", false, "Delusion artifact available as artifact stage modifier. Not intented to be available.");
+                "Artifacts", "Delusion", false, "Delusion artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowDelusionArtifact));
 
             allowDevotionArtifact = Config.Bind<bool>(
-                "Artifacts", "Devotion", false, "Devotion artifact available as artifact stage modifier. Not intented to be available.");
+                "Artifacts", "Devotion", false, "Devotion artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowDevotionArtifact));
 
             allowEnigmaArtifact = Config.Bind<bool>(
-                "Artifacts", "Enigma", false, "Enigma artifact available as artifact stage modifier. Not intented to be available.");
+                "Artifacts", "Enigma", false, "Enigma artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowEnigmaArtifact));
 
             allowEvolutionArtifact = Config.Bind<bool>(
-                "Artifacts", "Evolution", false, "Evolution artifact available as artifact stage modifier. Not intented to be available.");
+                "Artifacts", "Evolution", false, "Evolution artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowEvolutionArtifact));
 
             allowGlassArtifact = Config.Bind<bool>(
-                "Artifacts", "Glass", false, "Glass artifact available as artifact stage modifier. Not intented to be available.");
+                "Artifacts", "Glass", false, "Glass artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowGlassArtifact));
 
             allowKinArtifact = Config.Bind<bool>(
-                "Artifacts", "Kin", false, "Kin artifact available as artifact stage modifier. Not intented to be available.");
+                "Artifacts", "Kin", false, "Kin artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowKinArtifact));
 
             allowMetamorphosisArtifact = Config.Bind<bool>(
-                "Artifacts", "Metamorphosis", false, "Metamorphosis artifact available as artifact stage modifier. Not intented to be available.");
+                "Artifacts", "Metamorphosis", false, "Metamorphosis artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowMetamorphosisArtifact));
 
             allowRebirthArtifact = Config.Bind<bool>(
-                "Artifacts", "Rebirth", false, "Rebirth artifact available as artifact stage modifier. Not intented to be available.");
+                "Artifacts", "Rebirth", false, "Rebirth artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowRebirthArtifact));
 
             // STAGE MODIFIER TOGGLES /////////////////////////////////////////////////////////
@@ -589,28 +589,28 @@ namespace RiskOfRoutes
             /////////////////////////////////////////////////////////////////////
         }
 
-        private void Update()
-        {
-            //if (Time.timeScale == 0f) return;
+        //private void Update()
+        //{
+        //    //if (Time.timeScale == 0f) return;
 
-            if (Input.GetKeyDown(KeyCode.F2))
-            {
-                var transform = PlayerCharacterMasterController.instances[0].master.GetBodyObject().transform;
+        //    if (Input.GetKeyDown(KeyCode.F2))
+        //    {
+        //        var transform = PlayerCharacterMasterController.instances[0].master.GetBodyObject().transform;
 
-                Log.Info($"Player pressed F2. Spawning route portals {transform.position}");
-                RoutesExpansion.SpawnRoutePortals(transform.position);
-            }
+        //        Log.Info($"Player pressed F2. Spawning route portals {transform.position}");
+        //        RoutesExpansion.SpawnRoutePortals(transform.position);
+        //    }
 
-            if (Input.GetKeyDown(KeyCode.F3))
-            {
-                UnityHotReload.LoadNewAssemblyVersion(
-                    typeof(RiskOfRoutes).Assembly, // The currently loaded assembly to replace.
-                    "C:/Users/vit/AppData/Roaming/r2modmanPlus-local/RiskOfRain2/profiles/TEstling/BepInEx/plugins/RiskOfRoutes.dll"  // The path to the newly compiled DLL.
-                );
-                Log.Info("Done");
-            }
-            ////
-        }
+        //    if (Input.GetKeyDown(KeyCode.F3))
+        //    {
+        //        UnityHotReload.LoadNewAssemblyVersion(
+        //            typeof(RiskOfRoutes).Assembly, // The currently loaded assembly to replace.
+        //            "C:/Users/vit/AppData/Roaming/r2modmanPlus-local/RiskOfRain2/profiles/TEstling/BepInEx/plugins/RiskOfRoutes.dll"  // The path to the newly compiled DLL.
+        //        );
+        //        Log.Info("Done");
+        //    }
+        //    ////
+        //}
 
 
         [ConCommand(commandName = "debuglog_on_all", flags = ConVarFlags.ExecuteOnServer, helpText = "Logs a network message to all connected people.")]
