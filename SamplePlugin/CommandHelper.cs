@@ -13,7 +13,7 @@ namespace SamplePlugin
     public class CommandHelper : MonoBehaviour
     {
         [ConCommand(commandName = "nextStages", flags = ConVarFlags.ExecuteOnServer, helpText = "Get next stages")]
-        private static void GetNextStagesScenesCommand(ConCommandArgs args)
+        private static void CCGetNextStagesScenes(ConCommandArgs args)
         {
             Log.Info("Next stages available:");
             foreach (var scene in SceneHelper.GetNextStagesScenesList())
@@ -25,7 +25,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "printerPool", flags = ConVarFlags.ExecuteOnServer, helpText = "Get printers info")]
-        private static void GetAvailablePrinters(ConCommandArgs args)
+        private static void CCGetAvailablePrinters(ConCommandArgs args)
         {
             Log.Info("Printer items: ");
 
@@ -52,7 +52,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "enemyPool", flags = ConVarFlags.ExecuteOnServer, helpText = "Get enemy info")]
-        private static void GetAvailableEnemyItems(ConCommandArgs args)
+        private static void CCGetAvailableEnemyItems(ConCommandArgs args)
         {
             Log.Info("Enemy items: ");
             foreach (var en in StageModifierCatalog.generalNegativePool)
@@ -63,7 +63,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "lunarPool", flags = ConVarFlags.ExecuteOnServer, helpText = "Get lunars info")]
-        private static void GetAvailableLunarItems(ConCommandArgs args)
+        private static void CCGetAvailableLunarItems(ConCommandArgs args)
         {
             Log.Info("Lunar items: ");
             foreach (var en in StageModifierCatalog.generalNegativePool)
@@ -74,7 +74,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "artifactPool", flags = ConVarFlags.ExecuteOnServer, helpText = "Get artifacts info")]
-        private static void GetAvailableArtifacts(ConCommandArgs args)
+        private static void CCGetAvailableArtifacts(ConCommandArgs args)
         {
             Log.Info("Artifacts available: ");
             foreach (var art in StageModifierCatalog.generalNegativePool.Where(def => StageModifierCatalog.FindModifier(def).isArtifact))
@@ -88,7 +88,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "artifactDefs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get artifacts info")]
-        private static void GetAllArtifactDefs(ConCommandArgs args)
+        private static void CCGetAllArtifactDefs(ConCommandArgs args)
         {
             Log.Info("Artifacts defs: ");
             foreach (var art in ArtifactCatalog.artifactDefs)
@@ -98,13 +98,13 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "reinit", flags = ConVarFlags.ExecuteOnServer, helpText = "Reinit stageModifierCatalog")]
-        private static void Reinit(ConCommandArgs args)
+        private static void CCReinit(ConCommandArgs args)
         {
             StageModifierCatalog.Init(AssetManager.bundle);
         }
 
         [ConCommand(commandName = "green", flags = ConVarFlags.ExecuteOnServer, helpText = "Get nexeet stages")]
-        private static void GetNextGreenStage(ConCommandArgs args)
+        private static void CCGetNextGreenStage(ConCommandArgs args)
         {
             //var scene = RiskOfRoutes.RiskOfRoutes.GetGreenPortalScene();
             //Log.Info($"{scene.cachedName}");
@@ -114,7 +114,7 @@ namespace SamplePlugin
 
        
         [ConCommand(commandName = "dccs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all cards for enemies that can spawn on current stage")]
-        private static void GetDccs(ConCommandArgs args)
+        private static void CCGetDccs(ConCommandArgs args)
         {
             Log.Info("Available enemies");
             var sel = ClassicStageInfo.instance.monsterSelection;
@@ -129,7 +129,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "node", flags = ConVarFlags.ExecuteOnServer, helpText = "Node info")]
-        private static void GetCurrentNode(ConCommandArgs args)
+        private static void CCGetCurrentNode(ConCommandArgs args)
         {
 
             var nodes = StageModifierDirector.instance.routeNodesSynced;
@@ -150,7 +150,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "availableElites", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all elites that can spawn on current stage")]
-        private static void GetElitesAvailable(ConCommandArgs args)
+        private static void CCGetElitesAvailable(ConCommandArgs args)
         {
             FieldInfo eliteTiersField = typeof(CombatDirector).GetField("eliteTiers", BindingFlags.NonPublic | BindingFlags.Static);
             if (eliteTiersField != null)
@@ -170,7 +170,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "availableItemDefs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all itemdefs")]
-        private static void GetItemDefs(ConCommandArgs args)
+        private static void CCGetItemDefs(ConCommandArgs args)
         {
             Log.Info("Enemies can have");
             foreach (var itemDef in RoR2.ItemCatalog.allItemDefs.Where(def => def.DoesNotContainTag(ItemTag.AIBlacklist)))
@@ -206,7 +206,7 @@ namespace SamplePlugin
 
 
         [ConCommand(commandName = "markDirty", flags = ConVarFlags.ExecuteOnServer, helpText = "Mark map as dirty")]
-        private static void SetMapDirty(ConCommandArgs args)
+        private static void CCSetMapDirty(ConCommandArgs args)
         {
             StageModifierDirector.instance.routeMap.isDirty = true;
         }
@@ -225,7 +225,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "itemTags", flags = ConVarFlags.ExecuteOnServer, helpText = "ItemTags")]
-        private static void ItemTags(ConCommandArgs args)
+        private static void CCItemTags(ConCommandArgs args)
         {
             Log.Info("Items with damage tag");
             foreach (var item in RoR2.ItemCatalog.allItemDefs)
@@ -276,7 +276,7 @@ namespace SamplePlugin
 
 
         [ConCommand(commandName = "activeModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get currently active modifiers")]
-        private static void GetActiveModifiersCommand(ConCommandArgs args)
+        private static void CCGetActiveModifiers(ConCommandArgs args)
         {
             Log.Info("Getting synced modifiers");
             if (StageModifierDirector.instance != null)
@@ -305,7 +305,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "getSyncData", flags = ConVarFlags.ExecuteOnServer, helpText = "Get syned vars values")]
-        private static void GetSyncedData(ConCommandArgs args)
+        private static void CCGetSyncedData(ConCommandArgs args)
         {
             Log.Info("Getting synced modifiers");
             if (StageModifierDirector.instance != null)
@@ -325,7 +325,7 @@ namespace SamplePlugin
 
 
         [ConCommand(commandName = "reservedModifiers", flags = ConVarFlags.ExecuteOnServer, helpText = "Get modifiers that would be active on next stage")]
-        private static void GetReservedModifiersCommand(ConCommandArgs args)
+        private static void CCGetReservedModifiers(ConCommandArgs args)
         {
             if (StageModifierDirector.instance != null)
             {
@@ -359,7 +359,7 @@ namespace SamplePlugin
 
 
         [ConCommand(commandName = "charge", flags = ConVarFlags.ExecuteOnServer)]
-        static void ChargeTeleporter(ConCommandArgs args)
+        static void CCTeleporterCharge(ConCommandArgs args)
         {
             if (!TeleporterInteraction.instance) return;
 
@@ -386,7 +386,7 @@ namespace SamplePlugin
 
 
         [ConCommand(commandName = "greenportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void SpawnGreenPortal(ConCommandArgs args)
+        private static void CCSpawnGreenPortal(ConCommandArgs args)
         {
 
             CharacterBody body = args.senderMaster.GetBody();
@@ -415,7 +415,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "mount", flags = ConVarFlags.ExecuteOnServer)]
-        private static void SpawnMountainShrine(ConCommandArgs args)
+        private static void CCSpawnMountainShrine(ConCommandArgs args)
         {
 
             CharacterBody body = args.senderMaster.GetBody();
@@ -445,7 +445,7 @@ namespace SamplePlugin
 
 
         [ConCommand(commandName = "shopportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void SpawnShopPortal(ConCommandArgs args)
+        private static void CCSpawnShopPortal(ConCommandArgs args)
         {
 
             CharacterBody body = args.senderMaster.GetBody();
@@ -473,7 +473,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "virtualportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void SpawnVirtualPortal(ConCommandArgs args)
+        private static void CCSpawnVirtualPortal(ConCommandArgs args)
         {
 
             CharacterBody body = args.senderMaster.GetBody();
@@ -502,7 +502,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "goldportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void SpawnGoldPortal(ConCommandArgs args)
+        private static void CCSpawnGoldPortal(ConCommandArgs args)
         {
 
             CharacterBody body = args.senderMaster.GetBody();
@@ -531,7 +531,7 @@ namespace SamplePlugin
         }
 
         [ConCommand(commandName = "fing", flags = ConVarFlags.ExecuteOnServer)]
-        private static void FindShopPortal(ConCommandArgs args)
+        private static void CCFindShopPortal(ConCommandArgs args)
         {
             GameObject obj = GameObject.Find("Node");
             if (obj == null)
