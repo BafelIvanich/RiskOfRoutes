@@ -11,7 +11,7 @@ namespace RiskOfRoutes
     {
         public GenericInteraction genericInteraction;
         public SceneExitController sceneExitController;
-        public PurchaseInteraction purchaseInteraction; //для seer'a
+        public PurchaseInteraction purchaseInteraction; //for seer
 
         [SyncVar]
         public bool isUsingModifiers = false;
@@ -47,9 +47,9 @@ namespace RiskOfRoutes
             sceneExitController = GetComponent<SceneExitController>();
             purchaseInteraction = GetComponent<PurchaseInteraction>();
 
-            if (!genericInteraction) Log.Error("PurchaseInteraction missing!");
-            if (!sceneExitController) Log.Error("SceneExitController missing!");
-            if (isSeerStation && !purchaseInteraction) Log.Error("PurchaseInteraction missing");
+            //if (!genericInteraction) Log.Error("PurchaseInteraction missing!");
+            //if (!sceneExitController) Log.Error("SceneExitController missing!");
+            //if (isSeerStation && !purchaseInteraction) Log.Error("PurchaseInteraction missing");
         }
 
         public void Start()
@@ -408,7 +408,7 @@ namespace RiskOfRoutes
                             else
                             {
                                 tex = ModUIManager.GetHostSprite().texture;
-                                //todo цвет темный сделать
+                                //todo add dark purple tint
                             }
                         }
                         else
@@ -475,14 +475,16 @@ namespace RiskOfRoutes
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
                 StageModifierDirector.instance.reservedModifiers.Clear();
-                StageModifierDirector.instance.bannedModifiers.Clear();
+                StageModifierDirector.instance.bannedModifiersRun.Clear();
                 foreach (var modStr in stageModifiers)
                 {
                     string[] parts = modStr.Split('=');
                     StageModifierDirector.instance.reservedModifiers.Add(new ModifierSync { name = parts[0], stack = int.Parse(parts[1]), isArtifact = bool.Parse(parts[2]) });
-                    StageModifierDirector.instance.bannedModifiers.Add(parts[0]);
+                    StageModifierDirector.instance.bannedModifiersRun.Add(parts[0]);
                 }
             }
+
+            genericInteraction.enabled = false;
 
             if (routeNode != null)
             {
@@ -513,7 +515,6 @@ namespace RiskOfRoutes
             }
             else
             {
-                genericInteraction.enabled = false;
                 Log.Info($"{nameof(OnPortalActivation)}: Interacting with vanilla portal");
                 var mg = StageModifierDirector.activePortalInstances[0].GetComponent<RoutePortalManager>();
                 if (mg != null)
@@ -521,6 +522,14 @@ namespace RiskOfRoutes
                     StageModifierDirector.instance.currentNode = mg.routeNode;
                     StageModifierDirector.instance.currentNodeSync = mg.nodeSync;
                 }
+            }
+
+            if (sceneExitController != null && routeNode != null)
+            {
+                Log.Info($"{SceneCatalog.GetSceneDef(sceneExitController.destinationScene.sceneDefIndex).cachedName}");
+                if (SceneCatalog.GetSceneDef(sceneExitController.destinationScene.sceneDefIndex).cachedName == "bazaar") routeNode.shopVisited = true;
+                if (SceneCatalog.GetSceneDef(sceneExitController.destinationScene.sceneDefIndex).cachedName == "goldshores") routeNode.goldshoresVisited = true;
+                if (SceneCatalog.GetSceneDef(sceneExitController.destinationScene.sceneDefIndex).cachedName == "arena") routeNode.voidFieldsVisited = true;
             }
         }
 
@@ -551,5 +560,5 @@ namespace RiskOfRoutes
 
 public enum RoutePortalType
 {
-    None, Rare, ItemType, DroneType, ChefType, Colossus, Hardware, SolusWing, Goldshores, Shop, FalseSon, Starting, Combat, Heal, Utility
+    None, Rare, ItemType, DroneType, ChefType, Colossus, Hardware, SolusWing, Goldshores, Shop, Arena, FalseSon, Starting, Combat, Heal, Utility
 }

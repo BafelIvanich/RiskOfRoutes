@@ -23,9 +23,9 @@ public class RouteMap
 
         width = RiskOfRoutes.RiskOfRoutes.routeMapWidth.Value;
         height = 5;
-        //+1 к ширине под порталы длс2 длс3
+        //+1 to width reserved for dlc2 dlc3 portals
         mapGrid = new RouteNode[width + 1, height];
-        //старт нод
+        //starting node
         mapGrid[0, 0] = new RouteNode(0, 0);
         root = mapGrid[0, 0];
         root.visited = true;
@@ -49,6 +49,7 @@ public class RouteMap
 
     public void SetupRewards(Xoroshiro128Plus rng)
     {
+        //todo itemtype is the placeholder if portal type is not availabe due to it's modifiers being unavailable
         WeightedSelection<RoutePortalType> general = new WeightedSelection<RoutePortalType>();
         //general.AddChoice(RoutePortalType.ItemType, 1f);
         general.AddChoice(RoutePortalType.Heal, 1f);
@@ -86,7 +87,7 @@ public class RouteMap
         }
 
         HashSet<Vector2> memory = new HashSet<Vector2>();
-        var available = root.GetPaths(); //без доп портала
+        var available = root.GetPaths(); //without additional portal
 
         CheckNodeCorrect(root, rng, memory);
         foreach (var path in available)
@@ -108,14 +109,14 @@ public class RouteMap
 
         //if (node.portalType == RoutePortalType.Rare || node.portalType == RoutePortalType.ChefType)
         //{
-            toSkip = node.portalType;
-            foreach (var child in children)
+        toSkip = node.portalType;
+        foreach (var child in children)
+        {
+            if (child.portalType == node.portalType)
             {
-                if (child.portalType == node.portalType)
-                {
-                    child.portalType = RollPortalType(rng, node.portalType);
-                }
+                child.portalType = RollPortalType(rng, node.portalType);
             }
+        }
         //}
 
         if (children.Count > 1)
@@ -201,7 +202,7 @@ public class RouteMap
             int ny = y + 1;
 
             if (nx < 0 || nx > width - 1) continue;
-            if (i == 0 && mapGrid[nx, y].right != null) continue; //сосед слева
+            if (i == 0 && mapGrid[nx, y].right != null) continue; //checking for intersections
             //if (i == 1 && mapGrid[nx, y].front != null) continue;
             if (i == 2 && mapGrid[nx, y].left != null) continue;
 
@@ -224,10 +225,10 @@ public class RouteMap
         CreateRoute(next, next.x, next.y, rng);
     }
 
-    //currentLayer для случаев: goldshores/shop в colossus
+    //currentLayer for cases when its spawned in goldshores/shop into colossus
     public RouteNode CreateColossusNode(RouteNode current, bool currentLayer = false)
     {
-        if (current.y == height - 1 || current.y >= 3) return null;
+        if (current.y == height - 1 || current.y > 3) return null;
         int y = currentLayer ? current.y : current.y + 1;
 
         Log.Info("Creating colossus node");
@@ -405,6 +406,9 @@ public class RouteMap
         public int y;
 
         public bool visited;
+        public bool shopVisited;
+        public bool goldshoresVisited;
+        public bool voidFieldsVisited;
 
         public RouteNode left;
         public RouteNode front;

@@ -138,9 +138,11 @@ namespace RiskOfRoutes
         {
             //Log.Info($"{nameof(DrawMap)}: Coords of selected node:{selectedNodeCoords}");
 
+            //return;
             ClearContainer();
             MapNodes.Clear();
 
+            //todo for attaching to scoreboard option
             //isMapVertical = true;
 
             int mapWidth = StageModifierDirector.instance.mapWidth;
@@ -271,7 +273,6 @@ namespace RiskOfRoutes
 
                     //TODO если выбранный
 
-
                     if (currentNode.Equals(selectedNode) && pingCurve != null && !isMoonVisited)
                     {
                         //Log.Info("Curve is not null");
@@ -340,10 +341,40 @@ namespace RiskOfRoutes
                     if (MapNodes.TryGetValue(childNode, out RectTransform endRect))
                     {
                         DrawLine(startRect.anchoredPosition, endRect.anchoredPosition, linesContainer, childNode.visited && parentNode.visited);
+
+                        if (RiskOfRoutes.showIntermissionNodes.Value && parentNode.visited && childNode.visited)
+                            DrawIntermissionNodes(nodesContainer, startRect, childNode, endRect);
                     }
                 }
             }
 
+        }
+
+        private void DrawIntermissionNodes(Transform nodesContainer, RectTransform startRect, RouteNodeSync childNode, RectTransform endRect)
+        {
+            var intermissions = new List<RoutePortalType>();
+            if (childNode.shopVisited) intermissions.Add(RoutePortalType.Shop);
+            if (childNode.goldshoresVisited) intermissions.Add(RoutePortalType.Goldshores);
+            if (childNode.voidFieldsVisited) intermissions.Add(RoutePortalType.Arena);
+
+            for (int i = 0; i < intermissions.Count; i++)
+            {
+                RoutePortalType portalType = intermissions[i];
+
+                float step = i + 1;
+                float lim = 1 + intermissions.Count;
+
+                GameObject routeNode = Instantiate(nodePrefab, nodesContainer);
+                RectTransform routeNodeRect = routeNode.GetComponent<RectTransform>();
+
+                routeNodeRect.anchorMin = new Vector2(0.5f, 0.5f);
+                routeNodeRect.anchorMax = new Vector2(0.5f, 0.5f);
+                routeNodeRect.sizeDelta = new Vector2(36f, 36f);
+
+                routeNodeRect.anchoredPosition = startRect.anchoredPosition * ((lim - step) / lim) + endRect.anchoredPosition * (step / lim);
+
+                SetIconAndTooltip(routeNode, portalType, -1, -1, true);
+            }
         }
 
         private void DrawLine(Vector2 start, Vector2 end, Transform lineContainer, bool visited = false)
@@ -365,8 +396,8 @@ namespace RiskOfRoutes
             rect.localRotation = Quaternion.Euler(0, 0, angle);
         }
 
-        //TODO потом можно убрать tooltip и координаты в аргументе
-        private void SetIconAndTooltip(GameObject routeNode, RoutePortalType portalType, int x, int y, bool visited = false)
+        //TODO
+        private void SetIconAndTooltip(GameObject routeNode, RoutePortalType portalType, int x = -1, int y = -1, bool visited = false)
         {
             var icon = empty;
             switch (portalType)
@@ -381,6 +412,7 @@ namespace RiskOfRoutes
                 case RoutePortalType.SolusWing: icon = solusWing; break;
                 case RoutePortalType.Goldshores: icon = goldShores; break;
                 case RoutePortalType.Shop: icon = shop; break;
+                case RoutePortalType.Arena: icon = voidFields; break;
                 case RoutePortalType.FalseSon: icon = falseSon; break;
                 case RoutePortalType.Combat: icon = combat; break;
                 case RoutePortalType.Heal: icon = heal; break;
@@ -469,8 +501,11 @@ namespace RiskOfRoutes
 
         public RouteNodeSync GetNode(int x, int y, List<RouteNodeSync> map, int mapHeight)
         {
-            //todo indexOutOfBounds Обработка
-            return map[x * mapHeight + y];
+            int idx = x * mapHeight + y;
+
+            if (map != null && idx >= 0 && idx < map.Count) return map[idx];
+
+            return new RouteNodeSync();
         }
     }
 }
