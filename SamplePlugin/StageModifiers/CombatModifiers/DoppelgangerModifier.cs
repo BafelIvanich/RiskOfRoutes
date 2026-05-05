@@ -9,14 +9,13 @@ using UnityEngine.Networking;
 
 namespace RiskOfRoutes.StageModifiers.CombatModifiers
 {
-    public class DoppelgangerAttackModifier : StageModifier
+    public class DoppelgangerModifier : StageModifier
     {
         float coolDown = 0;
 
         static float defaultTime = 240f;
 
-        //TODO можно добавить стаки
-        public DoppelgangerAttackModifier(int stack)
+        public DoppelgangerModifier(int stack)
         {
             this.stack = stack;
         }
