@@ -14,20 +14,21 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
         public override void OnEnd()
         {
-            Log.Info("RedItemReward on end");
+            Log.Info("BossRedItem on end");
             IL.RoR2.BossGroup.DropRewards -= BossGroup_DropRewards;
         }
 
         public override void OnStart()
         {
-            Log.Info("RedItemReward on start");
+            Log.Info("BossRedItem on start");
 
-            //On.RoR2.BossGroup.DropRewards += DropHalcyoniteReward;
             IL.RoR2.BossGroup.DropRewards += BossGroup_DropRewards;
         }
 
         private void BossGroup_DropRewards(ILContext il)
         {
+            var aurelioniteMod = StageModifierDirector.instance.IsModifierActive("Aurelionite");
+            if (aurelioniteMod) return;
             ILCursor c = new ILCursor(il);
 
             if (c.TryGotoNext(MoveType.Before,

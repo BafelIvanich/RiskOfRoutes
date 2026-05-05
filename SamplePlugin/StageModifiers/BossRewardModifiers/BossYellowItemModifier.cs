@@ -20,20 +20,19 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
         public override void OnEnd()
         {
             IL.RoR2.BossGroup.DropRewards -= BossGroup_DropRewards;
-            Log.Info("BossItemModifier end");
+            Log.Info("BossYellowItem on end");
         }
 
         public override void OnStart()
         {
-            // On.RoR2.BossGroup.DropRewards += BossGroup_DropRewards;
             IL.RoR2.BossGroup.DropRewards += BossGroup_DropRewards;
-            Log.Info("BossItemModifier start");
-            Chat.AddMessage("Boss would drop yellow");
-
+            Log.Info("BossYellowItem on start");
         }
 
         private void BossGroup_DropRewards(ILContext il)
         {
+            var aurelioniteMod = StageModifierDirector.instance.IsModifierActive("Aurelionite");
+            if (aurelioniteMod) return;
             ILCursor c = new ILCursor(il);
             bool noBossTables = true;
 
@@ -44,7 +43,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                 {
                     c.Remove();
 
-                    //self (bossgroup)
                     c.Emit(OpCodes.Ldarg_0);
 
                     c.EmitDelegate<Action<UniquePickup, Vector3, Vector3, BossGroup>>((origPickup, position, vector, self) =>
@@ -54,10 +52,9 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                         bool hasDropTables = self.bossDropTables != null && self.bossDropTables.Count > 0;
                         bool hasUniqueDrops = self.bossDrops != null && self.bossDrops.Count > 0;
 
-                        //1 уникальный босс
+                        //boss signature
                         if (hasDropTables)
                         {
-
                             PickupDropTable table = self.rng.NextElementUniform(self.bossDropTables);
                             Log.Info($"Boss has dropTable:{table}");
                             if (table != null)
@@ -65,13 +62,13 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                                 pickup = table.GeneratePickup(self.rng);
                             }
                         }
-                        //2 имеет прописанный лут может быть не боссом
+                        //2 
                         else if (hasUniqueDrops)
                         {
                             Log.Info($"Boss has bossDrops:{self.bossDrops}");
                             pickup = new UniquePickup(self.rng.NextElementUniform(self.bossDrops).pickupIndex);
                         }
-                        //3 босс группа врагов
+                        //enemies as a boss
                         else
                         {
                             Log.Info("Boss is group of enemies");
