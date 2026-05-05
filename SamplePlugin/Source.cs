@@ -32,7 +32,7 @@ namespace RiskOfRoutes
         public const string PluginGUID = PluginAuthor + "." + PluginName;
         public const string PluginAuthor = "burboni4";
         public const string PluginName = "RiskOfRoutes";
-        public const string PluginVersion = "1.1.0";
+        public const string PluginVersion = "1.0.2";
 
         public enum MapOrientation { Vertical, Horizontal }
         public enum ItemPoolOptions { Default, VanillaEntire, Entire, None }
@@ -165,7 +165,7 @@ namespace RiskOfRoutes
 
             GameObject.Destroy(temp);
 
-            On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
+            //On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
 
             string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "riskofroutes");
             var bundle = AssetBundle.LoadFromFile(path);
@@ -173,13 +173,10 @@ namespace RiskOfRoutes
 
             ModUIManager.Initialize();
 
-            //hooks
             RoR2.RoR2Application.onLoad += () =>
             {
                 StageModifierCatalog.Init(bundle);
             };
-
-            //
 
             MysteryArtifact.InitializeArtifact();
             RoutesExpansion.InitializeExpansion(CentralNetworkObject);
@@ -201,7 +198,7 @@ namespace RiskOfRoutes
             teleporterUseRandomMods = Config.Bind<bool>(
                 "General", "Teleporter Use Random mods", true, "Makes the teleporter use random modifiers of spawned route portals after interacting with it, set false if you want it to not have any stage modifiers.");
             ModSettingsManager.AddOption(new CheckBoxOption(teleporterUseRandomMods));
-            //todo
+
             modifiersCanBeBanned = Config.Bind<bool>(
                 "General", "Modifiers Can Be Banned", true, "Prevents some of the stage modifiers appearing on the next stage, if they were active on the current stage.");
             ModSettingsManager.AddOption(new CheckBoxOption(modifiersCanBeBanned));
@@ -277,7 +274,7 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new IntFieldOption(lunarStackPercent));
 
             voidStackPercent = Config.Bind<int>(
-                "Modifier Options", "Void Enemies Discount", 15, "Discount on lunar enemies in percents for more than one stack. By default it's 15%.");
+                "Modifier Options", "Void Enemies Discount", 15, "Discount on void enemies in percents for more than one stack. By default it's 15%.");
             ModSettingsManager.AddOption(new IntFieldOption(voidStackPercent));
 
             soulCostStackPercent = Config.Bind<int>(
@@ -290,48 +287,58 @@ namespace RiskOfRoutes
 
             // PRINTER ITEM MODIFIER/////////////////////////////////////////////////////////////////
             printerItemPool = Config.Bind<ItemPoolOptions>(
-                "Printer Items", "Printer Item Pool", ItemPoolOptions.Default, "The configuration of what items printer modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below. \n Items from default configuration are listed below for each tier.");
+                "Printer Items", "Printer Item Pool", ItemPoolOptions.Default,
+                "The configuration of what items printer modifier can have, use fields below to add other items from vanilla or mods to configuration.\n\n" +
+                "Default - intended configuration that consists of the items that affect run the most\n" +
+                "VanillaEntire - configuration with all printer-allowed items from vanilla\n" +
+                "Entire - configuration with all printer-allowed items from all active mods, registered as Tier1 if not specified in the fields below\n" +
+                "None - only the fields below");
             ModSettingsManager.AddOption(new ChoiceOption(printerItemPool));
 
             tier1PrinterItems = Config.Bind<string>(
-                "Printer Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to a printer modifier as Tier1. \nItems from default configuration for Tier1 are:\nArmorPlate - Repulsion Armor Plate\nFlatHealth - Bison Steak\nCrowbar - Crowbar\nDeathMark - Death Mark\nDelayedDamage - Warped Echo\nDronesDropDynamite - Box of Dynamite\nHoof - Paul's Goat Hoof\nIgniteOnKill - Gasoline\nJumpBoost - Wax Quail\nMushroom - Bustling Fungus\nShieldBooster - Kinetic Dampener\nSprintBonus - Energy Drink\nStunChanceOnHit - Stun Grenade");
+                "Printer Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to a printer modifier as Tier1. All available for selected pool can be seen in the run using command 'printerpool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1PrinterItems));
 
             tier2PrinterItems = Config.Bind<string>(
-                "Printer Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to a printer modifier as Tier2. \nItems from default configuration for Tier2 are:\nAttackSpeedAndMoveSpeed - Mocha\nAttackSpeedOnCrit - Predatory Instincts\nBandolier - Bandolier\nBarrierOnKill - Topaz Brooch\nInfusion - Infusion\nSeed - Leeching Seed\nChainLightning - Ukulele\nCritAtLowerElevation - Hiker's Boots\nEquipmentMagazine - Fuel Cell\nExplodeOnDeath - Will-o'-the-wisp\nFragileDamageBonus - Delicate Watch\nIncreaseDamageOnMultiKill - Chronic Expansion\nKnockBackHitEnemies - Breaching Fin\nNearbyDamageBonus - Focus Crystal\nPrimarySkillShuriken - Shuriken\nSpeedBoostPickup - Elusive Antlers\nStrengthenBurn - Ignition Tank\nThorns - Razorwire");
+                "Printer Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to a printer modifier as Tier2. All available for selected pool can be seen in the run using command 'printerpool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2PrinterItems));
 
             tier3PrinterItems = Config.Bind<string>(
-                "Printer Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to a printer modifier as Tier3. \nItems from default configuration for Tier3 are:\nBear - Tougher Times\nBleedOnHit - Tri-Tip Dagger\nCritGlasses - Lens-Maker's Glasses\nFireRing - Kjaro's Band\nIceRing - Runald's Band\nMissile - AtG Missile Mk. 1\nStickyBomb - Sticky Bomb\nSyringe - Soldier's Syringe");
+                "Printer Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to a printer modifier as Tier3. All available for selected pool can be seen in the run using command 'printerpool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3PrinterItems));
 
             // ENEMY ITEM MODIFIER/////////////////////////////////////////////////////////////////
             enemyItemPool = Config.Bind<ItemPoolOptions>(
-                "Enemy Items", "Enemy Item Pool", ItemPoolOptions.Default, "The configuration of what items enemy item modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below.");
+                "Enemy Items", "Enemy Item Pool", ItemPoolOptions.Default,
+                "The configuration of what items enemy item modifier can have, use fields below to add other items from vanilla or mods to configuration.\n\n" +
+                "Default - intended configuration that consists of the items that affect run the most\n" +
+                "VanillaEntire - configuration with all items from vanilla\n" +
+                "Entire - configuration with all items from all active mods, registered as Tier1 if not specified in the fields below\n" +
+                "None - only the fields below");
             ModSettingsManager.AddOption(new ChoiceOption(enemyItemPool));
 
-            canAppearWithAIBlacklisted = Config.Bind<bool>(
-                "Enemy Items", "Allow AI Blacklisted", false, ".");
-            ModSettingsManager.AddOption(new CheckBoxOption(canAppearWithAIBlacklisted));
-
             enemyItemsAllowBoss = Config.Bind<bool>(
-    "Enemy Items", "Allow Boss Tier", false, "Adds items with boss tier to enemy item pool.");
+                "Enemy Items", "Allow Boss Tier", false, "Adds items with boss tier to the enemy item pool.");
             ModSettingsManager.AddOption(new CheckBoxOption(enemyItemsAllowBoss));
 
             enemyItemsAllowVoid = Config.Bind<bool>(
-                "Enemy Items", "Allow Void Tiers", false, "Adds items with void tiers to enemy item pool.");
+                "Enemy Items", "Allow Void Tiers", false, "Adds items with void tiers to the enemy item pool.");
             ModSettingsManager.AddOption(new CheckBoxOption(enemyItemsAllowVoid));
 
+            canAppearWithAIBlacklisted = Config.Bind<bool>(
+                "Enemy Items", "Allow AI Blacklisted", false, "Adds items with AI-blacklisted tag to the enemy pool.");
+            ModSettingsManager.AddOption(new CheckBoxOption(canAppearWithAIBlacklisted));
+
             tier1EnemyItems = Config.Bind<string>(
-                "Enemy Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to an enemy item modifier as Tier1. \nItems from default configuration for Tier1 are:\nSlowOnHit - Chronobauble\nFlatHealth - Bison Steak\nBarrierOnCooldown - Eclipse Lite\nNearbyDamageBonus - Focus Crystal\nOutOfCombatArmor - Oddly-shaped Opal\nPersonalShield - Personal Shield Generator\nHoof - Paul's Goat Hoof\nShieldBooster - Kinetic Dampener");
+                "Enemy Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to an enemy item modifier as Tier1. All available for selected pool can be seen in the run using command 'enemypool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1EnemyItems));
 
             tier2EnemyItems = Config.Bind<string>(
-                "Enemy Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to an enemy item modifier as Tier2. \nItems from default configuration for Tier2 are:\nSprintOutOfCombat - Red Whip\nFragileDamageBonus - Delicate Watch\nCritGlasses - Lens-Maker's Glasses\nSyringe - Soldier's Syringe\nArmorPlate - Repulsion Armor Plate");
+                "Enemy Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to an enemy item modifier as Tier2. All available for selected pool can be seen in the run using command 'enemypool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2EnemyItems));
 
             tier3EnemyItems = Config.Bind<string>(
-                "Enemy Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to an enemy item modifier as Tier3. \nItems from default configuration for Tier3 are:\nBehemoth - Brilliant Behemoth\nImmuneToDebuff - Ben's Raincoat\nExtraLife - Dio's Best Friend\nArmorReductionOnHit - Shattering Justice\nBear - Tougher Times");
+                "Enemy Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to an enemy item modifier as Tier3. All available for selected pool can be seen in the run using command 'enemypool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3EnemyItems));
 
             enemyItemsModifierCanStack = Config.Bind<bool>(
@@ -351,11 +358,11 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new IntFieldOption(legendaryDefaultStack));
 
             bossDefaultStack = Config.Bind<int>(
-                "Enemy Items", "Boss Default Stack", 1, "Default amount per stack. Note that the default configuration doesn't include any boss items by default.");
+                "Enemy Items", "Boss Default Stack", 1, "Default amount per stack.");
             ModSettingsManager.AddOption(new IntFieldOption(bossDefaultStack));
 
             chanceForExtra = Config.Bind<int>(
-                "Enemy Items", "Chance For Extra", 0, "Chance for enemy items to have extra stack.");
+                "Enemy Items", "Chance For Extra", 0, "Chance for enemy items to have extra stacks.");
             ModSettingsManager.AddOption(new IntSliderOption(chanceForExtra));
 
             commonExtraRange = Config.Bind<int>(
@@ -371,24 +378,29 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new IntFieldOption(legendaryExtraRange));
 
             bossExtraRange = Config.Bind<int>(
-                "Enemy Items", "Boss Extra Range", 1, "Default amount per stack. Note that the default configuration doesn't include any boss items by default.");
+                "Enemy Items", "Boss Extra Range", 1, "Amount of item stacks added as extra.");
             ModSettingsManager.AddOption(new IntFieldOption(bossExtraRange));
 
             // LUNAR ITEM MODIFIER/////////////////////////////////////////////////////////////////
             lunarItemPool = Config.Bind<ItemPoolOptions>(
-                "Lunar Items", "Lunar Item Pool", ItemPoolOptions.Default, "The configuration of what items lunar item modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below. Accepts only lunar itemDefs");
+                "Lunar Items", "Lunar Item Pool", ItemPoolOptions.Default,
+                "The configuration of what items printer modifier can have, use fields below to add other items from vanilla or mods to configuration.\n\n" +
+                "Default - configuration that consists of the items that affect run the most\n"+
+                "VanillaEntire - configuration with all lunar items from vanilla\n" +
+                "Entire - configuration with all lunar items from all active mods, registered as Tier3 if not specified in the fields below\n" +
+                "None - only the fields below");
             ModSettingsManager.AddOption(new ChoiceOption(lunarItemPool));
 
             tier1LunarItems = Config.Bind<string>(
-                "Lunar Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to a lunar item modifier as Tier1. \nItems from default configuration for Tier1 are:\nGoldOnHit - Brittle Crown\nMonstersOnShrineUse - Defiant Gouge\nFocusConvergence - Focused Convergence");
+                "Lunar Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to a lunar modifier as Tier1. All available for selected pool can be seen in the run using command 'lunarpool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1LunarItems));
 
             tier2LunarItems = Config.Bind<string>(
-                "Lunar Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to a lunar item modifier as Tier2. \nItems from default configuration for Tier2 are:\nRepeatHeal - Corpsebloom\nHalfAttackSpeedHalfCooldowns - Light Flux Pauldron\nShieldOnly - Transcendence");
+                "Lunar Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to a lunar item modifier as Tier2. All available for selected pool can be seen in the run using command 'lunarpool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2LunarItems));
 
             tier3LunarItems = Config.Bind<string>(
-                "Lunar Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to a lunar item modifier as Tier3. \nItems from default configuration for Tier3 are:\nLunarBadLuck - Purity\nHalfSpeedDoubleHealth - Stone Flux Pauldron");
+                "Lunar Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to a lunar item modifier as Tier3. All available for selected pool can be seen in the run using command 'lunarpool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3LunarItems));
 
             lunarTurnToPearl = Config.Bind<bool>(
@@ -397,15 +409,15 @@ namespace RiskOfRoutes
 
             //ARTIFACT MODIFIER
             tier1Artifacts = Config.Bind<string>(
-                "Artifacts", "Add Tier 1 Artifacts", "", "Adds artifactDefs separated by comma to the Artifact Modifier pool, use it to add artifacts from other mods.");
+                "Artifacts", "Add Tier 1 Artifacts", "", "Adds artifact defs separated by comma to the artifact modifier as Tier1, use it to add artifacts from other mods. All available can be seen in the run using command 'artifactpool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1Artifacts));
 
             tier2Artifacts = Config.Bind<string>(
-                "Artifacts", "Add Tier 2 Artifacts", "", "Adds artifactDefs separated by comma to the Artifact Modifier pool, use it to add artifacts from other mods.");
+                "Artifacts", "Add Tier 2 Artifacts", "", "Adds artifact defs separated by comma to the artifact modifier as Tier2, use it to add artifacts from other mods. All available can be seen in the run using command 'artifactpool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2Artifacts));
 
             tier3Artifacts = Config.Bind<string>(
-                "Artifacts", "Add Tier 3 Artifacts", "", "Adds artifactDefs separated by comma to the Artifact Modifier pool, use it to add artifacts from other mods.");
+                "Artifacts", "Add Tier 3 Artifacts", "", "Adds artifact defs separated by comma to the artifact modifier as Tier3, use it to add artifacts from other mods. All available can be seen in the run using command 'artifactpool'.");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3Artifacts));
 
             allowMysteryArtifact = Config.Bind<bool>(
@@ -578,6 +590,7 @@ namespace RiskOfRoutes
             //    Log.Info($"Player pressed F2. Spawning route portals {transform.position}");
             //    RoutesExpansion.SpawnRoutePortals(transform.position);
             //}
+
             ////
         }
 
