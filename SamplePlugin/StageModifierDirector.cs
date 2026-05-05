@@ -166,11 +166,11 @@ namespace SamplePlugin
             routeMap.isDirty = true;
 
             //todo убрпавть
-            Log.Info($"{nameof(Run_onRunStartGlobal)}: Config banlist is:");
-            foreach (var def in bannedModifiersRun)
-            {
-                Log.Info($"Banned: {def}");
-            }
+            //Log.Info($"{nameof(Run_onRunStartGlobal)}: Config banlist is:");
+            //foreach (var def in bannedModifiersRun)
+            //{
+            //    Log.Info($"Banned: {def}");
+            //}
             //
         }
 
@@ -188,16 +188,6 @@ namespace SamplePlugin
             bossExtraRange = RiskOfRoutes.RiskOfRoutes.bossExtraRange.Value;
 
             chanceForExtra = RiskOfRoutes.RiskOfRoutes.chanceForExtra.Value;
-
-            //StageModifierCatalog.Init(AssetManager.bundle);
-
-            //StageModifierCatalog.CreatePrinterPool(RiskOfRoutes.RiskOfRoutes.printerItemPool);
-            //StageModifierCatalog.CreateEnemyPool(RiskOfRoutes.RiskOfRoutes.enemyItemPool.Value, RiskOfRoutes.RiskOfRoutes.canAppearWithAIBlacklisted.Value);
-            //StageModifierCatalog.CreateLunarPool(RiskOfRoutes.RiskOfRoutes.lunarItemPool.Value);
-
-            //StageModifierCatalog.RegistersPrinters(RiskOfRoutes.RiskOfRoutes.printerItemPool.Value);
-            //StageModifierCatalog.RegisterEnemyItems(RiskOfRoutes.RiskOfRoutes.enemyItemPool.Value, RiskOfRoutes.RiskOfRoutes.canAppearWithAIBlacklisted.Value);
-            //StageModifierCatalog.RegisterLunarItems(RiskOfRoutes.RiskOfRoutes.lunarItemPool.Value);
 
             runArtifactsApplied = GetArtifactsAppliedThisRun();
             if (RiskOfRoutes.RiskOfRoutes.negativeStackPunishment.Value)
@@ -423,7 +413,7 @@ namespace SamplePlugin
 
 
 
-      
+
 
         public List<string> GetArtifactsAppliedThisRun()
         {
@@ -650,7 +640,7 @@ namespace SamplePlugin
             if (punishStack > 0) Log.Info($"{nameof(GetNextStageModifiers)}: Adding {punishStack} punishment stacks");
             //среди негативных
             //если модифаер стакающийся то добавляется
-            var stackableNegatives = selectedNegativeDefs.Where(s => s.IsStackable());
+            var stackableNegatives = selectedNegativeDefs.Where(s => s.isStackable);
             if (punishStack > 0)
             {
                 if (stackableNegatives.Count() == 0)
@@ -693,7 +683,7 @@ namespace SamplePlugin
                         punishStack -= targetTierInt;
 
                         int addedStacks = 0;
-                        if (punishStack > 0 && mod.IsStackable())
+                        if (punishStack > 0 && mod.isStackable)
                         {
                             addedStacks = Run.instance.stageRng.RangeInt(0, punishStack + 1);
                             punishStack -= addedStacks;
@@ -785,7 +775,7 @@ namespace SamplePlugin
                 if (!isTier3Available)
                 {
                     Log.Warning($"{nameof(GetModifierSlots)}: Couldnt get Tier3 modifier for node type {type}, using Tier2");
-                    res.positive.Remove(ModifierTier.Tier2);
+                    res.positive.Remove(ModifierTier.Tier3);
                     if (res.positive.ContainsKey(ModifierTier.Tier2))
                         res.positive[ModifierTier.Tier2] = res.positive[ModifierTier.Tier2] + 1;
                     else
@@ -793,15 +783,15 @@ namespace SamplePlugin
                 }
             }
 
-            foreach (var tier in res.positive)
-            {
-                //Log.Info($"\t\t\tTier:{tier.Key}, amount: {tier.Value}");
-            }
+            //foreach (var tier in res.positive)
+            //{
+            //    //Log.Info($"\t\t\tTier:{tier.Key}, amount: {tier.Value}");
+            //}
 
-            foreach (var tier in res.negative)
-            {
-                //Log.Info($"\t\t\tTier:{tier.Key}, amount: {tier.Value}");
-            }
+            //foreach (var tier in res.negative)
+            //{
+            //    //Log.Info($"\t\t\tTier:{tier.Key}, amount: {tier.Value}");
+            //}
 
 
             return res;

@@ -9,7 +9,7 @@ namespace RiskOfRoutes.StageModifiers
         public string name;
         public ModifierTier tier;
         public int cost;
-        public float selectionWeight; 
+        public float selectionWeight;
         public Func<bool> isAvailable = () => true;
         public List<string> conflictList = new List<string>();
         public int maxStack = -1;
@@ -20,6 +20,7 @@ namespace RiskOfRoutes.StageModifiers
 
         public bool isNegative = false;
         public bool isArtifact = false;
+        public bool isStackable = false;
 
         public ModifierDef(string name, ModifierTier tier, float weight, bool isStackable, bool isNegative, string[] conflicts = null, int maxStack = -1)
         {
@@ -27,10 +28,8 @@ namespace RiskOfRoutes.StageModifiers
             this.tier = tier;
             this.selectionWeight = weight;
             this.isNegative = isNegative;
-            if (!isStackable)
-            {
-                conflictList.Add(name);
-            }
+            this.isStackable = isStackable;
+
             if (conflicts != null)
             {
                 foreach (var c in conflicts)
@@ -47,10 +46,7 @@ namespace RiskOfRoutes.StageModifiers
             this.selectionWeight = weight;
             this.isNegative = isNegative;
             this.isAvailable = isAvailable;
-            if (!isStackable)
-            {
-                conflictList.Add(name);
-            }
+            this.isStackable = isStackable;
             if (conflicts != null)
             {
                 foreach (var c in conflicts)
@@ -60,10 +56,6 @@ namespace RiskOfRoutes.StageModifiers
             }
         }
 
-        public bool IsStackable()
-        {
-            return !conflictList.Contains(name);
-        }
     }
 }
 
