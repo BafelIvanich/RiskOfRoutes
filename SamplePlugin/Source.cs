@@ -8,62 +8,16 @@ using RiskOfRoutes.StageModifiers;
 using RiskOfRoutes.StageModifiers.SceneModifiers;
 using RoR2;
 using SamplePlugin;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityHotReloadNS;
-
-//TODO
-//Особые модификаторы для стейджей
-//(Подкорректировать)Добавить больше предметов в пулл зеленых и белых, добавить возможность для такого же с предметами любого тира через конфиг
-//Сделать, чтобы всё работало в мультиплеере
-//(Возможно) фиксированные места поялвения шефа
-//(Подкорректировать)Назначение exitController и purchase в RoutePortalManager нужно делать вручную, стоит сделать awake()
-//Конфликт с артефакт модификат
-//анти прок?
-//реген меньше
-//артефакт лимит модификаторов
-//атрефакт стейджи в разном порядке
-//(Возможно) более ровный спавн порталов
-//!ROUTE PORTAL MANAGER хуки пересмотреть и почти все с обновлением текста
-//почитать
-//на улучшение дронов
-//artifact of fallacy
-//проверить появление шефа
-//more drones с плюсиком
-
-
-//Визуал:
-//Текстура локи в портале
-
-
-//(Возможно) Скрытые модификаторы и предметы их раскрывающие
-//(Возможно) Модификатор исключающий категорию предметов из пулла
-//(Возможно) Покупка всего за хп
-//(Возможно) Меньше сундуков, но больше магазинов
-//(Возможно) Портал, очищающий лунные предметы
-//(Возможно) категории порталов?
-//Утилити урон хил
-//Категории порталов
-//Эклипсовые
-
-//Пост релиз
-//(Сложно) UI карты на манер шпиля
-//(Возможно) Можно ли сделать так, чтобы любые мобы могли воровать предметы?
-//(Возможно) Бродячий дрифтер или можно рюкзак
-//(Возможно) рюзкак дрифтера позволяет поделиться предметами
-//(Возможно) Void Stage
-//(Возможно) Святилище, что рероллит все предметы, лежащие на земле
-//(Возможно)стейдж где алтари удачи заменяют сундуки но другой дроп голды
-//(Возможно)Модификаторы длящиеся несколько стейджей
-//(Возможно)Если надоедать продавцу на базаре то гарантирует сложный портал
-
 
 [assembly: HG.Reflection.SearchableAttribute.OptIn]
 
 namespace RiskOfRoutes
 {
-    // https://risk-of-thunder.github.io/R2Wiki/Mod-Creation/Assets/Localization/
+
+
     [BepInPlugin(PluginGUID, PluginName, PluginVersion)]
     [BepInDependency(ItemAPI.PluginGUID)] //RiskofThunder-R2API_Items-1.0.8
     [BepInDependency(RecalculateStatsAPI.PluginGUID)] //RiskofThunder-R2API_RecalculateStats-1.6.6
@@ -73,13 +27,16 @@ namespace RiskOfRoutes
 
 
 
+
     public class RiskOfRoutes : BaseUnityPlugin
     {
         public const string PluginGUID = PluginAuthor + "." + PluginName;
         public const string PluginAuthor = "burboni4";
         public const string PluginName = "RiskOfRoutes";
-        public const string PluginVersion = "1.0.1";
+        public const string PluginVersion = "1.1.0";
 
+        public enum MapOrientation { Vertical, Horizontal }
+        public enum ItemPoolOptions { Default, VanillaEntire, Entire, None }
         //tweaks
         public static ConfigEntry<bool> usePortalMaterial { get; set; }
         public static ConfigEntry<bool> usePositiveNegativeColors { get; set; }
@@ -90,13 +47,20 @@ namespace RiskOfRoutes
         public static ConfigEntry<bool> modifiersCanBeBanned { get; set; }
         public static ConfigEntry<bool> negativeStackPunishment { get; set; }
         public static ConfigEntry<int> punishmentTimeMinutes { get; set; }
+        public static ConfigEntry<int> routeMapWidth;
 
+        public static ConfigEntry<bool> showIntermissionNodes;
         public static ConfigEntry<int> routeMapSize { get; set; }
         public static ConfigEntry<int> routeMapIconSize { get; set; }
         public static ConfigEntry<bool> routePanelShowsOnlyNames { get; set; }
         public static ConfigEntry<MapOrientation> punishmentBarOrientation { get; set; }
         public static ConfigEntry<Color> punishmentBarColor { get; set; }
+
         //artifacts
+        public static ConfigEntry<string> tier1Artifacts;
+        public static ConfigEntry<string> tier2Artifacts;
+        public static ConfigEntry<string> tier3Artifacts;
+
         public static ConfigEntry<bool> allowMysteryArtifact;
         public static ConfigEntry<bool> allowChaosArtifact;
         public static ConfigEntry<bool> allowCommandArtifact;
@@ -146,27 +110,34 @@ namespace RiskOfRoutes
         public static ConfigEntry<int> soulCostStackPercent;
         public static ConfigEntry<int> tier2ElitesStackPercent;
         //printer item
-        public static ConfigEntry<bool> useDefaultPrinterItems;
+        public static ConfigEntry<ItemPoolOptions> printerItemPool;
         public static ConfigEntry<string> tier1PrinterItems;
         public static ConfigEntry<string> tier2PrinterItems;
         public static ConfigEntry<string> tier3PrinterItems;
         //enemy item
-        public static ConfigEntry<bool> useDefaultEnemyItems;
+        public static ConfigEntry<ItemPoolOptions> enemyItemPool;
+        public static ConfigEntry<bool> canAppearWithAIBlacklisted;
         public static ConfigEntry<string> tier1EnemyItems;
         public static ConfigEntry<string> tier2EnemyItems;
         public static ConfigEntry<string> tier3EnemyItems;
         public static ConfigEntry<bool> enemyItemsModifierCanStack;
+        public static ConfigEntry<bool> enemyItemsAllowBoss;
+        public static ConfigEntry<bool> enemyItemsAllowVoid;
+        public static ConfigEntry<int> commonDefaultStack;
+        public static ConfigEntry<int> uncommonDefaultStack;
+        public static ConfigEntry<int> legendaryDefaultStack;
+        public static ConfigEntry<int> bossDefaultStack;
+        public static ConfigEntry<int> commonExtraRange;
+        public static ConfigEntry<int> uncommonExtraRange;
+        public static ConfigEntry<int> legendaryExtraRange;
+        public static ConfigEntry<int> bossExtraRange;
+        public static ConfigEntry<int> chanceForExtra;
         //lunar item
-        public static ConfigEntry<bool> useDefaultLunarItems;
+        public static ConfigEntry<ItemPoolOptions> lunarItemPool;
         public static ConfigEntry<string> tier1LunarItems;
         public static ConfigEntry<string> tier2LunarItems;
         public static ConfigEntry<string> tier3LunarItems;
         public static ConfigEntry<bool> lunarTurnToPearl;
-
-        public static ConfigEntry<int> routeMapWidth;
-
-
-        public static CombatDirector.EliteTierDef[] defaultEliteTiers;
 
         public static GameObject networkedInventoryPrefab;
 
@@ -195,43 +166,20 @@ namespace RiskOfRoutes
 
             GameObject.Destroy(temp);
 
-
-
             On.RoR2.Networking.NetworkManagerSystemSteam.OnClientConnect += (s, u, t) => { };
 
             string path = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Info.Location), "riskofroutes");
             var bundle = AssetBundle.LoadFromFile(path);
             AssetManager.Initialize(bundle);
 
-            FieldInfo eliteTiersField = typeof(CombatDirector).GetField("eliteTiers", BindingFlags.NonPublic | BindingFlags.Static);
-            if (eliteTiersField != null)
-            {
-                defaultEliteTiers = (CombatDirector.EliteTierDef[])eliteTiersField.GetValue(null);
-                Log.Info("Succesfully loaded elite tiers");
-            }
-            else
-            {
-                Log.Error("Could not load default elite tiers");
-                defaultEliteTiers = new CombatDirector.EliteTierDef[] { };
-            }
-
             ModUIManager.Initialize();
 
-            //хуки
+            //hooks
             RoR2.RoR2Application.onLoad += () =>
             {
                 StageModifierCatalog.Init(bundle);
             };
 
-            RoR2.Run.onRunDestroyGlobal += (run) =>
-            {
-                StageModifierCatalog.CleanAdditionalDefs();
-            };
-
-            RoR2.Networking.NetworkManagerSystem.onClientDisconnectGlobal += (connection) =>
-            {
-                StageModifierCatalog.CleanAdditionalDefs();
-            };
             //
 
             MysteryArtifact.InitializeArtifact();
@@ -240,21 +188,8 @@ namespace RiskOfRoutes
 
             Sprite icon = AssetManager.modIcon;
             ModSettingsManager.SetModIcon(icon);
-            ModSettingsManager.SetModDescription("Risk Of Routes. Mod that adds routing system and stage map to the game.");
+            ModSettingsManager.SetModDescription("Risk Of Routes. Mod that adds routing system and run map to the game.");
         }
-
-        //private void CreateNetworkObj(Run obj)
-        //{
-        //    if (NetworkServer.active)
-        //    {
-        //        if (!_centralNetworkObjectSpawned)
-        //        {
-        //            _centralNetworkObjectSpawned = GameObject.Instantiate(CentralNetworkObject);
-        //            NetworkServer.Spawn(_centralNetworkObjectSpawned);
-        //            Log.Info("StageModifierDirector spawned");
-        //        }
-        //    }
-        //}
 
         private void BindConfig()
         {
@@ -267,7 +202,6 @@ namespace RiskOfRoutes
             teleporterUseRandomMods = Config.Bind<bool>(
                 "General", "Teleporter Use Random mods", true, "Makes the teleporter use random modifiers of spawned route portals after interacting with it, set false if you want it to not have any stage modifiers.");
             ModSettingsManager.AddOption(new CheckBoxOption(teleporterUseRandomMods));
-
             //todo
             modifiersCanBeBanned = Config.Bind<bool>(
                 "General", "Modifiers Can Be Banned", true, "Prevents some of the stage modifiers appearing on the next stage, if they were active on the current stage.");
@@ -286,14 +220,12 @@ namespace RiskOfRoutes
             ModSettingsManager.AddOption(new IntSliderOption(punishmentTimeMinutes, new IntSliderConfig() { min = 1, max = 20 }));
 
             //VISUAL ///////////////////////////////////////////////////////
-
-
             usePositiveNegativeColors = Config.Bind<bool>(
                 "Visual", "Use Positive/Negative colors", true, "Makes bubbles on portals red and green, otherwise they are just blue.");
             ModSettingsManager.AddOption(new CheckBoxOption(usePositiveNegativeColors));
 
             usePortalTypeColors = Config.Bind<bool>(
-    "Visual", "Portal Color Type", true, "Portal color is changed according to its node type, otherwise they are just blue.");
+                "Visual", "Portal Color Type", true, "Portal color is changed according to its node type, otherwise they are just blue.");
             ModSettingsManager.AddOption(new CheckBoxOption(usePortalTypeColors));
 
             //showPortalDestination = Config.Bind<bool>(
@@ -307,6 +239,10 @@ namespace RiskOfRoutes
             routeMapIconSize = Config.Bind<int>(
                 "Visual", "Route Map Icons Size", 100, "Size of icons on Route Map panel.");
             ModSettingsManager.AddOption(new IntSliderOption(routeMapIconSize));
+
+            showIntermissionNodes = Config.Bind<bool>(
+                "Visual", "Show Intermission Nodes", true, "Shows nodes for intermission stages.");
+            ModSettingsManager.AddOption(new CheckBoxOption(showIntermissionNodes));
 
             routePanelShowsOnlyNames = Config.Bind<bool>(
                 "Visual", "Route Panel Shows Only Names", false, "Makes route portal panel show only names of modifiers. Use if descriptions seem too cluttered.");
@@ -324,38 +260,27 @@ namespace RiskOfRoutes
                 "Visual", "WIP Use Scene Material", false, "[WIP] Sets destination scene portrait as a portal texture.");
             ModSettingsManager.AddOption(new CheckBoxOption(usePortalMaterial));
 
-            //more drones modifier /////////////////////////////////////////////////////////////////
+            //MODIFIER OPTIONS /////////////////////////////////////////////////////////////////
             droneStackPercent = Config.Bind<int>(
                 "Modifier Options", "Drone Increase", 33, "Percent per stack of initial scene director budget, used only to spawn additional drones. By default it's 33%.");
             ModSettingsManager.AddOption(new IntFieldOption(droneStackPercent));
-            ////////////////////////////////////////////////////////////////////////////////////////
 
-            //more elites modifier /////////////////////////////////////////////////////////////////
             elitesStackPercent = Config.Bind<int>(
                 "Modifier Options", "Elite Increase", 33, "Percent of elite discount for director. By default it's 33%.");
             ModSettingsManager.AddOption(new IntFieldOption(elitesStackPercent));
-            ////////////////////////////////////////////////////////////////////////////////////////
-
-            //doppelganger modifier
 
             doppelStackTime = Config.Bind<int>(
                 "Modifier Options", "Doppelganger Cooldown Decrease", 30, "Cooldown reduction with one stack in seconds. By default it's 30s.");
             ModSettingsManager.AddOption(new IntFieldOption(doppelStackTime));
-            //////////////////////////////////////////////////////////////////////////////////////
 
-            //lunar enemies
             lunarStackPercent = Config.Bind<int>(
                 "Modifier Options", "Lunar Enemies Discount", 15, "Discount on lunar enemies in percents for more than one stack. By default it's 15%.");
             ModSettingsManager.AddOption(new IntFieldOption(lunarStackPercent));
-            /////////////////////////////////////////////////////////////////////////////////////
 
-            //void enemies
             voidStackPercent = Config.Bind<int>(
                 "Modifier Options", "Void Enemies Discount", 15, "Discount on lunar enemies in percents for more than one stack. By default it's 15%.");
             ModSettingsManager.AddOption(new IntFieldOption(voidStackPercent));
-            /////////////////////////////////////////////////////////////////////////////////////
 
-            //soul cost
             soulCostStackPercent = Config.Bind<int>(
                 "Modifier Options", "Soul Cost Increase", 2, "Percents added to hp curse for stack. By default it's 2%.");
             ModSettingsManager.AddOption(new IntFieldOption(soulCostStackPercent));
@@ -363,72 +288,127 @@ namespace RiskOfRoutes
             tier2ElitesStackPercent = Config.Bind<int>(
                 "Modifier Options", "Post-Loop Elites Increase", 15, "Discount on tier2 elites in percents for more than one stack. By default it's 15%.");
             ModSettingsManager.AddOption(new IntFieldOption(tier2ElitesStackPercent));
-            //////////////////////////////////////////////////////////////////////////////////////////
-
-            ////////////////////////////////////////////////////////////////
 
             // PRINTER ITEM MODIFIER/////////////////////////////////////////////////////////////////
-
-            useDefaultPrinterItems = Config.Bind<bool>(
-                "Printer Items", "Use Default Items", true, "Use default configuration of what items printer modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below. \n Items from default configuration are listed below for each tier.");
-            ModSettingsManager.AddOption(new CheckBoxOption(useDefaultPrinterItems));
+            printerItemPool = Config.Bind<ItemPoolOptions>(
+                "Printer Items", "Printer Item Pool", ItemPoolOptions.Default, "The configuration of what items printer modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below. \n Items from default configuration are listed below for each tier.");
+            ModSettingsManager.AddOption(new ChoiceOption(printerItemPool));
 
             tier1PrinterItems = Config.Bind<string>(
-                "Printer Items", "Tier 1 Items", "", "Adds item defs to a printer modifier as Tier1. \nItems from default configuration for Tier1 are:\nArmorPlate - Repulsion Armor Plate\nFlatHealth - Bison Steak\nCrowbar - Crowbar\nDeathMark - Death Mark\nDelayedDamage - Warped Echo\nDronesDropDynamite - Box of Dynamite\nHoof - Paul's Goat Hoof\nIgniteOnKill - Gasoline\nJumpBoost - Wax Quail\nMushroom - Bustling Fungus\nShieldBooster - Kinetic Dampener\nSprintBonus - Energy Drink\nStunChanceOnHit - Stun Grenade");
+                "Printer Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to a printer modifier as Tier1. \nItems from default configuration for Tier1 are:\nArmorPlate - Repulsion Armor Plate\nFlatHealth - Bison Steak\nCrowbar - Crowbar\nDeathMark - Death Mark\nDelayedDamage - Warped Echo\nDronesDropDynamite - Box of Dynamite\nHoof - Paul's Goat Hoof\nIgniteOnKill - Gasoline\nJumpBoost - Wax Quail\nMushroom - Bustling Fungus\nShieldBooster - Kinetic Dampener\nSprintBonus - Energy Drink\nStunChanceOnHit - Stun Grenade");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1PrinterItems));
 
             tier2PrinterItems = Config.Bind<string>(
-                "Printer Items", "Tier 2 Items", "", "Adds item defs to a printer modifier as Tier2. \nItems from default configuration for Tier2 are:\nAttackSpeedAndMoveSpeed - Mocha\nAttackSpeedOnCrit - Predatory Instincts\nBandolier - Bandolier\nBarrierOnKill - Topaz Brooch\nInfusion - Infusion\nSeed - Leeching Seed\nChainLightning - Ukulele\nCritAtLowerElevation - Hiker's Boots\nEquipmentMagazine - Fuel Cell\nExplodeOnDeath - Will-o'-the-wisp\nFragileDamageBonus - Delicate Watch\nIncreaseDamageOnMultiKill - Chronic Expansion\nKnockBackHitEnemies - Breaching Fin\nNearbyDamageBonus - Focus Crystal\nPrimarySkillShuriken - Shuriken\nSpeedBoostPickup - Elusive Antlers\nStrengthenBurn - Ignition Tank\nThorns - Razorwire");
+                "Printer Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to a printer modifier as Tier2. \nItems from default configuration for Tier2 are:\nAttackSpeedAndMoveSpeed - Mocha\nAttackSpeedOnCrit - Predatory Instincts\nBandolier - Bandolier\nBarrierOnKill - Topaz Brooch\nInfusion - Infusion\nSeed - Leeching Seed\nChainLightning - Ukulele\nCritAtLowerElevation - Hiker's Boots\nEquipmentMagazine - Fuel Cell\nExplodeOnDeath - Will-o'-the-wisp\nFragileDamageBonus - Delicate Watch\nIncreaseDamageOnMultiKill - Chronic Expansion\nKnockBackHitEnemies - Breaching Fin\nNearbyDamageBonus - Focus Crystal\nPrimarySkillShuriken - Shuriken\nSpeedBoostPickup - Elusive Antlers\nStrengthenBurn - Ignition Tank\nThorns - Razorwire");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2PrinterItems));
 
             tier3PrinterItems = Config.Bind<string>(
-                "Printer Items", "Tier 3 Items", "", "Adds item defs to a printer modifier as Tier3. \nItems from default configuration for Tier3 are:\nBear - Tougher Times\nBleedOnHit - Tri-Tip Dagger\nCritGlasses - Lens-Maker's Glasses\nFireRing - Kjaro's Band\nIceRing - Runald's Band\nMissile - AtG Missile Mk. 1\nStickyBomb - Sticky Bomb\nSyringe - Soldier's Syringe");
+                "Printer Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to a printer modifier as Tier3. \nItems from default configuration for Tier3 are:\nBear - Tougher Times\nBleedOnHit - Tri-Tip Dagger\nCritGlasses - Lens-Maker's Glasses\nFireRing - Kjaro's Band\nIceRing - Runald's Band\nMissile - AtG Missile Mk. 1\nStickyBomb - Sticky Bomb\nSyringe - Soldier's Syringe");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3PrinterItems));
-            // ENEMY ITEM MODIFIER/////////////////////////////////////////////////////////////////
 
-            useDefaultEnemyItems = Config.Bind<bool>(
-                "Enemy Items", "Use Default Items", true, "Use default configuration of what items enemy item modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below.");
-            ModSettingsManager.AddOption(new CheckBoxOption(useDefaultEnemyItems));
+            // ENEMY ITEM MODIFIER/////////////////////////////////////////////////////////////////
+            enemyItemPool = Config.Bind<ItemPoolOptions>(
+                "Enemy Items", "Enemy Item Pool", ItemPoolOptions.Default, "The configuration of what items enemy item modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below.");
+            ModSettingsManager.AddOption(new ChoiceOption(enemyItemPool));
+
+            canAppearWithAIBlacklisted = Config.Bind<bool>(
+                "Enemy Items", "Allow AI Blacklisted", false, ".");
+            ModSettingsManager.AddOption(new CheckBoxOption(canAppearWithAIBlacklisted));
+
+            enemyItemsAllowBoss = Config.Bind<bool>(
+    "Enemy Items", "Allow Boss Tier", false, "Adds items with boss tier to enemy item pool.");
+            ModSettingsManager.AddOption(new CheckBoxOption(enemyItemsAllowBoss));
+
+            enemyItemsAllowVoid = Config.Bind<bool>(
+                "Enemy Items", "Allow Void Tiers", false, "Adds items with void tiers to enemy item pool.");
+            ModSettingsManager.AddOption(new CheckBoxOption(enemyItemsAllowVoid));
 
             tier1EnemyItems = Config.Bind<string>(
-                "Enemy Items", "Tier 1 Items", "", "Adds item defs to a enemy item modifier as Tier1. \nItems from default configuration for Tier1 are:\nSlowOnHit - Chronobauble\nFlatHealth - Bison Steak\nBarrierOnCooldown - Eclipse Lite\nNearbyDamageBonus - Focus Crystal\nOutOfCombatArmor - Oddly-shaped Opal\nPersonalShield - Personal Shield Generator\nHoof - Paul's Goat Hoof\nShieldBooster - Kinetic Dampener");
+                "Enemy Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to an enemy item modifier as Tier1. \nItems from default configuration for Tier1 are:\nSlowOnHit - Chronobauble\nFlatHealth - Bison Steak\nBarrierOnCooldown - Eclipse Lite\nNearbyDamageBonus - Focus Crystal\nOutOfCombatArmor - Oddly-shaped Opal\nPersonalShield - Personal Shield Generator\nHoof - Paul's Goat Hoof\nShieldBooster - Kinetic Dampener");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1EnemyItems));
 
             tier2EnemyItems = Config.Bind<string>(
-                "Enemy Items", "Tier 2 Items", "", "Adds item defs to a enemy item modifier as Tier2. \nItems from default configuration for Tier2 are:\nSprintOutOfCombat - Red Whip\nFragileDamageBonus - Delicate Watch\nCritGlasses - Lens-Maker's Glasses\nSyringe - Soldier's Syringe\nArmorPlate - Repulsion Armor Plate");
+                "Enemy Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to an enemy item modifier as Tier2. \nItems from default configuration for Tier2 are:\nSprintOutOfCombat - Red Whip\nFragileDamageBonus - Delicate Watch\nCritGlasses - Lens-Maker's Glasses\nSyringe - Soldier's Syringe\nArmorPlate - Repulsion Armor Plate");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2EnemyItems));
 
             tier3EnemyItems = Config.Bind<string>(
-                "Enemy Items", "Tier 3 Items", "", "Adds item defs to a enemy item modifier as Tier3. \nItems from default configuration for Tier3 are:\nBehemoth - Brilliant Behemoth\nImmuneToDebuff - Ben's Raincoat\nExtraLife - Dio's Best Friend\nArmorReductionOnHit - Shattering Justice\nBear - Tougher Times");
+                "Enemy Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to an enemy item modifier as Tier3. \nItems from default configuration for Tier3 are:\nBehemoth - Brilliant Behemoth\nImmuneToDebuff - Ben's Raincoat\nExtraLife - Dio's Best Friend\nArmorReductionOnHit - Shattering Justice\nBear - Tougher Times");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3EnemyItems));
 
             enemyItemsModifierCanStack = Config.Bind<bool>(
                 "Enemy Items", "Modifier can stack", false, "Allows enemy item modifier to be stacked, so enemies can have more than one default stack for item.\nDefault amount for stack is:\nCommon - x5,\nUncommon - x3,\nLegendary - x1.");
             ModSettingsManager.AddOption(new CheckBoxOption(enemyItemsModifierCanStack));
 
-            // LUNAR ITEM MODIFIER/////////////////////////////////////////////////////////////////
+            commonDefaultStack = Config.Bind<int>(
+                "Enemy Items", "Common Default Stack", 5, "Default amount per stack.");
+            ModSettingsManager.AddOption(new IntFieldOption(commonDefaultStack));
 
-            useDefaultLunarItems = Config.Bind<bool>(
-                "Lunar Items", "Use Default Items", true, "Use default configuration of what items lunar item modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below. Accepts only lunar itemDefs");
-            ModSettingsManager.AddOption(new CheckBoxOption(useDefaultLunarItems));
+            uncommonDefaultStack = Config.Bind<int>(
+                "Enemy Items", "Uncommon Default Stack", 3, "Default amount per stack.");
+            ModSettingsManager.AddOption(new IntFieldOption(uncommonDefaultStack));
+
+            legendaryDefaultStack = Config.Bind<int>(
+                "Enemy Items", "Legendary Default Stack", 1, "Default amount per stack.");
+            ModSettingsManager.AddOption(new IntFieldOption(legendaryDefaultStack));
+
+            bossDefaultStack = Config.Bind<int>(
+                "Enemy Items", "Boss Default Stack", 1, "Default amount per stack. Note that the default configuration doesn't include any boss items by default.");
+            ModSettingsManager.AddOption(new IntFieldOption(bossDefaultStack));
+
+            chanceForExtra = Config.Bind<int>(
+                "Enemy Items", "Chance For Extra", 0, "Chance for enemy items to have extra stack.");
+            ModSettingsManager.AddOption(new IntSliderOption(chanceForExtra));
+
+            commonExtraRange = Config.Bind<int>(
+                "Enemy Items", "Common Extra Range", 3, "Amount of item stacks added as extra.");
+            ModSettingsManager.AddOption(new IntFieldOption(commonExtraRange));
+
+            uncommonExtraRange = Config.Bind<int>(
+                "Enemy Items", "Uncommon Extra Range", 2, "Amount of item stacks added as extra.");
+            ModSettingsManager.AddOption(new IntFieldOption(uncommonExtraRange));
+
+            legendaryExtraRange = Config.Bind<int>(
+                "Enemy Items", "Legendary Extra Range", 1, "Amount of item stacks added as extra.");
+            ModSettingsManager.AddOption(new IntFieldOption(legendaryExtraRange));
+
+            bossExtraRange = Config.Bind<int>(
+                "Enemy Items", "Boss Extra Range", 1, "Default amount per stack. Note that the default configuration doesn't include any boss items by default.");
+            ModSettingsManager.AddOption(new IntFieldOption(bossExtraRange));
+
+            // LUNAR ITEM MODIFIER/////////////////////////////////////////////////////////////////
+            lunarItemPool = Config.Bind<ItemPoolOptions>(
+                "Lunar Items", "Lunar Item Pool", ItemPoolOptions.Default, "The configuration of what items lunar item modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below. Accepts only lunar itemDefs");
+            ModSettingsManager.AddOption(new ChoiceOption(lunarItemPool));
 
             tier1LunarItems = Config.Bind<string>(
-                "Lunar Items", "Tier 1 Items", "", "Adds item defs to a lunar item modifier as Tier1. \nItems from default configuration for Tier1 are:\nGoldOnHit - Brittle Crown\nMonstersOnShrineUse - Defiant Gouge\nFocusConvergence - Focused Convergence");
+                "Lunar Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to a lunar item modifier as Tier1. \nItems from default configuration for Tier1 are:\nGoldOnHit - Brittle Crown\nMonstersOnShrineUse - Defiant Gouge\nFocusConvergence - Focused Convergence");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1LunarItems));
 
             tier2LunarItems = Config.Bind<string>(
-                "Lunar Items", "Tier 2 Items", "", "Adds item defs to a lunar item modifier as Tier2. \nItems from default configuration for Tier2 are:\nRepeatHeal - Corpsebloom\nHalfAttackSpeedHalfCooldowns - Light Flux Pauldron\nShieldOnly - Transcendence");
+                "Lunar Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to a lunar item modifier as Tier2. \nItems from default configuration for Tier2 are:\nRepeatHeal - Corpsebloom\nHalfAttackSpeedHalfCooldowns - Light Flux Pauldron\nShieldOnly - Transcendence");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2LunarItems));
 
             tier3LunarItems = Config.Bind<string>(
-                "Lunar Items", "Tier 3 Items", "", "Adds item defs to a lunar item modifier as Tier3. \nItems from default configuration for Tier3 are:\nLunarBadLuck - Purity\nHalfSpeedDoubleHealth - Stone Flux Pauldron");
+                "Lunar Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to a lunar item modifier as Tier3. \nItems from default configuration for Tier3 are:\nLunarBadLuck - Purity\nHalfSpeedDoubleHealth - Stone Flux Pauldron");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3LunarItems));
 
             lunarTurnToPearl = Config.Bind<bool>(
-                "Lunar Items", "Purify At The End", true, "By default the lunar item given by modifier is turned into a pearl at the end of the stage.");
+                "Lunar Items", "Purify At The End", true, "By default the lunar item given by the modifier is turned into a pearl at the end of the stage.");
             ModSettingsManager.AddOption(new CheckBoxOption(lunarTurnToPearl));
 
             //ARTIFACT MODIFIER
+            tier1Artifacts = Config.Bind<string>(
+                "Artifacts", "Add Tier 1 Artifacts", "", "Adds artifactDefs separated by comma to the Artifact Modifier pool, use it to add artifacts from other mods.");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier1Artifacts));
+
+            tier2Artifacts = Config.Bind<string>(
+                "Artifacts", "Add Tier 2 Artifacts", "", "Adds artifactDefs separated by comma to the Artifact Modifier pool, use it to add artifacts from other mods.");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier2Artifacts));
+
+            tier3Artifacts = Config.Bind<string>(
+                "Artifacts", "Add Tier 3 Artifacts", "", "Adds artifactDefs separated by comma to the Artifact Modifier pool, use it to add artifacts from other mods.");
+            ModSettingsManager.AddOption(new StringInputFieldOption(tier3Artifacts));
+
             allowMysteryArtifact = Config.Bind<bool>(
                 "Artifacts", "Mystery", true, "Mystery artifact available as artifact stage modifier.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowMysteryArtifact));
@@ -509,6 +489,7 @@ namespace RiskOfRoutes
                 "Artifacts", "Rebirth", false, "Rebirth artifact available as artifact stage modifier. Not intended to be available.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowRebirthArtifact));
 
+
             // STAGE MODIFIER TOGGLES /////////////////////////////////////////////////////////
             allowAurelioniteModifier = Config.Bind<bool>(
                 "Stage Modifiers", "Aurelionite", true, "Aurelionite reward available as a stage modifier.");
@@ -585,54 +566,33 @@ namespace RiskOfRoutes
             allowDoppelgangerModifier = Config.Bind<bool>(
                 "Stage Modifiers", "Doppelganger", true, "Doppelganger available as a stage modifier.");
             ModSettingsManager.AddOption(new CheckBoxOption(allowDoppelgangerModifier));
-            ////////////////////////////////////////////////////////////////////////////////////////
-            /////////////////////////////////////////////////////////////////////
         }
 
-        //private void Update()
-        //{
-        //    //if (Time.timeScale == 0f) return;
-
-        //    if (Input.GetKeyDown(KeyCode.F2))
-        //    {
-        //        var transform = PlayerCharacterMasterController.instances[0].master.GetBodyObject().transform;
-
-        //        Log.Info($"Player pressed F2. Spawning route portals {transform.position}");
-        //        RoutesExpansion.SpawnRoutePortals(transform.position);
-        //    }
-
-        //    if (Input.GetKeyDown(KeyCode.F3))
-        //    {
-        //        UnityHotReload.LoadNewAssemblyVersion(
-        //            typeof(RiskOfRoutes).Assembly, // The currently loaded assembly to replace.
-        //            "C:/Users/vit/AppData/Roaming/r2modmanPlus-local/RiskOfRain2/profiles/TEstling/BepInEx/plugins/RiskOfRoutes.dll"  // The path to the newly compiled DLL.
-        //        );
-        //        Log.Info("Done");
-        //    }
-        //    ////
-        //}
-
-
-        [ConCommand(commandName = "debuglog_on_all", flags = ConVarFlags.ExecuteOnServer, helpText = "Logs a network message to all connected people.")]
-        private static void CCNetworkLog(ConCommandArgs args)
+        private void Update()
         {
-            if (NetworkServer.active)
-            {
-                if (!_centralNetworkObjectSpawned)
-                {
-                    _centralNetworkObjectSpawned = Object.Instantiate(CentralNetworkObject);
-                    NetworkServer.Spawn(_centralNetworkObjectSpawned);
-                    Log.Info("instantiated network ob");
-                }
-                foreach (NetworkUser user in NetworkUser.readOnlyInstancesList)
-                {
-                    MyNetworkComponent.Invoke(user, string.Join("Pognali", args.userArgs));
-                }
-            }
-        }
+            //if (Time.timeScale == 0f) return;
 
-        public enum MapOrientation { Vertical, Horizontal }
+            if (Input.GetKeyDown(KeyCode.F2))
+            {
+                var transform = PlayerCharacterMasterController.instances[0].master.GetBodyObject().transform;
+
+                Log.Info($"Player pressed F2. Spawning route portals {transform.position}");
+                RoutesExpansion.SpawnRoutePortals(transform.position);
+            }
+
+            if (Input.GetKeyDown(KeyCode.F3))
+            {
+                UnityHotReload.LoadNewAssemblyVersion(
+                    typeof(RiskOfRoutes).Assembly, 
+                    "C:/Users/vit/AppData/Roaming/r2modmanPlus-local/RiskOfRain2/profiles/TEstling/BepInEx/plugins/RiskOfRoutes.dll" 
+                );
+                Log.Info("Done");
+            }
+            ////
+        }
 
 
     }
 }
+
+
