@@ -6,7 +6,6 @@ using UnityEngine.Networking;
 
 namespace SamplePlugin.StageModifiers
 {
-    [System.Serializable]
     public abstract class StageModifier
     {
         public int stack = 1;
@@ -17,11 +16,7 @@ namespace SamplePlugin.StageModifiers
 
         protected GameObject TryPlaceObjectOnScene(SpawnCard spawnCard, string name = "object")
         {
-            if (!NetworkServer.active)
-            {
-                Log.Error("SERVER IS NOT ACTIVE");
-                return null;
-            }
+            if (!NetworkServer.active) return null;
 
             if (spawnCard == null)
             {
