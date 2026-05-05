@@ -2,7 +2,6 @@
 
 namespace RiskOfRoutes.StageModifiers.OtherModifiers
 {
-    //На стейдже будет активно то количество артефактов горы, что были на том стейдже, где был выбран этот портал
     public class SaveMountainEffectModifier : StageModifier
     {
         public SaveMountainEffectModifier(int stack)
@@ -12,13 +11,14 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
 
         public override void OnEnd()
         {
-            Log.Info("Shrine safe on end");
+            Log.Info("SaveMountain on end");
             RoR2.Stage.onServerStageBegin -= Stage_onServerStageBegin;
 
         }
 
         public override void OnStart()
         {
+            Log.Info("SaveMountain on start");
             RoR2.Stage.onServerStageBegin += Stage_onServerStageBegin;
         }
 

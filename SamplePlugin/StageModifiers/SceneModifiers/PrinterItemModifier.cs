@@ -5,7 +5,6 @@ using UnityEngine;
 
 namespace SamplePlugin.StageModifiers.SceneModifiers
 {
-    //возможно весь модифаер будет опциональным в конфиге
     public class PrinterItemModifier : StageModifier
     {
         public ItemDef selectedItem;
@@ -82,7 +81,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             }
             else
             {
-                Log.Info("Asset path is invalid");
+                Log.Error("Asset path is invalid");
             }
         }
     }

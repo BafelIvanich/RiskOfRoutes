@@ -9,11 +9,11 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
     {
         public static void Initialize()
         {
-            On.RoR2.CostTypeDef.BuildCostStringStyled += CostTypeDef_BuildCostStringStyled;
-            RecalculateStatsAPI.GetStatCoefficients += RecalculateStatsAPI_GetStatCoefficients;
+            On.RoR2.CostTypeDef.BuildCostStringStyled += AppendSoulCost;
+            RecalculateStatsAPI.GetStatCoefficients += AppendHPBarCurse;
         }
 
-        private static void CostTypeDef_BuildCostStringStyled(On.RoR2.CostTypeDef.orig_BuildCostStringStyled orig, CostTypeDef self, int cost, System.Text.StringBuilder stringBuilder, bool forWorldDisplay, bool includeColor)
+        private static void AppendSoulCost(On.RoR2.CostTypeDef.orig_BuildCostStringStyled orig, CostTypeDef self, int cost, System.Text.StringBuilder stringBuilder, bool forWorldDisplay, bool includeColor)
         {
             orig(self, cost, stringBuilder, forWorldDisplay, includeColor);
             if (StageModifierDirector.instance && StageModifierDirector.instance.IsModifierActive("SoulCost"))
@@ -25,7 +25,7 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
             }
         }
 
-        private static void RecalculateStatsAPI_GetStatCoefficients(CharacterBody sender, RecalculateStatsAPI.StatHookEventArgs args)
+        private static void AppendHPBarCurse(CharacterBody sender, RecalculateStatsAPI.StatHookEventArgs args)
         {
             if (StageModifierDirector.instance && StageModifierDirector.instance.IsModifierActive("SoulCost"))
             {

@@ -17,12 +17,14 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
 
         public override void OnStart()
         {
+            Log.Info("UpgradeDrones on start");
             for (int i = 0; i < stack; i++)
             {
                 UpgradePlayerDrones();
             }
         }
 
+        //todo actually upgrades all minions players have
         private void UpgradePlayerDrones()
         {
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)

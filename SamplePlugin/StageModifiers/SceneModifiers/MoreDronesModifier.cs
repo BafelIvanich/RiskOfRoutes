@@ -42,6 +42,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             if (droneCategory.cards.Length == 0)
             {
                 Log.Error("No drones available on stage");
+                return;
             }
 
             foreach (var card in droneCategory.cards)

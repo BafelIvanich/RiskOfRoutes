@@ -20,12 +20,12 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         }
         public override void OnEnd()
         {
-            Log.Info("RedPrinterModifier end");
+            Log.Info("RedPrinter on end");
         }
 
         public override void OnStart()
         {
-            Log.Info("RedPrinterModifier start");
+            Log.Info("RedPrinter on start");
             SpawnRedPrinter();
         }
 
@@ -77,7 +77,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
         private void CreateRedPrinterSpawnCard()
         {
-            //TODO вынести
             InteractableSpawnCard card = AssetManager.tier3Printer;
 
             if (card != null)
