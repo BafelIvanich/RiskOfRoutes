@@ -23,6 +23,9 @@ namespace SamplePlugin
         public int bonusY = -1;
 
         public bool visited;
+        public bool shopVisited;
+        public bool goldshoresVisited;
+        public bool voidFieldsVisited;
 
         public RouteNodeSync(RouteMap.RouteNode node)
         {
@@ -55,6 +58,10 @@ namespace SamplePlugin
                 bonusX = node.portalNode.x;
                 bonusY = node.portalNode.y;
             }
+
+            shopVisited = node.shopVisited;
+            goldshoresVisited = node.goldshoresVisited;
+            voidFieldsVisited = node.voidFieldsVisited;
 
         }
 
