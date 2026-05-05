@@ -1,7 +1,6 @@
 using RiskOfRoutes;
 using RoR2;
 using SamplePlugin.StageModifiers.SceneModifiers;
-using UnityEngine;
 
 
 namespace SamplePlugin.StageModifiers.CombatModifiers
@@ -63,7 +62,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             int chanceForExtra = StageModifierDirector.instance?.chanceForExtra ?? 0;
             bool shouldAddExtra = false;
 
-            if(Run.instance!=null && Run.instance.stageRng!=null)
+            if (Run.instance != null && Run.instance.stageRng != null)
             {
                 shouldAddExtra = Run.instance.stageRng.nextNormalizedFloat < chanceForExtra;
             }

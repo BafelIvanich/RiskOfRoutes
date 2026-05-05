@@ -43,11 +43,11 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                         float pct = 1 - defaultPercent - ((stack - 1) * (float)(RiskOfRoutes.RiskOfRoutes.elitesStackPercent.Value) / 100f);
 
                         Log.Info($"Cost for elite tier {eliteTier} lowered by {(stack - 1) * (float)(RiskOfRoutes.RiskOfRoutes.elitesStackPercent.Value) / 100f}: {eliteTier.costMultiplier}->{eliteTier.costMultiplier * pct}");
-                        Log.Info($"Elite tier {eliteTier} consists of:");
-                        foreach (var eliteType in eliteTier.eliteTypes)
-                        {
-                            Log.Info($"\tEliteDef:{eliteType.name}");
-                        }
+                        //Log.Info($"Elite tier {eliteTier} consists of:");
+                        //foreach (var eliteType in eliteTier.eliteTypes)
+                        //{
+                        //    Log.Info($"\tEliteDef:{eliteType.name}");
+                        //}
                         tierAndInitialPrice.Add(eliteTier, eliteTier.costMultiplier);
                         eliteTier.costMultiplier = Mathf.Max(eliteTier.costMultiplier * pct, 1);
                     }
