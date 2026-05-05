@@ -131,6 +131,7 @@ namespace RiskOfRoutes.StageModifiers
         public static readonly Dictionary<string, ItemInfo> vanillaItemsInfo = new Dictionary<string, ItemInfo>()
         {
             //tiers based on how much they affect the run, default includes in default configuration
+            //whites
             {"BossDamageBonus", new ItemInfo(2, true, 1, false)},
             {"SecondarySkillMagazine", new ItemInfo(1, true, 1, false)},
             {"FlatHealth", new ItemInfo(1, true, 1, true)},
@@ -165,6 +166,7 @@ namespace RiskOfRoutes.StageModifiers
             {"BleedOnHit", new ItemInfo(3, true, 3, true)},
             {"WardOnLevel", new ItemInfo(1, true, 2, true)},
             {"DelayedDamage", new ItemInfo(1, true, 2, true)},
+            //greens
             {"Missile", new ItemInfo(3, true, 3, true)},
             {"Bandolier", new ItemInfo(1, true, 1, false)},
             {"WarCryOnMultiKill", new ItemInfo(1, true, 1, false)},
@@ -206,6 +208,7 @@ namespace RiskOfRoutes.StageModifiers
             {"EnergizedOnEquipmentUse", new ItemInfo(2, true, 1, false)},
             {"JumpBoost", new ItemInfo(2, true, 1, false)},
             {"ExplodeOnDeath", new ItemInfo(2, true, 1, false)},
+            //reds
             {"Clover", new ItemInfo(3, false, 1, false)},
             {"BarrierOnOverHeal", new ItemInfo(1, false, 1, false)},
             {"AlienHead", new ItemInfo(2, false, 3, true)},
@@ -232,7 +235,7 @@ namespace RiskOfRoutes.StageModifiers
             {"IncreaseHealing", new ItemInfo(1, false, 2, true)},
             {"LaserTurbine", new ItemInfo(1, false, 1, false)},
             {"MeteorAttackOnHighDamage", new ItemInfo(1, false, 1, false)},
-            {"BounceNearby", new ItemInfo(1, false, 1, false)},
+            {"BounceNearby", new ItemInfo(1, false, 1, true)},
             {"ArmorReductionOnHit", new ItemInfo(1, false, 3, true)},
             {"ItemDropChanceOnKill", new ItemInfo(1, false, 1, false)},
             {"Talisman", new ItemInfo(1, false, 1, false)},
@@ -242,6 +245,7 @@ namespace RiskOfRoutes.StageModifiers
             {"ShockNearby", new ItemInfo(1, false, 3, false)},
             {"HeadHunter", new ItemInfo(1, false, 1, false)},
             {"BarrageOnBoss", new ItemInfo(1, false, 1, false)},
+            //yellows
             {"ArtifactKey", new ItemInfo(1, false, 1, false)},
             {"LightningStrikeOnHit", new ItemInfo(1, false, 3, true)},
             {"MinorConstructOnKill", new ItemInfo(1, false, 1, false)},
@@ -478,7 +482,7 @@ namespace RiskOfRoutes.StageModifiers
             if (printer != RiskOfRoutes.ItemPoolOptions.None)
             {
                 var filtered = RoR2.ItemCatalog.allItemDefs.Where(def =>
-                (def.tier == ItemTier.Tier1) || 
+                (def.tier == ItemTier.Tier1) ||
                 (def.tier == ItemTier.Tier2) &&
                 def.DoesNotContainTag(ItemTag.CannotDuplicate)).ToList(); //entire
 
@@ -527,9 +531,14 @@ namespace RiskOfRoutes.StageModifiers
                     filtered = filtered.Where(def => vanillaItemsInfo.TryGetValue(def.name, out ItemInfo info) && info.isEnemyDefault).ToList();
                 }
 
+                bool isStackable = StageModifierDirector.instance.enemyItemsModifierCanStack;
+
                 foreach (var def in filtered)
                 {
                     string modName = def.name + "_EnemyItem";
+
+                    if (AllDefs.TryGetValue(modName, out ModifierDef enemyDef)) enemyDef.isStackable = isStackable;
+
                     if (!generalNegativePool.Contains(modName)) generalNegativePool.Add(modName);
                 }
             }
@@ -667,19 +676,17 @@ namespace RiskOfRoutes.StageModifiers
             }
 
             string modName = itemName + "_EnemyItem";
-            if (StageModifierDirector.instance != null)
-            {
-                Register(new ModifierDef(modName, tier, 1f, isStackable: StageModifierDirector.instance.enemyItemsModifierCanStack, true), itemName, false, true);
-            }
-            else
-            {
-                Register(new ModifierDef(modName, tier, 1f, isStackable: RiskOfRoutes.enemyItemsModifierCanStack.Value, true), itemName, false, true);
-            }
 
-            if(isAdditional)
+            bool isStackable = StageModifierDirector.instance?.enemyItemsModifierCanStack ?? RiskOfRoutes.enemyItemsModifierCanStack.Value;
+
+            if (AllDefs.TryGetValue(modName, out ModifierDef enemyDef)) enemyDef.isStackable = isStackable;
+
+            Register(new ModifierDef(modName, tier, 1f, isStackable: StageModifierDirector.instance?.enemyItemsModifierCanStack ?? RiskOfRoutes.enemyItemsModifierCanStack.Value, true), itemName, false, true);
+
+            if (isAdditional)
             {
                 if (!generalNegativePool.Contains(modName)) generalNegativePool.Add(modName);
-            //if (!enemyItemPool.Contains(modName)) enemyItemPool.Add(modName);
+                //if (!enemyItemPool.Contains(modName)) enemyItemPool.Add(modName);
             }
         }
 
@@ -931,7 +938,7 @@ namespace RiskOfRoutes.StageModifiers
 
                 if (!currentDef.isAvailable()) continue;
 
-                if (currentDef.tier == tier || (currentDef.tier < tier && currentDef.IsStackable()))
+                if (currentDef.tier == tier || (currentDef.tier < tier && currentDef.isStackable))
                 {
                     //if (currentDef.tier != tier)
                     //Log.Info($"{nameof(SelectModifier)}: Modifier {currentDef.name} with default tier {currentDef.tier} needs to be stacked for tier {tier}");
@@ -946,10 +953,6 @@ namespace RiskOfRoutes.StageModifiers
             if (selection.Count > 0)
             {
                 var selected = selection.Evaluate(Run.instance.stageRng.nextNormalizedFloat);
-                if (selected.name.EndsWith("_EnemyItem") && StageModifierDirector.instance.enemyItemsModifierCanStack)
-                {
-                    selected.conflictList.Clear();
-                }
 
                 return selected;
             }
@@ -1053,7 +1056,7 @@ namespace RiskOfRoutes.StageModifiers
                             colorHex = "#FFFFFF";
                             break;
                     }
-                    
+
 
                     localizedName = $"<color={colorHex}>{defaultName}</color>";
                 }
