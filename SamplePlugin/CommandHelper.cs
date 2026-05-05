@@ -12,6 +12,7 @@ namespace SamplePlugin
 {
     public class CommandHelper : MonoBehaviour
     {
+        //todo log option allowing the test commands
         [ConCommand(commandName = "nextStages", flags = ConVarFlags.ExecuteOnServer, helpText = "Get next stages")]
         private static void CCGetNextStagesScenes(ConCommandArgs args)
         {
@@ -22,6 +23,26 @@ namespace SamplePlugin
             }
             Log.Info(Run.instance.nextStageScene.destinationsGroup);
 
+        }
+
+        [ConCommand(commandName = "bannedStage", flags = ConVarFlags.ExecuteOnServer, helpText = "Get modifiers banned for stage")]
+        private static void CCGetBannedStage(ConCommandArgs args)
+        {
+            Log.Info("Banned on stage: ");
+            foreach (var mod in StageModifierDirector.instance.bannedModifiersStage)
+            {
+                Log.Info($"\t{mod}");
+            }
+        }
+
+        [ConCommand(commandName = "bannedRun", flags = ConVarFlags.ExecuteOnServer, helpText = "Get modifiers banned for run")]
+        private static void CCGetBannedRun(ConCommandArgs args)
+        {
+            Log.Info("Banned in run: ");
+            foreach (var mod in StageModifierDirector.instance.bannedModifiersRun)
+            {
+                Log.Info($"\t{mod}");
+            }
         }
 
         [ConCommand(commandName = "printerPool", flags = ConVarFlags.ExecuteOnServer, helpText = "Get printers info")]
@@ -112,7 +133,7 @@ namespace SamplePlugin
 
         }
 
-       
+
         [ConCommand(commandName = "dccs", flags = ConVarFlags.ExecuteOnServer, helpText = "Get all cards for enemies that can spawn on current stage")]
         private static void CCGetDccs(ConCommandArgs args)
         {
@@ -205,24 +226,24 @@ namespace SamplePlugin
         //}
 
 
-        [ConCommand(commandName = "markDirty", flags = ConVarFlags.ExecuteOnServer, helpText = "Mark map as dirty")]
-        private static void CCSetMapDirty(ConCommandArgs args)
-        {
-            StageModifierDirector.instance.routeMap.isDirty = true;
-        }
+        //[ConCommand(commandName = "markDirty", flags = ConVarFlags.ExecuteOnServer, helpText = "Mark map as dirty")]
+        //private static void CCSetMapDirty(ConCommandArgs args)
+        //{
+        //    StageModifierDirector.instance.routeMap.isDirty = true;
+        //}
 
 
-        [ConCommand(commandName = "give_money", flags = ConVarFlags.ExecuteOnServer)]
-        private static void CCGiveMoney(ConCommandArgs args)
-        {
-            if (args.senderMaster)
-            {
-                args.senderMaster.GiveMoney(1000);
-                args.senderMaster.GiveMoneyWithOnLevelUpFreeUnlock(1000);
-                Log.Info("Gave 1000 gold to " + args.senderMaster.name);
+        //[ConCommand(commandName = "give_money", flags = ConVarFlags.ExecuteOnServer)]
+        //private static void CCGiveMoney(ConCommandArgs args)
+        //{
+        //    if (args.senderMaster)
+        //    {
+        //        args.senderMaster.GiveMoney(1000);
+        //        args.senderMaster.GiveMoneyWithOnLevelUpFreeUnlock(1000);
+        //        Log.Info("Gave 1000 gold to " + args.senderMaster.name);
 
-            }
-        }
+        //    }
+        //}
 
         [ConCommand(commandName = "itemTags", flags = ConVarFlags.ExecuteOnServer, helpText = "ItemTags")]
         private static void CCItemTags(ConCommandArgs args)
@@ -358,177 +379,177 @@ namespace SamplePlugin
         }
 
 
-        [ConCommand(commandName = "charge", flags = ConVarFlags.ExecuteOnServer)]
-        static void CCTeleporterCharge(ConCommandArgs args)
-        {
-            if (!TeleporterInteraction.instance) return;
+        //[ConCommand(commandName = "charge", flags = ConVarFlags.ExecuteOnServer)]
+        //static void CCTeleporterCharge(ConCommandArgs args)
+        //{
+        //    if (!TeleporterInteraction.instance) return;
 
-            var tp = TeleporterInteraction.instance;
+        //    var tp = TeleporterInteraction.instance;
 
-            tp.holdoutZoneController.charge = 0.99f;
+        //    tp.holdoutZoneController.charge = 0.99f;
 
-            if (tp.bossGroup && tp.bossGroup.combatSquad)
-            {
+        //    if (tp.bossGroup && tp.bossGroup.combatSquad)
+        //    {
 
-                List<CharacterMaster> bossMasters = new List<CharacterMaster>(tp.bossGroup.combatSquad.readOnlyMembersList);
+        //        List<CharacterMaster> bossMasters = new List<CharacterMaster>(tp.bossGroup.combatSquad.readOnlyMembersList);
 
-                foreach (CharacterMaster master in bossMasters)
-                {
-                    CharacterBody body = master.GetBody();
+        //        foreach (CharacterMaster master in bossMasters)
+        //        {
+        //            CharacterBody body = master.GetBody();
 
-                    if (body && body.healthComponent && body.healthComponent.alive)
-                    {
-                        body.healthComponent.Suicide(null, null, DamageType.Generic);
-                    }
-                }
-            }
-        }
-
-
-        [ConCommand(commandName = "greenportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void CCSpawnGreenPortal(ConCommandArgs args)
-        {
-
-            CharacterBody body = args.senderMaster.GetBody();
-            Vector3 position = body.transform.position + body.transform.forward * 5f;
-            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
-            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscColossusPortal");
-
-            if (!spawnCard)
-            {
-                spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
-            }
-
-            if (!spawnCard)
-            {
-                return;
-            }
-
-            DirectorPlacementRule placementRule = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Direct,
-                position = position
-            };
-
-            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
-
-        }
-
-        [ConCommand(commandName = "mount", flags = ConVarFlags.ExecuteOnServer)]
-        private static void CCSpawnMountainShrine(ConCommandArgs args)
-        {
-
-            CharacterBody body = args.senderMaster.GetBody();
-            Vector3 position = body.transform.position + body.transform.forward * 5f;
-            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
-            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscColossusPortal");
-            spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/Base/ShrineBoss/iscShrineBoss.asset").WaitForCompletion();
+        //            if (body && body.healthComponent && body.healthComponent.alive)
+        //            {
+        //                body.healthComponent.Suicide(null, null, DamageType.Generic);
+        //            }
+        //        }
+        //    }
+        //}
 
 
-            if (!spawnCard)
-            {
-                return;
-            }
+        //[ConCommand(commandName = "greenportal", flags = ConVarFlags.ExecuteOnServer)]
+        //private static void CCSpawnGreenPortal(ConCommandArgs args)
+        //{
 
-            DirectorPlacementRule placementRule = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Direct,
-                position = position
-            };
+        //    CharacterBody body = args.senderMaster.GetBody();
+        //    Vector3 position = body.transform.position + body.transform.forward * 5f;
+        //    Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
+        //    SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscColossusPortal");
 
-            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
+        //    if (!spawnCard)
+        //    {
+        //        spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
+        //    }
 
-            Log.Info("Mount availalbe:" + StageModifierDirector.instance?.CheckMountainShrine());
+        //    if (!spawnCard)
+        //    {
+        //        return;
+        //    }
 
-        }
+        //    DirectorPlacementRule placementRule = new DirectorPlacementRule
+        //    {
+        //        placementMode = DirectorPlacementRule.PlacementMode.Direct,
+        //        position = position
+        //    };
+
+        //    GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
+
+        //}
+
+        //[ConCommand(commandName = "mount", flags = ConVarFlags.ExecuteOnServer)]
+        //private static void CCSpawnMountainShrine(ConCommandArgs args)
+        //{
+
+        //    CharacterBody body = args.senderMaster.GetBody();
+        //    Vector3 position = body.transform.position + body.transform.forward * 5f;
+        //    Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
+        //    SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscColossusPortal");
+        //    spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/Base/ShrineBoss/iscShrineBoss.asset").WaitForCompletion();
+
+
+        //    if (!spawnCard)
+        //    {
+        //        return;
+        //    }
+
+        //    DirectorPlacementRule placementRule = new DirectorPlacementRule
+        //    {
+        //        placementMode = DirectorPlacementRule.PlacementMode.Direct,
+        //        position = position
+        //    };
+
+        //    GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
+
+        //    Log.Info("Mount availalbe:" + StageModifierDirector.instance?.CheckMountainShrine());
+
+        //}
 
 
 
-        [ConCommand(commandName = "shopportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void CCSpawnShopPortal(ConCommandArgs args)
-        {
+        //[ConCommand(commandName = "shopportal", flags = ConVarFlags.ExecuteOnServer)]
+        //private static void CCSpawnShopPortal(ConCommandArgs args)
+        //{
 
-            CharacterBody body = args.senderMaster.GetBody();
-            Vector3 position = body.transform.position + body.transform.forward * 5f;
-            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
-            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscShopPortal");
+        //    CharacterBody body = args.senderMaster.GetBody();
+        //    Vector3 position = body.transform.position + body.transform.forward * 5f;
+        //    Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
+        //    SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscShopPortal");
 
-            if (!spawnCard)
-            {
-                spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
-            }
+        //    if (!spawnCard)
+        //    {
+        //        spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
+        //    }
 
-            if (!spawnCard)
-            {
-                return;
-            }
+        //    if (!spawnCard)
+        //    {
+        //        return;
+        //    }
 
-            DirectorPlacementRule placementRule = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Direct,
-                position = position
-            };
+        //    DirectorPlacementRule placementRule = new DirectorPlacementRule
+        //    {
+        //        placementMode = DirectorPlacementRule.PlacementMode.Direct,
+        //        position = position
+        //    };
 
-            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
-        }
+        //    GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
+        //}
 
-        [ConCommand(commandName = "virtualportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void CCSpawnVirtualPortal(ConCommandArgs args)
-        {
+        //[ConCommand(commandName = "virtualportal", flags = ConVarFlags.ExecuteOnServer)]
+        //private static void CCSpawnVirtualPortal(ConCommandArgs args)
+        //{
 
-            CharacterBody body = args.senderMaster.GetBody();
-            Vector3 position = body.transform.position + body.transform.forward * 5f;
-            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
-            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscHardwareProgPortal_Haunt");
+        //    CharacterBody body = args.senderMaster.GetBody();
+        //    Vector3 position = body.transform.position + body.transform.forward * 5f;
+        //    Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
+        //    SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscHardwareProgPortal_Haunt");
 
-            if (!spawnCard)
-            {
-                spawnCard = Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC3/iscHardwareProgPortal_Haunt.asset").WaitForCompletion();
-            }
+        //    if (!spawnCard)
+        //    {
+        //        spawnCard = Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC3/iscHardwareProgPortal_Haunt.asset").WaitForCompletion();
+        //    }
 
-            if (!spawnCard)
-            {
-                return;
-            }
+        //    if (!spawnCard)
+        //    {
+        //        return;
+        //    }
 
-            DirectorPlacementRule placementRule = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Direct,
-                position = position
-            };
+        //    DirectorPlacementRule placementRule = new DirectorPlacementRule
+        //    {
+        //        placementMode = DirectorPlacementRule.PlacementMode.Direct,
+        //        position = position
+        //    };
 
-            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
+        //    GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
 
-        }
+        //}
 
-        [ConCommand(commandName = "goldportal", flags = ConVarFlags.ExecuteOnServer)]
-        private static void CCSpawnGoldPortal(ConCommandArgs args)
-        {
+        //[ConCommand(commandName = "goldportal", flags = ConVarFlags.ExecuteOnServer)]
+        //private static void CCSpawnGoldPortal(ConCommandArgs args)
+        //{
 
-            CharacterBody body = args.senderMaster.GetBody();
-            Vector3 position = body.transform.position + body.transform.forward * 5f;
-            Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
-            SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscGoldshoresPortal");
+        //    CharacterBody body = args.senderMaster.GetBody();
+        //    Vector3 position = body.transform.position + body.transform.forward * 5f;
+        //    Quaternion rotation = Quaternion.LookRotation(-body.transform.forward);
+        //    SpawnCard spawnCard = LegacyResourcesAPI.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscGoldshoresPortal");
 
-            if (!spawnCard)
-            {
-                spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
-            }
+        //    if (!spawnCard)
+        //    {
+        //        spawnCard = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<SpawnCard>("RoR2/DLC2/PortalColossus/iscPortalColossus.asset").WaitForCompletion();
+        //    }
 
-            if (!spawnCard)
-            {
-                return;
-            }
+        //    if (!spawnCard)
+        //    {
+        //        return;
+        //    }
 
-            DirectorPlacementRule placementRule = new DirectorPlacementRule
-            {
-                placementMode = DirectorPlacementRule.PlacementMode.Direct,
-                position = position
-            };
+        //    DirectorPlacementRule placementRule = new DirectorPlacementRule
+        //    {
+        //        placementMode = DirectorPlacementRule.PlacementMode.Direct,
+        //        position = position
+        //    };
 
-            GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
+        //    GameObject spawnedObject = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, RoR2Application.rng));
 
-        }
+        //}
 
         [ConCommand(commandName = "fing", flags = ConVarFlags.ExecuteOnServer)]
         private static void CCFindShopPortal(ConCommandArgs args)
