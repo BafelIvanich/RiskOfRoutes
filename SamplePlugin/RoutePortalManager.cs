@@ -152,7 +152,7 @@ namespace RiskOfRoutes
         private void OnTypeChanged(int value)
         {
             portalType = value;
-            Log.Info("got value for type");
+            //Log.Info("got value for type");
 
             UpdatePortalMaterials();
         }
