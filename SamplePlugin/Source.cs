@@ -291,24 +291,24 @@ namespace RiskOfRoutes
 
             // PRINTER ITEM MODIFIER/////////////////////////////////////////////////////////////////
             printerItemPool = Config.Bind<ItemPoolOptions>(
-                "Printer Items", "Printer Item Pool", ItemPoolOptions.Default, "The configuration of what items printer modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below. \n Items from default configuration are listed below for each tier.");
+                "Printer Items", "Printer Item Pool", ItemPoolOptions.Default, "The configuration of what items printer modifier can have by modifier tier, use fields below to add other items from vanilla or mods to configuration.");
             ModSettingsManager.AddOption(new ChoiceOption(printerItemPool));
 
             tier1PrinterItems = Config.Bind<string>(
-                "Printer Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to a printer modifier as Tier1. \nItems from default configuration for Tier1 are:\nArmorPlate - Repulsion Armor Plate\nFlatHealth - Bison Steak\nCrowbar - Crowbar\nDeathMark - Death Mark\nDelayedDamage - Warped Echo\nDronesDropDynamite - Box of Dynamite\nHoof - Paul's Goat Hoof\nIgniteOnKill - Gasoline\nJumpBoost - Wax Quail\nMushroom - Bustling Fungus\nShieldBooster - Kinetic Dampener\nSprintBonus - Energy Drink\nStunChanceOnHit - Stun Grenade");
+                "Printer Items", "Add Tier 1 Items", "", "Adds item defs separated by comma to a printer modifier as Tier1. ");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier1PrinterItems));
 
             tier2PrinterItems = Config.Bind<string>(
-                "Printer Items", "Add Tier 2 Items", "", "Adds item defs separated by comma to a printer modifier as Tier2. \nItems from default configuration for Tier2 are:\nAttackSpeedAndMoveSpeed - Mocha\nAttackSpeedOnCrit - Predatory Instincts\nBandolier - Bandolier\nBarrierOnKill - Topaz Brooch\nInfusion - Infusion\nSeed - Leeching Seed\nChainLightning - Ukulele\nCritAtLowerElevation - Hiker's Boots\nEquipmentMagazine - Fuel Cell\nExplodeOnDeath - Will-o'-the-wisp\nFragileDamageBonus - Delicate Watch\nIncreaseDamageOnMultiKill - Chronic Expansion\nKnockBackHitEnemies - Breaching Fin\nNearbyDamageBonus - Focus Crystal\nPrimarySkillShuriken - Shuriken\nSpeedBoostPickup - Elusive Antlers\nStrengthenBurn - Ignition Tank\nThorns - Razorwire");
+                "Printer Items", "Add Tier 2 Items", "", "");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier2PrinterItems));
 
             tier3PrinterItems = Config.Bind<string>(
-                "Printer Items", "Add Tier 3 Items", "", "Adds item defs separated by comma to a printer modifier as Tier3. \nItems from default configuration for Tier3 are:\nBear - Tougher Times\nBleedOnHit - Tri-Tip Dagger\nCritGlasses - Lens-Maker's Glasses\nFireRing - Kjaro's Band\nIceRing - Runald's Band\nMissile - AtG Missile Mk. 1\nStickyBomb - Sticky Bomb\nSyringe - Soldier's Syringe");
+                "Printer Items", "Add Tier 3 Items", "", "");
             ModSettingsManager.AddOption(new StringInputFieldOption(tier3PrinterItems));
 
             // ENEMY ITEM MODIFIER/////////////////////////////////////////////////////////////////
             enemyItemPool = Config.Bind<ItemPoolOptions>(
-                "Enemy Items", "Enemy Item Pool", ItemPoolOptions.Default, "The configuration of what items enemy item modifier can have by modifier tier, use fields below to add other items from vanilla or mods. Disable if you want it to only use defs from fields below.");
+                "Enemy Items", "Enemy Item Pool", ItemPoolOptions.Default, "");
             ModSettingsManager.AddOption(new ChoiceOption(enemyItemPool));
 
             canAppearWithAIBlacklisted = Config.Bind<bool>(
@@ -580,14 +580,6 @@ namespace RiskOfRoutes
                 RoutesExpansion.SpawnRoutePortals(transform.position);
             }
 
-            if (Input.GetKeyDown(KeyCode.F3))
-            {
-                UnityHotReload.LoadNewAssemblyVersion(
-                    typeof(RiskOfRoutes).Assembly, 
-                    "C:/Users/vit/AppData/Roaming/r2modmanPlus-local/RiskOfRain2/profiles/TEstling/BepInEx/plugins/RiskOfRoutes.dll" 
-                );
-                Log.Info("Done");
-            }
             ////
         }
 

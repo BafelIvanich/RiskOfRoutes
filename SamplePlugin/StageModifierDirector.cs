@@ -27,15 +27,16 @@ namespace SamplePlugin
 
         public List<StageModifier> activeModifiers { get; set; }
         public List<ModifierSync> reservedModifiers { get; set; }
-        public HashSet<string> bannedModifiers { get; set; }
         public List<string> runArtifactsApplied;
+        public HashSet<string> bannedModifiersRun { get; set; }
+        public HashSet<string> bannedModifiersStage { get; set; }
 
         public SyncListModifier modifiersSynced = new SyncListModifier();
         public List<RouteNodeSync> routeNodesSynced = new List<RouteNodeSync>();
 
         public int mapState = 0;
 
-        public float stageEnterTime = 0; //todo
+        public float stageEnterTime = 0;
 
         [SyncVar]
         public int mapWidth;
@@ -66,14 +67,38 @@ namespace SamplePlugin
         public int commandAddedStack = 0;
 
         // run configuration
+        [SyncVar]
         public float punishmentTime = -1;
+        [SyncVar]
         public bool purifyLunarItemModifier;
+        [SyncVar]
         public int doppelStackTime = 30;
+        [SyncVar]
         public bool modifiersCanBeBanned = true;
+
+        [SyncVar]
         public bool enemyItemsModifierCanStack = false;
 
-        private List<string> syncNames = new List<string>();
-        private List<int> syncTiers = new List<int>();
+        [SyncVar]
+        public int commonDefaultStack = 5;
+        [SyncVar]
+        public int uncommonDefaultStack = 3;
+        [SyncVar]
+        public int legendaryDefaultStack = 1;
+        [SyncVar]
+        public int bossDefaultStack = 1;
+
+        [SyncVar]
+        public int commonExtraRange = 3;
+        [SyncVar]
+        public int uncommonExtraRange = 2;
+        [SyncVar]
+        public int legendaryExtraRange = 1;
+        [SyncVar]
+        public int bossExtraRange = 1;
+        [SyncVar]
+        public int chanceForExtra = 0;
+
         /////
 
         public void Awake()
@@ -83,7 +108,8 @@ namespace SamplePlugin
 
             activeModifiers = new List<StageModifier>();
             reservedModifiers = new List<ModifierSync>();
-            bannedModifiers = new HashSet<string>();
+            bannedModifiersRun = new HashSet<string>();
+            bannedModifiersStage = new HashSet<string>();
             activePortalInstances = new List<GameObject>();
 
             Log.Info($"{nameof(Awake)}: StageModifierDirector created");
@@ -98,6 +124,8 @@ namespace SamplePlugin
 
         }
 
+
+
         public void OnDestroy()
         {
             RoR2.Run.onRunDestroyGlobal -= Run_onRunDestroyGlobal;
@@ -111,6 +139,9 @@ namespace SamplePlugin
         {
             Log.Info($"{nameof(Run_onRunStartGlobal)}: Run started");
 
+
+            if (!NetworkServer.active) return;
+
             var invObj = Instantiate(RiskOfRoutes.RiskOfRoutes.networkedInventoryPrefab);
             DontDestroyOnLoad(invObj);
 
@@ -120,6 +151,7 @@ namespace SamplePlugin
             NetworkServer.Spawn(invObj);
 
             CreateRunConfiguration();
+
 
 
             Log.Info($"{nameof(Run_onRunStartGlobal)}: Got punishmentTimeMinutes value - {punishmentTime}");
@@ -135,7 +167,7 @@ namespace SamplePlugin
 
             //todo убрпавть
             Log.Info($"{nameof(Run_onRunStartGlobal)}: Config banlist is:");
-            foreach (var def in bannedModifiers)
+            foreach (var def in bannedModifiersRun)
             {
                 Log.Info($"Banned: {def}");
             }
@@ -145,8 +177,27 @@ namespace SamplePlugin
         private void CreateRunConfiguration()
         {
             enemyItemsModifierCanStack = RiskOfRoutes.RiskOfRoutes.enemyItemsModifierCanStack.Value;
+            commonDefaultStack = RiskOfRoutes.RiskOfRoutes.commonDefaultStack.Value;
+            uncommonDefaultStack = RiskOfRoutes.RiskOfRoutes.uncommonDefaultStack.Value;
+            legendaryDefaultStack = RiskOfRoutes.RiskOfRoutes.legendaryDefaultStack.Value;
+            bossDefaultStack = RiskOfRoutes.RiskOfRoutes.bossDefaultStack.Value;
 
-            StageModifierCatalog.Init(AssetManager.bundle);
+            commonExtraRange = RiskOfRoutes.RiskOfRoutes.commonExtraRange.Value;
+            uncommonExtraRange = RiskOfRoutes.RiskOfRoutes.uncommonExtraRange.Value;
+            legendaryExtraRange = RiskOfRoutes.RiskOfRoutes.legendaryExtraRange.Value;
+            bossExtraRange = RiskOfRoutes.RiskOfRoutes.bossExtraRange.Value;
+
+            chanceForExtra = RiskOfRoutes.RiskOfRoutes.chanceForExtra.Value;
+
+            //StageModifierCatalog.Init(AssetManager.bundle);
+
+            //StageModifierCatalog.CreatePrinterPool(RiskOfRoutes.RiskOfRoutes.printerItemPool);
+            //StageModifierCatalog.CreateEnemyPool(RiskOfRoutes.RiskOfRoutes.enemyItemPool.Value, RiskOfRoutes.RiskOfRoutes.canAppearWithAIBlacklisted.Value);
+            //StageModifierCatalog.CreateLunarPool(RiskOfRoutes.RiskOfRoutes.lunarItemPool.Value);
+
+            //StageModifierCatalog.RegistersPrinters(RiskOfRoutes.RiskOfRoutes.printerItemPool.Value);
+            //StageModifierCatalog.RegisterEnemyItems(RiskOfRoutes.RiskOfRoutes.enemyItemPool.Value, RiskOfRoutes.RiskOfRoutes.canAppearWithAIBlacklisted.Value);
+            //StageModifierCatalog.RegisterLunarItems(RiskOfRoutes.RiskOfRoutes.lunarItemPool.Value);
 
             runArtifactsApplied = GetArtifactsAppliedThisRun();
             if (RiskOfRoutes.RiskOfRoutes.negativeStackPunishment.Value)
@@ -158,10 +209,54 @@ namespace SamplePlugin
             doppelStackTime = RiskOfRoutes.RiskOfRoutes.doppelStackTime.Value;
             modifiersCanBeBanned = RiskOfRoutes.RiskOfRoutes.modifiersCanBeBanned.Value;
 
-            bannedModifiers.Clear();
-            StageModifierCatalog.CleanAdditionalDefs();
+            bannedModifiersRun.Clear();
 
-            StageModifierCatalog.DisableDefaultPools(disablePrinter: !RiskOfRoutes.RiskOfRoutes.useDefaultPrinterItems.Value, disableEnemy: !RiskOfRoutes.RiskOfRoutes.useDefaultEnemyItems.Value, disableLunar: !RiskOfRoutes.RiskOfRoutes.useDefaultLunarItems.Value);
+            //modifiers
+            if (!RiskOfRoutes.RiskOfRoutes.allowAurelioniteModifier.Value) bannedModifiersRun.Add("Aurelionite");
+            if (!RiskOfRoutes.RiskOfRoutes.allowBossRedItemModifier.Value) bannedModifiersRun.Add("BossRedItem");
+            if (!RiskOfRoutes.RiskOfRoutes.allowBossYellowItemModifier.Value) bannedModifiersRun.Add("BossYellowItem");
+            if (!RiskOfRoutes.RiskOfRoutes.allowDroneBossGreenModifier.Value) bannedModifiersRun.Add("DroneBossGreen");
+            if (!RiskOfRoutes.RiskOfRoutes.allowDroneBossRedModifier.Value) bannedModifiersRun.Add("DroneBossRed");
+            if (!RiskOfRoutes.RiskOfRoutes.allowMoreElitesModifier.Value) bannedModifiersRun.Add("MoreElites");
+            if (!RiskOfRoutes.RiskOfRoutes.allowMoreDronesModifier.Value) bannedModifiersRun.Add("MoreDrones");
+            if (!RiskOfRoutes.RiskOfRoutes.allowUpgradeDronesModifier.Value) bannedModifiersRun.Add("UpgradeDrones");
+            if (!RiskOfRoutes.RiskOfRoutes.allowLunarEnemiesModifier.Value) bannedModifiersRun.Add("LunarEnemies");
+            if (!RiskOfRoutes.RiskOfRoutes.allowVoidEnemiesModifier.Value) bannedModifiersRun.Add("VoidEnemies");
+            if (!RiskOfRoutes.RiskOfRoutes.allowYellowPrinterModifier.Value) bannedModifiersRun.Add("YellowPrinter");
+            if (!RiskOfRoutes.RiskOfRoutes.allowRedPrinterModifier.Value) bannedModifiersRun.Add("RedPrinter");
+            if (!RiskOfRoutes.RiskOfRoutes.allowOnlyFlyingModifier.Value) bannedModifiersRun.Add("OnlyFlying");
+            if (!RiskOfRoutes.RiskOfRoutes.allowPowerfulElitesModifier.Value) bannedModifiersRun.Add("PowerfulElites");
+            if (!RiskOfRoutes.RiskOfRoutes.allowRepairModifier.Value) bannedModifiersRun.Add("Repair");
+            if (!RiskOfRoutes.RiskOfRoutes.allowWanderingChefModifier.Value) bannedModifiersRun.Add("WanderingChef");
+            if (!RiskOfRoutes.RiskOfRoutes.allowMountainModifier.Value) bannedModifiersRun.Add("Mountain");
+            if (!RiskOfRoutes.RiskOfRoutes.allowSoulCostModifier.Value) bannedModifiersRun.Add("SoulCost");
+            if (!RiskOfRoutes.RiskOfRoutes.allowDoppelgangerModifier.Value) bannedModifiersRun.Add("Doppelganger");
+
+            //artifacts
+            if (!RiskOfRoutes.RiskOfRoutes.allowMysteryArtifact.Value) bannedModifiersRun.Add("Mystery");
+            if (!RiskOfRoutes.RiskOfRoutes.allowChaosArtifact.Value) bannedModifiersRun.Add("FriendlyFire");
+            if (!RiskOfRoutes.RiskOfRoutes.allowCommandArtifact.Value) bannedModifiersRun.Add("Command");
+            if (!RiskOfRoutes.RiskOfRoutes.allowDelusionArtifact.Value) bannedModifiersRun.Add("Delusion");
+            if (!RiskOfRoutes.RiskOfRoutes.allowDevotionArtifact.Value) bannedModifiersRun.Add("Devotion");
+            if (!RiskOfRoutes.RiskOfRoutes.allowDissonanceArtifact.Value) bannedModifiersRun.Add("MixEnemy");
+            if (!RiskOfRoutes.RiskOfRoutes.allowEnigmaArtifact.Value) bannedModifiersRun.Add("Enigma");
+            if (!RiskOfRoutes.RiskOfRoutes.allowEvolutionArtifact.Value) bannedModifiersRun.Add("MonsterTeamGainsItems");
+            if (!RiskOfRoutes.RiskOfRoutes.allowFrailtyArtifact.Value) bannedModifiersRun.Add("WeakAssKnees");
+            if (!RiskOfRoutes.RiskOfRoutes.allowGlassArtifact.Value) bannedModifiersRun.Add("Glass");
+            if (!RiskOfRoutes.RiskOfRoutes.allowHonorArtifact.Value) bannedModifiersRun.Add("EliteOnly");
+            if (!RiskOfRoutes.RiskOfRoutes.allowKinArtifact.Value) bannedModifiersRun.Add("SingleMonsterType");
+            if (!RiskOfRoutes.RiskOfRoutes.allowMetamorphosisArtifact.Value) bannedModifiersRun.Add("RandomSurvivorOnRespawn");
+            if (!RiskOfRoutes.RiskOfRoutes.allowRebirthArtifact.Value) bannedModifiersRun.Add("Rebirth");
+            if (!RiskOfRoutes.RiskOfRoutes.allowSacrificeArtifact.Value) bannedModifiersRun.Add("Sacrifice");
+            if (!RiskOfRoutes.RiskOfRoutes.allowSoulArtifact.Value) bannedModifiersRun.Add("WispOnDeath");
+            if (!RiskOfRoutes.RiskOfRoutes.allowSpiteArtifact.Value) bannedModifiersRun.Add("Bomb");
+            if (!RiskOfRoutes.RiskOfRoutes.allowSwarmsArtifact.Value) bannedModifiersRun.Add("Swarms");
+            if (!RiskOfRoutes.RiskOfRoutes.allowVengeanceArtifact.Value) bannedModifiersRun.Add("ShadowClone");
+            if (!RiskOfRoutes.RiskOfRoutes.allowDeathArtifact.Value) bannedModifiersRun.Add("TeamDeath");
+
+            StageModifierCatalog.CreateRunPools(RiskOfRoutes.RiskOfRoutes.printerItemPool.Value, RiskOfRoutes.RiskOfRoutes.lunarItemPool.Value, RiskOfRoutes.RiskOfRoutes.enemyItemPool.Value,
+                RiskOfRoutes.RiskOfRoutes.canAppearWithAIBlacklisted.Value, RiskOfRoutes.RiskOfRoutes.enemyItemsAllowBoss.Value, RiskOfRoutes.RiskOfRoutes.enemyItemsAllowVoid.Value,
+                bannedModifiersRun);
 
             var enemyTier1Config = RiskOfRoutes.RiskOfRoutes.tier1EnemyItems.Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
             var enemyTier2Config = RiskOfRoutes.RiskOfRoutes.tier2EnemyItems.Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
@@ -175,70 +270,113 @@ namespace SamplePlugin
             var lunarTier2Config = RiskOfRoutes.RiskOfRoutes.tier2LunarItems.Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
             var lunarTier3Config = RiskOfRoutes.RiskOfRoutes.tier3LunarItems.Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
 
-            foreach (var enemyTier1 in enemyTier1Config) { StageModifierCatalog.RegEnemy(enemyTier1, ModifierTier.Tier1, isAdditional: true); Log.Info($"{enemyTier1} registering as Tier1 enemy item"); }
-            foreach (var enemyTier2 in enemyTier2Config) { StageModifierCatalog.RegEnemy(enemyTier2, ModifierTier.Tier2, isAdditional: true); Log.Info($"{enemyTier2} registering as Tier2 enemy item"); }
-            foreach (var enemyTier3 in enemyTier3Config) { StageModifierCatalog.RegEnemy(enemyTier3, ModifierTier.Tier3, isAdditional: true); Log.Info($"{enemyTier3} registering as Tier3 enemy item"); }
+            var artifactTier1Config = RiskOfRoutes.RiskOfRoutes.tier1Artifacts.Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            var artifactTier2Config = RiskOfRoutes.RiskOfRoutes.tier2Artifacts.Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+            var artifactTier3Config = RiskOfRoutes.RiskOfRoutes.tier3Artifacts.Value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
 
-            foreach (var printerTier1 in printerTier1Config) { StageModifierCatalog.RegPrinter(printerTier1, ModifierTier.Tier1, isAdditional: true); Log.Info($"{printerTier1} registering as Tier1 printer item"); }
-            foreach (var printerTier2 in printerTier2Config) { StageModifierCatalog.RegPrinter(printerTier2, ModifierTier.Tier2, isAdditional: true); Log.Info($"{printerTier2} registering as Tier2 printer item"); }
-            foreach (var printerTier3 in printerTier3Config) { StageModifierCatalog.RegPrinter(printerTier3, ModifierTier.Tier3, isAdditional: true); Log.Info($"{printerTier3} registering as Tier3 printer item"); }
+            foreach (var enemyTier1 in enemyTier1Config) { StageModifierCatalog.TryRegEnemy(enemyTier1, ModifierTier.Tier1, isAdditional: true); Log.Info($"{enemyTier1} registering as Tier1 enemy item"); }
+            foreach (var enemyTier2 in enemyTier2Config) { StageModifierCatalog.TryRegEnemy(enemyTier2, ModifierTier.Tier2, isAdditional: true); Log.Info($"{enemyTier2} registering as Tier2 enemy item"); }
+            foreach (var enemyTier3 in enemyTier3Config) { StageModifierCatalog.TryRegEnemy(enemyTier3, ModifierTier.Tier3, isAdditional: true); Log.Info($"{enemyTier3} registering as Tier3 enemy item"); }
 
-            foreach (var lunarTier1 in lunarTier1Config) { StageModifierCatalog.RegLunar(lunarTier1, ModifierTier.Tier1, isAdditional: true); Log.Info($"{lunarTier1} registering as Tier1 lunar item"); }
-            foreach (var lunarTier2 in lunarTier2Config) { StageModifierCatalog.RegLunar(lunarTier2, ModifierTier.Tier2, isAdditional: true); Log.Info($"{lunarTier2} registering as Tier2 lunar item"); }
-            foreach (var lunarTier3 in lunarTier3Config) { StageModifierCatalog.RegLunar(lunarTier3, ModifierTier.Tier3, isAdditional: true); Log.Info($"{lunarTier3} registering as Tier3 lunar item"); }
+            foreach (var printerTier1 in printerTier1Config) { StageModifierCatalog.TryRegPrinter(printerTier1, ModifierTier.Tier1, isAdditional: true); Log.Info($"{printerTier1} registering as Tier1 printer item"); }
+            foreach (var printerTier2 in printerTier2Config) { StageModifierCatalog.TryRegPrinter(printerTier2, ModifierTier.Tier2, isAdditional: true); Log.Info($"{printerTier2} registering as Tier2 printer item"); }
+            foreach (var printerTier3 in printerTier3Config) { StageModifierCatalog.TryRegPrinter(printerTier3, ModifierTier.Tier3, isAdditional: true); Log.Info($"{printerTier3} registering as Tier3 printer item"); }
 
+            foreach (var lunarTier1 in lunarTier1Config) { StageModifierCatalog.TryRegLunar(lunarTier1, ModifierTier.Tier1, isAdditional: true); Log.Info($"{lunarTier1} registering as Tier1 lunar item"); }
+            foreach (var lunarTier2 in lunarTier2Config) { StageModifierCatalog.TryRegLunar(lunarTier2, ModifierTier.Tier2, isAdditional: true); Log.Info($"{lunarTier2} registering as Tier2 lunar item"); }
+            foreach (var lunarTier3 in lunarTier3Config) { StageModifierCatalog.TryRegLunar(lunarTier3, ModifierTier.Tier3, isAdditional: true); Log.Info($"{lunarTier3} registering as Tier3 lunar item"); }
 
-            void AddToSync(List<string> itemNames, ModifierTier tier, string modType)
-            {
-                foreach (var itemName in itemNames)
-                {
-                    syncNames.Add($"{itemName}{modType}");
-                    syncTiers.Add((int)tier);
-                }
-            }
-
-            AddToSync(enemyTier1Config, ModifierTier.Tier1, "_EnemyItem");
-            AddToSync(enemyTier2Config, ModifierTier.Tier2, "_EnemyItem");
-            AddToSync(enemyTier3Config, ModifierTier.Tier3, "_EnemyItem");
-
-            AddToSync(printerTier1Config, ModifierTier.Tier1, "_Printer");
-            AddToSync(printerTier2Config, ModifierTier.Tier2, "_Printer");
-            AddToSync(printerTier3Config, ModifierTier.Tier3, "_Printer");
-
-            AddToSync(lunarTier1Config, ModifierTier.Tier1, "_LunarItem");
-            AddToSync(lunarTier2Config, ModifierTier.Tier2, "_LunarItem");
-            AddToSync(lunarTier3Config, ModifierTier.Tier3, "_LunarItem");
-
-            if (!RiskOfRoutes.RiskOfRoutes.allowAurelioniteModifier.Value) bannedModifiers.Add("Aurelionite");
-            if (!RiskOfRoutes.RiskOfRoutes.allowBossRedItemModifier.Value) bannedModifiers.Add("BossRedItem");
-            if (!RiskOfRoutes.RiskOfRoutes.allowBossYellowItemModifier.Value) bannedModifiers.Add("BossYellowItem");
-            if (!RiskOfRoutes.RiskOfRoutes.allowDroneBossGreenModifier.Value) bannedModifiers.Add("DroneBossGreen");
-            if (!RiskOfRoutes.RiskOfRoutes.allowDroneBossRedModifier.Value) bannedModifiers.Add("DroneBossRed");
-            if (!RiskOfRoutes.RiskOfRoutes.allowMoreElitesModifier.Value) bannedModifiers.Add("MoreElites");
-            if (!RiskOfRoutes.RiskOfRoutes.allowMoreDronesModifier.Value) bannedModifiers.Add("MoreDrones");
-            if (!RiskOfRoutes.RiskOfRoutes.allowUpgradeDronesModifier.Value) bannedModifiers.Add("UpgradeDrones");
-            if (!RiskOfRoutes.RiskOfRoutes.allowLunarEnemiesModifier.Value) bannedModifiers.Add("LunarEnemies");
-            if (!RiskOfRoutes.RiskOfRoutes.allowVoidEnemiesModifier.Value) bannedModifiers.Add("VoidEnemies");
-            if (!RiskOfRoutes.RiskOfRoutes.allowYellowPrinterModifier.Value) bannedModifiers.Add("YellowPrinter");
-            if (!RiskOfRoutes.RiskOfRoutes.allowRedPrinterModifier.Value) bannedModifiers.Add("RedPrinter");
-            if (!RiskOfRoutes.RiskOfRoutes.allowOnlyFlyingModifier.Value) bannedModifiers.Add("OnlyFlying");
-            if (!RiskOfRoutes.RiskOfRoutes.allowPowerfulElitesModifier.Value) bannedModifiers.Add("PowerfulElites");
-            if (!RiskOfRoutes.RiskOfRoutes.allowRepairModifier.Value) bannedModifiers.Add("Repair");
-            if (!RiskOfRoutes.RiskOfRoutes.allowWanderingChefModifier.Value) bannedModifiers.Add("WanderingChef");
-            if (!RiskOfRoutes.RiskOfRoutes.allowMountainModifier.Value) bannedModifiers.Add("Mountain");
-            if (!RiskOfRoutes.RiskOfRoutes.allowSoulCostModifier.Value) bannedModifiers.Add("SoulCost");
-            if (!RiskOfRoutes.RiskOfRoutes.allowDoppelgangerModifier.Value) bannedModifiers.Add("Doppelganger");
-
+            foreach (var artifactTier1 in artifactTier1Config) { StageModifierCatalog.TryRegArtifact(new ArtifactInfo(artifactTier1, (int)ModifierTier.Tier1, true), isAdditional: true); Log.Info($"{artifactTier1} registering as Tier1 artifact"); }
+            foreach (var artifactTier2 in artifactTier2Config) { StageModifierCatalog.TryRegArtifact(new ArtifactInfo(artifactTier2, (int)ModifierTier.Tier2, true), isAdditional: true); Log.Info($"{artifactTier2} registering as Tier2 artifact"); }
+            foreach (var artifactTier3 in artifactTier3Config) { StageModifierCatalog.TryRegArtifact(new ArtifactInfo(artifactTier3, (int)ModifierTier.Tier3, true), isAdditional: true); Log.Info($"{artifactTier3} registering as Tier3 artifact"); }
 
         }
 
+        private void OnEnable()
+        {
+            RoR2.Stage.onStageStartGlobal += OnStageStartClient;
+        }
 
+        private void OnDisable()
+        {
+            RoR2.Stage.onStageStartGlobal -= OnStageStartClient;
+        }
+
+        private void OnStageStartClient(RoR2.Stage obj)
+        {
+            if (!NetworkServer.active)
+            {
+                Log.Info($"{nameof(OnStageStartClient)}: on client");
+                NetworkUser user = LocalUserManager.GetFirstLocalUser()?.currentNetworkUser;
+                if (user == null) return;
+                RoR2.Console.instance.SubmitCmd(user, "request_map");
+            }
+        }
+
+        [ConCommand(commandName = "request_map", flags = ConVarFlags.ExecuteOnServer, helpText = "request map sync for clients")]
+        private static void CCRequestMap(ConCommandArgs args)
+        {
+            if (instance != null && instance.routeMap != null)
+            {
+                Log.Info($"{nameof(CCRequestMap)}: requested the map");
+                instance.routeMap.isDirty = true;
+            }
+        }
+
+        protected virtual void FixedUpdate()
+        {
+            if (NetworkServer.active && routeMap != null && routeMap.isDirty)
+            {
+                UpdateRouteMap();
+                routeMap.isDirty = false;
+            }
+        }
+
+        private void UpdateRouteMap()
+        {
+            Log.Info($"{nameof(UpdateRouteMap)}: Updating route map");
+            int width = routeMap.width;
+            int height = routeMap.height;
+            RouteNodeSync[] mapUpdated = new RouteNodeSync[(width + 1) * height];
+
+            for (int x = 0; x < width + 1; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    int index = x * height + y;
+                    if (routeMap.mapGrid[x, y] != null)
+                        mapUpdated[index] = new RouteNodeSync(routeMap.mapGrid[x, y]);
+                    else
+                        mapUpdated[index] = new RouteNodeSync(new RouteMap.RouteNode(-1, -1));
+                }
+            }
+
+            mapWidth = width;
+            mapHeight = height;
+            isMoonVisited = routeMap.isMoonVisited;
+            routeNodesSynced = new List<RouteNodeSync>(mapUpdated);
+            RpcReceiveFullMap(mapUpdated, width, height, routeMap.isMoonVisited, stageEnterTime);
+
+        }
+
+        [ClientRpc]
+        private void RpcReceiveFullMap(RouteNodeSync[] map, int width, int height, bool moon, float hostStageEnterTime)
+        {
+            mapWidth = width;
+            mapHeight = height;
+            isMoonVisited = moon;
+
+            routeNodesSynced = new List<RouteNodeSync>(map);
+            mapState++;
+
+            stageEnterTime = hostStageEnterTime;
+
+            Debug.Log($"{nameof(RpcReceiveFullMap)}: Got map on client");
+        }
 
         private void Run_onRunDestroyGlobal(Run obj)
         {
-            //ClearCatalog();
-
-            //if (!NetworkServer.active) return;
+            if (!NetworkServer.active) return;
 
             Log.Info($"{nameof(Run_onRunDestroyGlobal)}: Run ended, clearing {activeModifiers.Count} modifiers");
 
@@ -284,164 +422,8 @@ namespace SamplePlugin
         }
 
 
-        public override void OnStartServer()
-        {
-            base.OnStartServer();
 
-            //CreateDirector(Run.instance);
-        }
-
-        //TODO обработка случая когда произошел переход на след стейдж но не поменялся нод
-        private void CreateDirector(Run run)
-        {
-            Log.Info("Run started");
-
-            runArtifactsApplied = GetArtifactsAppliedThisRun();
-
-            Log.Info("Creating route map");
-            routeMap = new RouteMap(run.runRNG);
-
-            currentNode = routeMap.GetStartingNode();
-            currentNode.visited = true;
-            currentNodeSync = new Vector2(currentNode.x, currentNode.y);
-            Log.Info($"Current:{currentNode.x},{currentNode.y} that has {currentNode.GetPaths().Count} paths");
-            routeMap.isDirty = true;
-
-        }
-
-        private void OnEnable()
-        {
-            RoR2.Stage.onStageStartGlobal += OnStageStartClient;
-        }
-
-        private void OnDisable()
-        {
-            RoR2.Stage.onStageStartGlobal -= OnStageStartClient;
-        }
-
-        private void OnStageStartClient(RoR2.Stage obj)
-        {
-            if (!NetworkServer.active)
-            {
-                Log.Info($"{nameof(OnStageStartClient)}: on client");
-                NetworkUser user = LocalUserManager.GetFirstLocalUser()?.currentNetworkUser;
-                if (user == null) return;
-                RoR2.Console.instance.SubmitCmd(user, "request_map");
-            }
-        }
-
-        [ConCommand(commandName = "request_map", flags = ConVarFlags.ExecuteOnServer, helpText = "request map sync for clients")]
-        private static void CCRequestMap(ConCommandArgs args)
-        {
-            if (instance != null && instance.routeMap != null)
-            {
-                Log.Info($"{nameof(CCRequestMap)}: requested the map");
-                instance.routeMap.isDirty = true;
-            }
-        }
-
-
-        protected virtual void FixedUpdate()
-        {
-            if (NetworkServer.active && routeMap != null && routeMap.isDirty)
-            {
-                UpdateRouteMap();
-                routeMap.isDirty = false;
-            }
-        }
-
-        private void UpdateRouteMap()
-        {
-            Log.Info($"{nameof(UpdateRouteMap)}: Updating route map");
-            int width = routeMap.width;
-            int height = routeMap.height;
-            RouteNodeSync[] mapUpdated = new RouteNodeSync[(width + 1) * height];
-
-            for (int x = 0; x < width + 1; x++)
-            {
-                for (int y = 0; y < height; y++)
-                {
-                    int index = x * height + y;
-                    if (routeMap.mapGrid[x, y] != null)
-                        mapUpdated[index] = new RouteNodeSync(routeMap.mapGrid[x, y]);
-                    else
-                        mapUpdated[index] = new RouteNodeSync(new RouteMap.RouteNode(-1, -1));
-                }
-            }
-
-            mapWidth = width;
-            mapHeight = height;
-            isMoonVisited = routeMap.isMoonVisited;
-            routeNodesSynced = new List<RouteNodeSync>(mapUpdated);
-            RpcReceiveFullMap(mapUpdated, width, height, routeMap.isMoonVisited, stageEnterTime);
-            RpcReceiveRunConfiguration(syncNames.ToArray(), syncTiers.ToArray(), punishmentTime, purifyLunarItemModifier, doppelStackTime);
-
-        }
-
-        [ClientRpc]
-        private void RpcReceiveFullMap(RouteNodeSync[] map, int width, int height, bool moon, float hostStageEnterTime)
-        {
-            mapWidth = width;
-            mapHeight = height;
-            isMoonVisited = moon;
-
-            routeNodesSynced = new List<RouteNodeSync>(map);
-            mapState++;
-
-            stageEnterTime = hostStageEnterTime;
-
-            Debug.Log($"{nameof(RpcReceiveFullMap)}: Got map on client");
-
-        }
-
-        [ClientRpc]
-        public void RpcReceiveRunConfiguration(string[] names, int[] tiers, float hostPunishmentTime, bool lunarConfig, int doppel)
-        {
-            if (NetworkServer.active) return;
-
-            Debug.Log($"{nameof(RpcReceiveRunConfiguration)}: Receiving run configuration.");
-
-            if (hostPunishmentTime != -1)
-            {
-                Debug.Log($"{nameof(RpcReceiveFullMap)}: Host has punish time of {hostPunishmentTime}");
-            }
-            else
-            {
-                Debug.Log($"{nameof(RpcReceiveFullMap)}: Host has punish disabled");
-            }
-
-            punishmentTime = hostPunishmentTime;
-            purifyLunarItemModifier = lunarConfig;
-            doppelStackTime = doppel;
-
-            ///
-            for (int i = 0; i < names.Length; i++)
-            {
-                string modName = names[i];
-                int tierInt = tiers[i];
-
-                ModifierTier tier = (ModifierTier)tierInt;
-                string itemName = modName.Split('_')[0];
-
-                if (modName.EndsWith("_EnemyItem"))
-                {
-                    StageModifierCatalog.RegEnemy(itemName, tier, true);
-                    Debug.Log($"{nameof(RpcReceiveRunConfiguration)}: Registered enemy item {itemName} as additional.");
-                }
-                else if (modName.EndsWith("_Printer"))
-                {
-                    StageModifierCatalog.RegPrinter(itemName, tier, true);
-                    Debug.Log($"{nameof(RpcReceiveRunConfiguration)}: Registered enemy item {itemName} as additional.");
-                }
-                else if (modName.EndsWith("_LunarItem"))
-                {
-                    StageModifierCatalog.RegLunar(itemName, tier, true);
-                    Debug.Log($"{nameof(RpcReceiveRunConfiguration)}: Registered enemy item {itemName} as additional.");
-                }
-            }
-
-        }
-
+      
 
         public List<string> GetArtifactsAppliedThisRun()
         {
@@ -456,20 +438,24 @@ namespace SamplePlugin
 
         private void SceneDirector_onPrePopulateSceneServer(SceneDirector obj)
         {
-            Log.Info($"Stage started, applying {reservedModifiers.Count} modifiers");
+            Log.Info($"{nameof(SceneDirector_onPrePopulateSceneServer)}: Stage started, applying {reservedModifiers.Count} modifiers");
             if (reservedModifiers.Count == 0) return;
             Log.Info(reservedModifiers.Count);
 
             activeModifiers.Clear();
-            foreach (var modifier in reservedModifiers)
+            bannedModifiersStage.Clear();
+            Log.Info("Active");
+            foreach (var modDef in reservedModifiers)
             {
-                StageModifier mod = StageModifierCatalog.StageModifierFromDef(modifier.name, modifier.stack);
+                StageModifier mod = StageModifierCatalog.StageModifierFromDef(modDef.name, modDef.stack);
                 if (mod == null)
                 {
-                    Log.Error($"{nameof(SceneDirector_onPrePopulateSceneServer)}: Modifier with def {modifier.name} is null");
+                    Log.Error($"{nameof(SceneDirector_onPrePopulateSceneServer)}: Modifier with def {modDef.name} is null");
                     continue;
                 }
                 activeModifiers.Add(mod);
+                if (modifiersCanBeBanned)
+                    bannedModifiersStage.Add(modDef.name);
             }
 
             foreach (var mod in reservedModifiers)
@@ -477,7 +463,7 @@ namespace SamplePlugin
                 modifiersSynced.Add(mod);
                 if (mod.name == "SoulCost")
                 {
-                    Log.Info("Found soulcost");
+                    //Log.Info("Found soulcost");
                     soulCostStack = mod.stack;
                 }
             }
@@ -499,7 +485,6 @@ namespace SamplePlugin
             //    currentNode.visited = true;
 
 
-            //todo
         }
 
 
@@ -511,9 +496,10 @@ namespace SamplePlugin
 
             activeModifiers.Clear();
             modifiersSynced.Clear();
+            //todo ban here
 
             Log.Info($"Modul:{Stage.instance.sceneDef.stageOrder}");
-            //todo пиздец нагромождение, логика создания новой карты 5 стейд -> базар -> 1 стейдж 
+            //logic of stage 5 -> bazaar -> new map
             if (Stage.instance.sceneDef.stageOrder == 5 || (currentNode.x == 0 && currentNode.y == 0 && Stage.instance.sceneDef.baseSceneName != "bazaar") && Stage.instance.sceneDef.sceneType == SceneType.Stage)
             {
                 Log.Info("Trying to create new map");
@@ -540,12 +526,11 @@ namespace SamplePlugin
             }
 
 
-            //TODO возможно стоит поменять порядок
-            //todo nullreference и софтлок при переходе на луну
             currentNode.visited = true;
             routeMap.isDirty = true;
         }
 
+        //todo enemyITemModifier might be need to have only one united def 'enemyItemModifier' to not overweight other ones with its amount
         public void GetNextStageModifiers(GameObject portal)
         {
             var mg = portal.GetComponent<RoutePortalManager>();
@@ -556,7 +541,9 @@ namespace SamplePlugin
                 return;
             }
 
-            HashSet<string> banList = new HashSet<string>(bannedModifiers);
+            HashSet<string> banList = new HashSet<string>(bannedModifiersRun);
+            banList.UnionWith(bannedModifiersStage);
+
             Dictionary<string, int> modifiers = new Dictionary<string, int>();
 
 
@@ -564,7 +551,7 @@ namespace SamplePlugin
 
             if (SceneHelper.IsSceneColossus((SceneIndex)mg.destinationSceneIndex, includeFalseSonScene: false))
             {
-                if (!bannedModifiers.Contains("Aurelionite"))
+                if (!bannedModifiersRun.Contains("Aurelionite"))
                 {
                     modifiers.Add("Aurelionite", 1);
                     Log.Info($"{nameof(GetNextStageModifiers)}: Added aurelionite modifier to colossus portal");
@@ -579,22 +566,22 @@ namespace SamplePlugin
             }
             if (mg.routeNode.portalType == RoutePortalType.ChefType)
             {
-                if (!bannedModifiers.Contains("WanderingChef"))
+                if (!bannedModifiersRun.Contains("WanderingChef"))
                 {
                     modifiers.Add("WanderingChef", 1);
                     Log.Info($"{nameof(GetNextStageModifiers)}: Added chef modifier to route portal");
                 }
                 else Log.Warning("Not adding wandering chef to chef portal because modifier is banned");
             }
-            //todo условие можно сделать интереснее
+            //todo might be made more interesting
             if (CheckMountainShrine() && Run.instance.stageRng.nextNormalizedFloat > 0.5f)
             {
-                if (!bannedModifiers.Contains("Mountain"))
+                if (!bannedModifiersRun.Contains("Mountain"))
                     modifiers.Add("Mountain", RoR2.TeleporterInteraction.instance.shrineBonusStacks);
             }
             if (CheckPlayersHaveConsumedItems() && Run.instance.stageRng.nextNormalizedFloat > 0.8f)
             {
-                if (!bannedModifiers.Contains("Repair"))
+                if (!bannedModifiersRun.Contains("Repair"))
                     modifiers.Add("Repair", 1);
             }
 
@@ -614,9 +601,6 @@ namespace SamplePlugin
                     {
                         foreach (var name in currentModifier.conflictList) banList.Add(name);
                     }
-
-                    //TODO
-                    //if(!currentModifier.IsStackable() && currentModifier.)
 
                     int stack = CalculateStack(currentModifier, tier.Key);
 
@@ -674,8 +658,7 @@ namespace SamplePlugin
                     Log.Warning($"{nameof(GetNextStageModifiers)}: There are no stackable negative modifiers to apply punish, adding new");
                     var pool = StageModifierCatalog.GetPool(mg.routeNode.portalType, isNegative: true);
 
-                    //todo переработать
-                    while (punishStack>0)
+                    while (punishStack > 0)
                     {
                         int cap = Mathf.Min(punishStack, 3);
 
@@ -684,7 +667,7 @@ namespace SamplePlugin
 
                         var mod = StageModifierCatalog.SelectModifier(banList, mg.routeNode.portalType, targetTier, pool);
 
-                        while(mod == null && targetTierInt > 1)
+                        while (mod == null && targetTierInt > 1)
                         {
                             targetTierInt--;
                             targetTier = (ModifierTier)targetTierInt;
@@ -692,16 +675,16 @@ namespace SamplePlugin
 
                         }
 
-                        if(mod == null)
+                        if (mod == null)
                         {
                             Log.Warning($"{nameof(GetNextStageModifiers)}: Couldnt add new negative modifiers");
                             break;
                         }
 
                         banList.Add(mod.name);
-                        if(mod.conflictList!=null)
+                        if (mod.conflictList != null)
                         {
-                            foreach(var name in mod.conflictList)
+                            foreach (var name in mod.conflictList)
                             {
                                 banList.Add(name);
                             }
@@ -710,15 +693,15 @@ namespace SamplePlugin
                         punishStack -= targetTierInt;
 
                         int addedStacks = 0;
-                        if(punishStack>0 && mod.IsStackable())
+                        if (punishStack > 0 && mod.IsStackable())
                         {
                             addedStacks = Run.instance.stageRng.RangeInt(0, punishStack + 1);
-                            punishStack-= addedStacks;
+                            punishStack -= addedStacks;
                         }
 
-                        modifiers.Add(mod.name, 1+addedStacks);
+                        modifiers.Add(mod.name, 1 + addedStacks);
 
-                        Log.Info($"{nameof(GetNextStageModifiers)}: Punish added new modifier {mod.name} with stack {1+addedStacks}");
+                        Log.Info($"{nameof(GetNextStageModifiers)}: Punish added new modifier {mod.name} with stack {1 + addedStacks}");
 
                     }
                 }
@@ -788,7 +771,6 @@ namespace SamplePlugin
                 selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 1 } }, negative = { { ModifierTier.Tier1, 1 } } }, 1.0f);
                 selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier1, 2 } }, negative = { { ModifierTier.Tier2, 1 } } }, 1.0f);
                 selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier2, 1 } }, negative = { { ModifierTier.Tier1, 2 } } }, 1.0f);
-                //todo верунть
             }
 
             selection.AddChoice(new ModifierSlotConfiguration { positive = { { ModifierTier.Tier3, 1 } }, negative = { { ModifierTier.Tier3, 1 } } }, 0.3f);
@@ -907,7 +889,7 @@ namespace SamplePlugin
             }
 
             currentNode = mg.routeNode;
-            currentNodeSync = new Vector2(currentNode.x, currentNode.y); //todo позже убрать после измененной логики смены currentNode
+            currentNodeSync = new Vector2(currentNode.x, currentNode.y);
 
             foreach (var p in activePortalInstances)
             {
@@ -917,10 +899,7 @@ namespace SamplePlugin
                     gi.enabled = false;
                 }
             }
-
-
         }
-
 
         [Server]
         public bool CheckPlayersRedItem()
@@ -942,7 +921,7 @@ namespace SamplePlugin
                     }
                 }
             }
-            //Log.Info($"{nameof(CheckPlayersRedItem)}: Players have {redItemCount} red items right now");
+            Log.Info($"{nameof(CheckPlayersRedItem)}: Players have {redItemCount} red items right now");
 
             return redItemCount > 0;
         }
@@ -968,12 +947,12 @@ namespace SamplePlugin
                     }
                 }
             }
-            //Log.Info($"{nameof(CheckPlayersYellowItem)}: Players have {yellowItemCount} yellow items right now");
+            Log.Info($"{nameof(CheckPlayersYellowItem)}: Players have {yellowItemCount} yellow items right now");
 
             return yellowItemCount > 0;
         }
 
-        //TODO можно проверить и активки
+        //TODO equipment can be added
         [Server]
         public bool CheckPlayersHaveConsumedItems()
         {
@@ -994,7 +973,7 @@ namespace SamplePlugin
                     }
                 }
             }
-            //Log.Info($"Players have {consumedItemsCount} consumed items right now");
+            Log.Info($"Players have {consumedItemsCount} consumed items right now");
 
             return consumedItemsCount > 0;
         }
@@ -1022,6 +1001,7 @@ namespace SamplePlugin
         }
 
 
+        //not used for now
         [Server]
         public int CheckPlayersHaveFoodItems()
         {
@@ -1034,7 +1014,7 @@ namespace SamplePlugin
                 RoR2.DLC1Content.Items.MushroomVoid
 
             };
-            
+
             int foodItems = 0;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {
