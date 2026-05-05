@@ -20,21 +20,21 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public override void OnEnd()
         {
-            Log.Info("Moon invasion on end");
+            Log.Info("LunarEnemies on end");
         }
 
         public override void OnStart()
         {
-            Log.Info("Moon invasion modifier start");
+            Log.Info("LunarEnemies on start");
 
             int basicCost = 0;
             int miniBossCost = 0;
 
             if (ClassicStageInfo.instance.monsterCategories == null || ClassicStageInfo.instance.monsterCategories.categories == null)
             {
-                Log.Error("No monster categories found. Returning");
                 return;
             }
+
             foreach (var ctg in ClassicStageInfo.instance.monsterCategories.categories)
             {
                 if (ctg.name == "Basic Monsters")
@@ -105,7 +105,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                     {
                         float weight = directorCard.selectionWeight * num2;
                         weightedSelection.AddChoice(directorCard, weight);
-                        if (directorCard == lunarEnemies[0]) Log.Debug("THEY WERE ACTUALLY ADDED");
+                        //if (directorCard == lunarEnemies[0]) Log.Debug("THEY WERE ACTUALLY ADDED");
                     }
                 }
             }

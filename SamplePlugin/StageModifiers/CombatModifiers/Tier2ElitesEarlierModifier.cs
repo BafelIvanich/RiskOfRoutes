@@ -12,14 +12,14 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         public Func<SpawnCard.EliteRules, bool> modifiedAvailability;
         public float modifiedCostMultiplier;
 
-        public Tier2ElitesEarlierModifier()
+        public Tier2ElitesEarlierModifier(int stack)
         {
-            //todo stack
+            this.stack = stack;
         }
 
         public override void OnEnd()
         {
-            Log.Info("Tier2 elites on end");
+            Log.Info("Tier2Elites on end");
             Log.Info("Restoring elite tier costs");
             if (modifiedTier != null)
             {
@@ -34,7 +34,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public override void OnStart()
         {
-            //todo they might remain permanent
+            //todo they might remain permanent in some rare cases
             Log.Info("Tier2 elites start");
             FieldInfo eliteTiersField = typeof(CombatDirector).GetField("eliteTiers", BindingFlags.NonPublic | BindingFlags.Static);
             if (eliteTiersField != null)

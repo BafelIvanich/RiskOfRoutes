@@ -8,6 +8,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
     {
         public OnlyFlyingEnemiesModifier()
         {
+
         }
 
         public override void OnEnd()
@@ -17,8 +18,8 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public override void OnStart()
         {
-            Log.Info("On flyingEnemies start");
-            // RoR2.ClassicStageInfo.instance.monsterSelection;
+            Log.Info("OnlyFlying on start");
+
             var categories = ClassicStageInfo.instance.monsterCategories.categories;
             if (categories == null)
             {
@@ -34,7 +35,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             for (int i = 0; i < ClassicStageInfo.instance.monsterSelection.Count; i++)
             {
                 var c = ClassicStageInfo.instance.monsterSelection.GetChoice(i);
-                Log.Info($"{c.value.spawnCard.name}");
+                Log.Info($"\t{c.value.spawnCard.name}");
             }
 
             foreach (var director in CombatDirector.instancesList)
@@ -50,7 +51,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             for (int i = 0; i < categories.Length; i++)
             {
                 var oldCtgCards = categories[i].cards;
-                //
+
                 var newCtgCards = oldCtgCards.Where(card => card.spawnCard.nodeGraphType == RoR2.Navigation.MapNodeGroup.GraphType.Air).ToArray();
                 foreach (var flCard in newCtgCards)
                 {
@@ -59,7 +60,6 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
                 categories[i].cards = newCtgCards;
 
 
-                //
                 var ctg = categories[i];
                 float num = SumAllWeightsInCategory(ctg);
                 float num2 = ctg.selectionWeight / num;

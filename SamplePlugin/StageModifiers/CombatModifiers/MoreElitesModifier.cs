@@ -7,7 +7,6 @@ using UnityEngine;
 
 namespace SamplePlugin.StageModifiers.CombatModifiers
 {
-    //не артефакт, элитки становятся дешевле для директора
     public class MoreElitesModifier : StageModifier
     {
         public Dictionary<CombatDirector.EliteTierDef, float> tierAndInitialPrice = new Dictionary<CombatDirector.EliteTierDef, float>();
@@ -19,7 +18,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
         }
         public override void OnEnd()
         {
-            Log.Info("More elites on end");
+            Log.Info("MoreElites on end");
             Log.Info("Restoring elite tier costs");
             foreach (var tier in tierAndInitialPrice)
             {
@@ -29,7 +28,7 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public override void OnStart()
         {
-            Log.Info("More elites modifies start");
+            Log.Info("MoreElites on start");
             FieldInfo eliteTiersField = typeof(CombatDirector).GetField("eliteTiers", BindingFlags.NonPublic | BindingFlags.Static);
             if (eliteTiersField != null)
             {

@@ -18,20 +18,18 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
 
         public override void OnEnd()
         {
-            Log.Info("Void invasion on end");
+            Log.Info("VoidEnemies on end");
         }
 
         public override void OnStart()
         {
-            Log.Info("Void invasion modifier start");
+            Log.Info("VoidEnemies on start");
 
             int basicCost = 0;
             int miniBossCost = 0;
             int champCost = 0;
-            //TODO breaks on loop
             if (ClassicStageInfo.instance.monsterCategories == null || ClassicStageInfo.instance.monsterCategories.categories == null)
             {
-                Log.Error("No monster categories found. Returning");
                 return;
             }
             foreach (var category in ClassicStageInfo.instance.monsterCategories.categories)

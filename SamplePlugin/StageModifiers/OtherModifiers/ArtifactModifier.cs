@@ -6,8 +6,7 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
     public class ArtifactModifier : StageModifier
     {
         private ArtifactDef currentArtifact;
-        //TODO: артефакт жертвы не вырубает спавн сундуков
-        public ArtifactModifier(ArtifactDef artifact, bool isPositive)
+        public ArtifactModifier(ArtifactDef artifact)
         {
             currentArtifact = artifact;
         }
@@ -37,7 +36,7 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
 
         public override void OnEnd()
         {
-            Log.Info("On artifactModifier end");
+            Log.Info("ArtifactModifier on end");
             if (currentArtifact)
             {
                 if (Run.instance)
@@ -60,11 +59,11 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
         public override void OnStart()
         {
 
-            Log.Info("ArtifactModifier start");
+            Log.Info("ArtifactModifier on start start");
             if (currentArtifact)
             {
                 RunArtifactManager.instance.SetArtifactEnabled(currentArtifact, true);
-                Chat.AddMessage($"Artifact {currentArtifact.cachedName} enabled");
+                //Chat.AddMessage($"Artifact {currentArtifact.cachedName} enabled");
             }
             else
             {

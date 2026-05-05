@@ -9,8 +9,6 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
     public class LunarItemsModifier : StageModifier
     {
         ItemDef lunarItem;
-        Sprite lunarItemSprite;
-        string lunarItemDescToken;
 
         public LunarItemsModifier(string internalName)
         {
@@ -61,8 +59,6 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
 
             On.RoR2.UI.ItemIcon.SetItemIndex_ItemIndex_int_float += ItemIcon_SetItemIndex_ItemIndex_int_float;
 
-            Log.Info("hook");
-
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {
                 if (cm.playerCharacterMasterController != null && cm.inventory != null)
@@ -72,6 +68,7 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
             }
         }
 
+        //todo for some reason can grey out other items
         private void ItemIcon_SetItemIndex_ItemIndex_int_float(On.RoR2.UI.ItemIcon.orig_SetItemIndex_ItemIndex_int_float orig, RoR2.UI.ItemIcon self, ItemIndex newItemIndex, int newItemCount, float newDurationPercent)
         {
             orig(self, newItemIndex, newItemCount, newDurationPercent);
