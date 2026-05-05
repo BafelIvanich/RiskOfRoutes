@@ -79,14 +79,13 @@ namespace RiskOfRoutes
         private static GameObject CreateRoutePortalPrefab()
         {
             GameObject routePortal = PrefabAPI.InstantiateClone(Addressables.LoadAssetAsync<GameObject>("RoR2/Base/PortalShop/PortalShop.prefab").WaitForCompletion(), "RoutePortal");
-            Log.Info("Invoked");
 
-            UnityEngine.Object.Destroy(routePortal.GetComponent<GenericInteraction>());
-            UnityEngine.Object.Destroy(routePortal.GetComponent<SceneExitController>());
+            Object.Destroy(routePortal.GetComponent<GenericInteraction>());
+            Object.Destroy(routePortal.GetComponent<SceneExitController>());
 
             var scaleCurve = routePortal.GetComponentInChildren<ObjectScaleCurve>();
 
-            //у ваниллы 0.7 1.26
+            //vanilla is 0.7 1.26
             float portalScaleX = 1f;
             float portalScaleY = 1f;
             routePortal.name = "RoutePortal";
@@ -122,14 +121,13 @@ namespace RiskOfRoutes
             var renderers = routePortal.GetComponentsInChildren<Renderer>();
 
             RoutePortalManager mgr = routePortal.AddComponent<RoutePortalManager>();
-            //Material mat = SceneCatalog.GetSceneDef((SceneIndex)mgr.destinationSceneIndex).portalMaterial;
 
             Texture2D edge = null;
             Texture2D center = null;
 
             if (RiskOfRoutes.usePortalTypeColors.Value)
             {
-                Log.Info("Using black and white");
+                //Log.Info("Using black and white");
                 edge = bundle.LoadAsset<Texture2D>("bwCenter");
                 center = bundle.LoadAsset<Texture2D>("bwEdge");
             }
@@ -154,22 +152,16 @@ namespace RiskOfRoutes
                 }
             }
 
-            //создаем интеракцию
             GenericInteraction interaction = routePortal.AddComponent<GenericInteraction>();
             SceneExitController sceneExitController = routePortal.AddComponent<SceneExitController>();
             GenericDisplayNameProvider genericDisplayNameProvider = routePortal.AddComponent<GenericDisplayNameProvider>();
             GenericInspectInfoProvider genericInspectInfo = routePortal.AddComponent<GenericInspectInfoProvider>();
 
-            //todo таб сюдаа
+            //todo tab inscpect
             mgr.genericInteraction = interaction;
             mgr.sceneExitController = sceneExitController;
 
             interaction.contextToken = RoR2.Language.GetString("ENTER_ROUTE_PORTAL");
-
-            //routePortal.GetComponent<Highlight>().targetRenderer = routePortal.GetComponentInChildren<SkinnedMeshRenderer>();
-            //GameObject trigger = Instantiate(new GameObject("Trigger"), routePortal.transform);
-            //trigger.AddComponent<BoxCollider>().isTrigger = true;
-            //trigger.AddComponent<EntityLocator>().entity = routePortal;
 
             return routePortal;
         }
@@ -185,7 +177,7 @@ namespace RiskOfRoutes
             {
                 GameObject parent = new GameObject("IconBubblePrefab");
 
-                UnityEngine.Object.DontDestroyOnLoad(parent);
+                Object.DontDestroyOnLoad(parent);
                 parent.SetActive(false);
                 portalDisplay.SetParent(parent.transform);
                 portalDisplay.transform.localPosition = new Vector3(0, 0f, 0);
@@ -267,7 +259,7 @@ namespace RiskOfRoutes
             seed.transform.localRotation = Quaternion.Euler(48.0785f, 327.5262f, 319.4f);
             seed.transform.localScale = new Vector3(0.1043f, 0.1043f, 0.1043f);
 
-            //для prefab другие но он не грузится
+            //it actually has different cleaver prefab but its not loading
             cleaver.transform.localPosition = new Vector3(0.922f, -0.7f, -0.01f);
             cleaver.transform.localRotation = Quaternion.Euler(0f, 205.2114f, 127.0116f);
             cleaver.transform.localScale = new Vector3(1f, 1f, 1f);
@@ -287,7 +279,7 @@ namespace RiskOfRoutes
                 renderer.material = cleaverMat;
             }
 
-            //todo разные материалы
+            //todo different materials
             //var tableMat = Addressables.LoadAssetAsync<Material>("RoR2/Base/goolake/matGoolakeStoneStructs.mat").WaitForCompletion();
             //var rendererTable = lunarTable.GetComponentInChildren<Renderer>();
             //if(rendererTable != null)
@@ -326,6 +318,7 @@ namespace RiskOfRoutes
             return interactableSpawnCard;
         }
 
+        //TODO rewrite
         public static void CheckAssetsLoaded()
         {
             bool loadingFailed = false;
