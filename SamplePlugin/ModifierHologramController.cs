@@ -45,6 +45,7 @@ namespace RiskOfRoutes
 
                 //Log.Info($"isAurelioniteActive:{isAurelioniteActive}");
 
+                //todo coloring them doesnt work for some reason
                 if (isAurelioniteActive) SetAurelioniteIconActive(true);
                 if (isDroneGreenActive) SetDroneIconActive(true);
                 if (isDroneRedActive) SetDroneIconActive(true, true);

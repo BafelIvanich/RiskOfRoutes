@@ -26,7 +26,7 @@ namespace RiskOfRoutes
 
         }
 
-        //TODO Looking glass может показать предмет
+        //TODO LookingGlass mod can show item
         private static void PickupDisplay_Update(On.RoR2.PickupDisplay.orig_Update orig, RoR2.PickupDisplay self)
         {
             orig(self);
@@ -76,7 +76,7 @@ namespace RiskOfRoutes
         {
             if (RunArtifactManager.instance.IsArtifactEnabled(Mystery))
             {
-                Log.Info($"Gameobject display name:{self.modelPrefab}");
+                //Log.Info($"Gameobject display name:{self.modelPrefab}");
                 self.hidden = true;
             }
 

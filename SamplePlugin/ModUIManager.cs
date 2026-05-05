@@ -176,7 +176,6 @@ namespace RiskOfRoutes
 
                 var scoreboardJuice = hud.scoreboardPanel.GetComponent<UIJuice>();
                 var panelUiJuice = routeMapPanel.AddComponent<UIJuice>();
-                //TODO
                 var mapScript = routeMapPanel.GetComponent<RouteMapUI>();
                 if (scoreboardJuice != null)
                 {
@@ -188,7 +187,9 @@ namespace RiskOfRoutes
                     panelUiJuice.canvasGroup = mapCanvasGroup;
                 }
 
-                routeMapPanel.transform.SetParent(hud.mainContainer.transform, false); //к objective panel
+                routeMapPanel.transform.SetParent(hud.mainContainer.transform, false); 
+                //TODO
+                //to objective panel option
                 //routeMapPanel.transform.SetParent(hud.scoreboardPanel.transform, true);
                 if (mapScript != null)
                 {
@@ -312,7 +313,6 @@ namespace RiskOfRoutes
                     sceneImage.texture = sceneDef.portalMaterial.mainTexture;
                 }
             }
-            //todo nullcheck
 
             string positiveText = $"<style=cIsHealing>{RoR2.Language.GetString("POSITIVE")}</style>" + '\n';
             string negativeText = $"<style=cDeath>{RoR2.Language.GetString("NEGATIVE")}</style>" + '\n';
