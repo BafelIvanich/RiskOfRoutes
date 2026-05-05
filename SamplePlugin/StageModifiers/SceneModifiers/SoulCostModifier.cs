@@ -6,8 +6,6 @@ using UnityEngine.Networking;
 
 namespace RiskOfRoutes.StageModifiers.SceneModifiers
 {
-    //Каждое открытие сундука стакает на всех игроках проклятье на макс хп.
-    //todo networking UI
     public class SoulCostModifier : StageModifier
     {
         public float curseAdd = 0;
@@ -30,8 +28,8 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
                 StageModifierDirector.instance.soulCostStack = this.stack;
                 StageModifierDirector.instance.syncedBaseCurse = 0f;
             }
-            Log.Info("Stack" + stack);
-            Log.Info("Curseadd" + curseAdd);
+            Log.Info($"SoulCost stack - {stack}");
+            Log.Info($"CurseAdd - {curseAdd}");
             On.RoR2.PurchaseInteraction.Awake += PurchaseInteraction_Awake;
         }
 

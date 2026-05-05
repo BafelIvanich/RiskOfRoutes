@@ -3,7 +3,6 @@ using RoR2;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 
 
@@ -22,12 +21,12 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
         }
         public override void OnEnd()
         {
-            Log.Info("YellowPrinterModifier end");
+            Log.Info("YellowPrinterModifier on end");
         }
 
         public override void OnStart()
         {
-            Log.Info("YellowPrinterModifier start");
+            Log.Info("YellowPrinterModifier on start");
             SpawnYellowPrinter();
         }
 
@@ -79,7 +78,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
         private void CreateYellowPrinterSpawnCard()
         {
-            InteractableSpawnCard card = Addressables.LoadAssetAsync<InteractableSpawnCard>("RoR2/Base/DuplicatorWild/iscDuplicatorWild.asset").WaitForCompletion();
+            InteractableSpawnCard card = AssetManager.bossPrinter;
 
             if (card != null)
             {
@@ -88,7 +87,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             }
             else
             {
-                Log.Info("Asset path is invalid");
+                Log.Error("Asset path is invalid");
             }
         }
 
