@@ -1,11 +1,12 @@
 using RiskOfRoutes;
 using RoR2;
 using SamplePlugin.StageModifiers.SceneModifiers;
+using UnityEngine;
 
 
 namespace SamplePlugin.StageModifiers.CombatModifiers
 {
-    //карты : 
+    //todo needs to be made separate 'EnemyItems modifier' so it wont overweight others in catalog
     public class EnemyItemsModifier : StageModifier
     {
         ItemDef selectedItem;
@@ -46,19 +47,37 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             }
         }
 
-        //todo на будущее если сделаю стакинг предметов врагов
+        //todo extra stack calculating logic for portal panel doesnt work on clients
         public static int GetItemStack(ItemDef def, int modStack)
         {
+            int commonItemStack = StageModifierDirector.instance?.commonDefaultStack ?? 5;
+            int uncommonItemStack = StageModifierDirector.instance?.uncommonDefaultStack ?? 3;
+            int legendaryItemStack = StageModifierDirector.instance?.legendaryDefaultStack ?? 1;
+            int bossItemStack = StageModifierDirector.instance?.bossDefaultStack ?? 1;
+
+            int commonExtraStack = StageModifierDirector.instance?.commonExtraRange ?? 3;
+            int uncommonExtraStack = StageModifierDirector.instance?.uncommonExtraRange ?? 2;
+            int legendaryExtraStack = StageModifierDirector.instance?.legendaryExtraRange ?? 1;
+            int bossExtraStack = StageModifierDirector.instance?.bossExtraRange ?? 1;
+
+            int chanceForExtra = StageModifierDirector.instance?.chanceForExtra ?? 0;
+            bool shouldAddExtra = false;
+
+            if(Run.instance!=null && Run.instance.stageRng!=null)
+            {
+                shouldAddExtra = Run.instance.stageRng.nextNormalizedFloat < chanceForExtra;
+            }
+
             switch (def.tier)
             {
-                case ItemTier.Tier1: return (5 * modStack);
-                case ItemTier.Tier2: return (3 * modStack);
-                case ItemTier.Tier3: return (1 * modStack);
-                case ItemTier.Boss: return (1 * modStack);
-                case ItemTier.VoidTier1: return (5 * modStack);
-                case ItemTier.VoidTier2: return (3 * modStack);
-                case ItemTier.VoidTier3: return (1 * modStack);
-                case ItemTier.VoidBoss: return (1 * modStack);
+                case ItemTier.Tier1: return (commonItemStack * modStack) + (shouldAddExtra ? commonExtraStack : 0);
+                case ItemTier.Tier2: return (uncommonItemStack * modStack) + (shouldAddExtra ? uncommonExtraStack : 0);
+                case ItemTier.Tier3: return (legendaryItemStack * modStack) + (shouldAddExtra ? legendaryExtraStack : 0);
+                case ItemTier.Boss: return (bossItemStack * modStack) + (shouldAddExtra ? bossItemStack : 0);
+                case ItemTier.VoidTier1: return (commonItemStack * modStack) + (shouldAddExtra ? commonExtraStack : 0);
+                case ItemTier.VoidTier2: return (uncommonItemStack * modStack) + (shouldAddExtra ? uncommonExtraStack : 0);
+                case ItemTier.VoidTier3: return (legendaryItemStack * modStack) + (shouldAddExtra ? legendaryExtraStack : 0);
+                case ItemTier.VoidBoss: return (bossItemStack * modStack) + (shouldAddExtra ? bossItemStack : 0);
                 default: return 1;
             }
 
