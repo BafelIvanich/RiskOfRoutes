@@ -480,7 +480,7 @@ namespace RiskOfRoutes
                 {
                     string[] parts = modStr.Split('=');
                     StageModifierDirector.instance.reservedModifiers.Add(new ModifierSync { name = parts[0], stack = int.Parse(parts[1]), isArtifact = bool.Parse(parts[2]) });
-                    StageModifierDirector.instance.bannedModifiersRun.Add(parts[0]);
+                    StageModifierDirector.instance.bannedModifiersStage.Add(parts[0]);
                 }
             }
 
