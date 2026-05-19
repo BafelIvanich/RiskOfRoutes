@@ -5,9 +5,6 @@ using RoR2;
 using System;
 using UnityEngine;
 
-//whites: crowbar, bears, bleed, bombs, watches, gasoline, focus crystal, syringe, key
-//greens: reload one, ukulele, active charge, wisps, band 1, band 2, injection, pinwheel, fin, star, rockets, energy shield, gasoline, wire
-
 
 namespace SamplePlugin.StageModifiers.BossRewardModifiers
 {
