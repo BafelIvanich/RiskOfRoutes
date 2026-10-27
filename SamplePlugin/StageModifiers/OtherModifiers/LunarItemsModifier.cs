@@ -28,7 +28,7 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
                 return;
             }
 
-            On.RoR2.UI.ItemIcon.SetItemIndex_ItemIndex_int_float -= ItemIcon_SetItemIndex_ItemIndex_int_float;
+            On.RoR2.UI.ItemIcon.SetItemIndex_ItemIndex_int_float -= ChangeLunarIcon;
 
             var instances = PlayerCharacterMasterController.instances;
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
@@ -57,7 +57,7 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
                 return;
             }
 
-            On.RoR2.UI.ItemIcon.SetItemIndex_ItemIndex_int_float += ItemIcon_SetItemIndex_ItemIndex_int_float;
+            On.RoR2.UI.ItemIcon.SetItemIndex_ItemIndex_int_float += ChangeLunarIcon;
 
             foreach (CharacterMaster cm in CharacterMaster.readOnlyInstancesList)
             {
@@ -69,7 +69,7 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
         }
 
         //todo for some reason can grey out other items
-        private void ItemIcon_SetItemIndex_ItemIndex_int_float(On.RoR2.UI.ItemIcon.orig_SetItemIndex_ItemIndex_int_float orig, RoR2.UI.ItemIcon self, ItemIndex newItemIndex, int newItemCount, float newDurationPercent)
+        private void ChangeLunarIcon(On.RoR2.UI.ItemIcon.orig_SetItemIndex_ItemIndex_int_float orig, RoR2.UI.ItemIcon self, ItemIndex newItemIndex, int newItemCount, float newDurationPercent)
         {
             orig(self, newItemIndex, newItemCount, newDurationPercent);
 
@@ -77,6 +77,10 @@ namespace RiskOfRoutes.StageModifiers.OtherModifiers
             {
                 self.image.color = new Color(0.3f, 0.3f, 0.3f, 1f);
                 //self.tooltipProvider.bodyToken = "SMTH";
+            }
+            else
+            {
+                self.image.color = Color.white;
             }
 
             //Log.Info($"Set item index intfloat{newItemIndex}");

@@ -17,7 +17,6 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
             Log.Info("Repair on end");
         }
 
-        //todo can be made compatible with modded ones
         public override void OnStart()
         {
             Log.Info("Repair on start");
@@ -37,7 +36,8 @@ namespace SamplePlugin.StageModifiers.OtherModifiers
                             var count = cm.inventory.GetItemCount(itemDef);
 
                             cm.inventory.RemoveItem(itemDef, count);
-                            ItemDef repairedItem = new ItemDef();
+                            //todo replace with index
+                            ItemDef repairedItem = null;
                             if (itemDef == DLC1Content.Items.FragileDamageBonusConsumed) repairedItem = DLC1Content.Items.FragileDamageBonus;
                             else if (itemDef == DLC1Content.Items.HealingPotionConsumed) repairedItem = DLC1Content.Items.HealingPotion;
                             else if (itemDef == DLC1Content.Items.ExtraLifeVoidConsumed) repairedItem = DLC1Content.Items.ExtraLifeVoid;

@@ -35,6 +35,11 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
             var rewardPickupPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC2/FragmentPotentialPickup.prefab").WaitForCompletion();
 
+            int choiceAmount = 3;
+            int stacks = StageModifierDirector.instance.CheckPlayersHaveFalseSonHeart();
+            if (stacks > 1)
+                choiceAmount += stacks - 1;
+
             ILCursor c = new ILCursor(il);
 
             if (c.TryGotoNext(MoveType.Before,
@@ -77,7 +82,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                         pickup = new GenericPickupController.CreatePickupInfo
                         {
                             pickup = new UniquePickup(PickupCatalog.FindPickupIndex(ItemTier.Tier1)),
-                            pickerOptions = PickupPickerController.GenerateOptionsFromList(pickups.Take(5).ToList()),
+                            pickerOptions = PickupPickerController.GenerateOptionsFromList(pickups.Take(choiceAmount).ToList()),
                             rotation = Quaternion.identity,
                             position = position,
                             prefabOverride = rewardPickupPrefab
@@ -107,7 +112,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                         pickup = new GenericPickupController.CreatePickupInfo
                         {
                             pickup = new UniquePickup(PickupCatalog.FindPickupIndex(ItemTier.Tier1)),
-                            pickerOptions = PickupPickerController.GenerateOptionsFromList(pickups.Take(5).ToList()),
+                            pickerOptions = PickupPickerController.GenerateOptionsFromList(pickups.Take(choiceAmount).ToList()),
                             rotation = Quaternion.identity,
                             position = position,
                             prefabOverride = rewardPickupPrefab
@@ -118,15 +123,13 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                         pickup = new GenericPickupController.CreatePickupInfo
                         {
                             pickup = new UniquePickup(PickupCatalog.FindPickupIndex(ItemTier.Tier1)),
-                            pickerOptions = PickupPickerController.GenerateOptionsFromDropTablePlusForcedStorm(3, halcyoniteDropTableTier3, halcyoniteDropTableTier2, Run.instance.stageRng),
+                            pickerOptions = PickupPickerController.GenerateOptionsFromDropTablePlusForcedStorm(choiceAmount, halcyoniteDropTableTier3, halcyoniteDropTableTier2, Run.instance.stageRng),
                             rotation = Quaternion.identity,
                             position = position,
                             prefabOverride = rewardPickupPrefab
                         };
 
                     }
-
-
                     PickupDropletController.CreatePickupDroplet(pickup, position, vector);
                     Log.Info("Created pickup");
                 });

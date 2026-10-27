@@ -12,7 +12,6 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
     public class DoppelgangerModifier : StageModifier
     {
         float coolDown = 0;
-
         static float defaultTime = 240f;
 
         public DoppelgangerModifier(int stack)
@@ -77,11 +76,10 @@ namespace RiskOfRoutes.StageModifiers.CombatModifiers
         }
         private static void CreateDoppelganger(CharacterMaster srcCharacterMaster, Xoroshiro128Plus rng)
         {
-            Log.Info("Doppel");
             SpawnCard spawnCard = FromMaster(srcCharacterMaster);
             if (!spawnCard)
             {
-                Log.Error("No spawn card");
+                Log.Error($"{nameof(CreateDoppelganger)}: No doppelganger spawn card");
                 return;
             }
             Transform coreTransform;

@@ -10,6 +10,8 @@ namespace SamplePlugin
         public int stack;
         public bool isArtifact;
 
+        //todo item extra stack for networking
+
         public ModifierSync(ModifierDef mod)
         {
             name = mod.name;

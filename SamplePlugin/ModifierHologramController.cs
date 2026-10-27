@@ -1,4 +1,5 @@
-﻿using SamplePlugin;
+﻿using RoR2;
+using SamplePlugin;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 
@@ -18,6 +19,7 @@ namespace RiskOfRoutes
         public Color legendary = new Color(255f / 255f, 56f / 255f, 50f / 255f, 1f);
         public Color boss = new Color(255f / 255f, 235f / 255f, 49f / 255f, 1f);
         public Color aurelionite = new Color(255f / 255f, 144f / 255f, 0, 1f);
+        public Color mountain = new Color(61f / 255f, 220f / 255f, 255f / 255f, 1f);
 
         private void Start()
         {
@@ -30,12 +32,25 @@ namespace RiskOfRoutes
             rewardIcon = CreateIcon(bossSymbol, bossIndicator, rewardTex, "Hologram_Reward");
             aurelioniteIcon = CreateIcon(bossSymbol, bossIndicator, aurelioniteTex, "Hologram_Aurelionite");
 
-            RefreshIcons();
+            RefreshHologramIcons();
+
+            RiskOfRoutes.hologramsAreColored.SettingChanged += OnConfigChanged;
         }
 
-        public void RefreshIcons()
+        private void OnDestroy()
         {
-            if (StageModifierDirector.instance != null)
+            RiskOfRoutes.hologramsAreColored.SettingChanged -= OnConfigChanged;
+        }
+
+        private void OnConfigChanged(object sender, System.EventArgs e)
+        {
+            Log.Info("Config changed, refreshing hologram icons");
+            RefreshHologramIcons();
+        }
+
+        public void RefreshHologramIcons()
+        {
+            if (StageModifierDirector.instance != null && TeleporterInteraction.instance != null)
             {
                 bool isAurelioniteActive = StageModifierDirector.instance.IsModifierActive("Aurelionite");
                 bool isDroneGreenActive = StageModifierDirector.instance.IsModifierActive("DroneBossGreen");
@@ -45,7 +60,6 @@ namespace RiskOfRoutes
 
                 //Log.Info($"isAurelioniteActive:{isAurelioniteActive}");
 
-                //todo coloring them doesnt work for some reason
                 if (isAurelioniteActive) SetAurelioniteIconActive(true);
                 if (isDroneGreenActive) SetDroneIconActive(true);
                 if (isDroneRedActive) SetDroneIconActive(true, true);
@@ -79,45 +93,87 @@ namespace RiskOfRoutes
 
         public void SetDroneIconActive(bool active, bool isLegendary = false)
         {
-            var renderer = droneIcon?.GetComponent<MeshRenderer>();
+            if (droneIcon == null) return;
+
+            var visualObj = droneIcon.transform.Find("Hologram_Drone_Visual");
+
+            if (visualObj == null) return;
+
+            Log.Info($"drone Icon is null {droneIcon == null} || {visualObj == null}");
+            var renderer = visualObj.GetComponent<MeshRenderer>();
             if (renderer != null)
             {
-                if (isLegendary)
+                if (RiskOfRoutes.hologramsAreColored.Value)
                 {
-                    renderer.material.SetColor("_TintColor", legendary);
+                    if (isLegendary)
+                    {
+                        renderer.material.SetColor("_TintColor", legendary);
+                    }
+                    else
+                    {
+                        renderer.material.SetColor("_TintColor", uncommon);
+                    }
                 }
                 else
                 {
-                    renderer.material.SetColor("_TintColor", uncommon);
+                    renderer.material.SetColor("_TintColor", mountain);
                 }
             }
 
-            droneIcon?.SetActive(active);
+            droneIcon.SetActive(active);
         }
         public void SetRewardIconActive(bool active, bool isLegendary = false)
         {
-            var renderer = droneIcon?.GetComponent<MeshRenderer>();
+            if (rewardIcon == null) return;
+
+            var visualObj = rewardIcon.transform.Find("Hologram_Reward_Visual");
+
+            if (visualObj == null) return;
+
+            var renderer = visualObj.GetComponent<MeshRenderer>();
             if (renderer != null)
             {
-                if (isLegendary)
+                if (RiskOfRoutes.hologramsAreColored.Value)
                 {
-                    renderer.material.SetColor("_TintColor", legendary);
+                    if (isLegendary)
+                    {
+                        renderer.material.SetColor("_TintColor", legendary);
+                    }
+                    else
+                    {
+                        renderer.material.SetColor("_TintColor", boss);
+                    }
+
                 }
                 else
                 {
-                    renderer.material.SetColor("_TintColor", boss);
+                    renderer.material.SetColor("_TintColor", mountain);
                 }
             }
-            rewardIcon?.SetActive(active);
+            rewardIcon.SetActive(active);
         }
         public void SetAurelioniteIconActive(bool active)
         {
-            var renderer = droneIcon?.GetComponent<MeshRenderer>();
+            if (aurelioniteIcon == null) return;
+
+            var visualObj = aurelioniteIcon.transform.Find("Hologram_Aurelionite_Visual");
+
+            if (visualObj == null) return;
+
+            var renderer = visualObj.GetComponent<MeshRenderer>();
             if (renderer != null)
             {
-                renderer.material.SetColor("_TintColor", aurelionite);
+                if (RiskOfRoutes.hologramsAreColored.Value)
+                {
+                    renderer.material.SetColor("_TintColor", aurelionite);
+                }
+                else
+                {
+                    renderer.material.SetColor("_TintColor", mountain);
+                }
+
             }
-            aurelioniteIcon?.SetActive(active);
+            aurelioniteIcon.SetActive(active);
         }
 
     }

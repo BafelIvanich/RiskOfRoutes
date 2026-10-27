@@ -5,9 +5,6 @@ using RoR2;
 using System;
 using UnityEngine;
 
-//whites: crowbar, bears, bleed, bombs, watches, gasoline, focus crystal, syringe, key
-//greens: reload one, ukulele, active charge, wisps, band 1, band 2, injection, pinwheel, fin, star, rockets, energy shield, gasoline, wire
-
 
 namespace SamplePlugin.StageModifiers.BossRewardModifiers
 {
@@ -16,28 +13,26 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
         public bool dropLegendary = false;
         public bool isAurelioniteActive = false;
 
-        //todo может и зеленых
-        //todo кроме equipment Дрона
         public DroneBossModifier(bool dropLegendary = false)
         {
             this.dropLegendary = dropLegendary;
-
         }
 
         public override void OnEnd()
         {
-            IL.RoR2.BossGroup.DropRewards -= BossGroup_DropRewards;
+            IL.RoR2.BossGroup.DropRewards -= DropDroneReward;
             Log.Info("BossDroneReward on end");
         }
 
         public override void OnStart()
         {
-            IL.RoR2.BossGroup.DropRewards += BossGroup_DropRewards;
+            IL.RoR2.BossGroup.DropRewards += DropDroneReward;
             Log.Info("BossItemModifier on start");
         }
 
-        private void BossGroup_DropRewards(ILContext il)
+        private void DropDroneReward(ILContext il)
         {
+            Log.Info("Dropping drone");
             var aurelioniteMod = StageModifierDirector.instance.IsModifierActive("Aurelionite");
             if (aurelioniteMod) return;
             ILCursor c = new ILCursor(il);
@@ -68,7 +63,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
                         var pickupIndex = PickupCatalog.FindPickupIndex(reward);
                         if (pickupIndex == null)
                         {
-                            Log.Error("NONE DRONE");
+                            Log.Error($"{nameof(DropDroneReward)}: Couldnt select drone to drop reward");
                         }
                         pickup = new UniquePickup(pickupIndex);
                         var pickupInfo = new GenericPickupController.CreatePickupInfo

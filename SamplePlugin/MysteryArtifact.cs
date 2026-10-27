@@ -20,10 +20,6 @@ namespace RiskOfRoutes
             On.RoR2.GenericPickupController.GetInspectInfoProvider += GenericPickupController_GetInspectInfoProvider;
             On.RoR2.ShopTerminalBehavior.Start += ShopTerminalBehavior_Start;
             On.RoR2.PickupDisplay.Update += PickupDisplay_Update;
-
-
-
-
         }
 
         //TODO LookingGlass mod can show item

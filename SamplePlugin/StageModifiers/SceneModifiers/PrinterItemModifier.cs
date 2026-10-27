@@ -76,7 +76,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
             if (card != null)
             {
-                //Log.Info("printer spawncard created succesfully");
                 printerSpawnCard = card;
             }
             else

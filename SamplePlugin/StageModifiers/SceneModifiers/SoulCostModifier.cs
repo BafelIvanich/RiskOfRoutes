@@ -1,4 +1,5 @@
-﻿using RoR2;
+﻿using RiskOfRoutes.Items;
+using RoR2;
 using SamplePlugin;
 using SamplePlugin.StageModifiers;
 using UnityEngine;
@@ -17,6 +18,14 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
         public override void OnEnd()
         {
             On.RoR2.PurchaseInteraction.Awake -= PurchaseInteraction_Awake;
+
+            foreach (var player in PlayerCharacterMasterController.instances)
+            {
+                if (player.master && player.master.GetBody())
+                {
+                    player.master.inventory.RemoveItem(ModItemsManager.soulCostCurse, 1);
+                }
+            }
         }
 
         public override void OnStart()
@@ -25,7 +34,7 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
 
             if (NetworkServer.active && StageModifierDirector.instance)
             {
-                StageModifierDirector.instance.soulCostStack = this.stack;
+                StageModifierDirector.instance.cursePerStack = this.stack;
                 StageModifierDirector.instance.syncedBaseCurse = 0f;
             }
             Log.Info($"SoulCost stack - {stack}");
@@ -37,25 +46,33 @@ namespace RiskOfRoutes.StageModifiers.SceneModifiers
         private void PurchaseInteraction_Awake(On.RoR2.PurchaseInteraction.orig_Awake orig, PurchaseInteraction self)
         {
             orig(self);
-            if (self.costType == CostTypeIndex.Money)
+            if (self.costType == CostTypeIndex.Money && self.cost > 0)
                 self.onPurchase.AddListener(PlayerPurchase);
         }
 
+        //todo should send to clients
         private void PlayerPurchase(Interactor interactor)
         {
             if (!NetworkServer.active) return;
 
-            if (StageModifierDirector.instance)
+
+
+            if (RiskOfRoutes.soulCostCurseShared.Value)
             {
-                StageModifierDirector.instance.syncedBaseCurse += curseAdd;
                 foreach (var player in PlayerCharacterMasterController.instances)
                 {
                     if (player.master && player.master.GetBody())
                     {
-                        player.master.GetBody().RecalculateStats();
+                        player.master.inventory.GiveItem(ModItemsManager.soulCostCurse, 1);
                     }
                 }
 
+            }
+            else
+            {
+                var body = interactor.GetComponent<CharacterBody>();
+                if (body == null) return;
+                body.inventory.GiveItem(ModItemsManager.soulCostCurse, 1);
             }
 
         }

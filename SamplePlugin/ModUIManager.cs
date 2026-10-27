@@ -187,7 +187,7 @@ namespace RiskOfRoutes
                     panelUiJuice.canvasGroup = mapCanvasGroup;
                 }
 
-                routeMapPanel.transform.SetParent(hud.mainContainer.transform, false); 
+                routeMapPanel.transform.SetParent(hud.mainContainer.transform, false);
                 //TODO
                 //to objective panel option
                 //routeMapPanel.transform.SetParent(hud.scoreboardPanel.transform, true);

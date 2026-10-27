@@ -9,11 +9,11 @@ namespace RiskOfRoutes.StageModifiers
         public string name;
         public ModifierTier tier;
         public int cost;
-        public float selectionWeight;
+        public float weight;
         public Func<bool> isAvailable = () => true;
         public List<string> conflictList = new List<string>();
         public int maxStack = -1;
-        public Sprite icon;
+        public Sprite spriteIcon;
 
         public string nameToken;
         public string descriptionToken;
@@ -26,7 +26,7 @@ namespace RiskOfRoutes.StageModifiers
         {
             this.name = name;
             this.tier = tier;
-            this.selectionWeight = weight;
+            this.weight = weight;
             this.isNegative = isNegative;
             this.isStackable = isStackable;
 
@@ -43,7 +43,7 @@ namespace RiskOfRoutes.StageModifiers
         {
             this.name = name;
             this.tier = tier;
-            this.selectionWeight = weight;
+            this.weight = weight;
             this.isNegative = isNegative;
             this.isAvailable = isAvailable;
             this.isStackable = isStackable;
@@ -61,7 +61,7 @@ namespace RiskOfRoutes.StageModifiers
 
 public enum ModifierTier
 {
-    Tier1 = 1, Tier2 = 2, Tier3 = 3
+    None = 0, Tier1 = 1, Tier2 = 2, Tier3 = 3
 }
 
 public enum ModifierRarity

@@ -20,7 +20,7 @@ public class RouteMap
 
     public RouteMap(Xoroshiro128Plus rng)
     {
-
+        //todo проверка количества путей
         width = RiskOfRoutes.RiskOfRoutes.routeMapWidth.Value;
         height = 5;
         //+1 to width reserved for dlc2 dlc3 portals
@@ -31,12 +31,40 @@ public class RouteMap
         root.visited = true;
         root.portalType = RoutePortalType.Starting;
 
+        int attempts = 100;
+        bool flag = false;
+        List<RouteNode> availablePaths = new List<RouteNode>();
 
-        for (int i = 0; i < width; i++)
-            for (int j = 1; j < height; j++)
-                mapGrid[i, j] = new RouteNode(i, j);
+        while (attempts > 0 && flag == false)
+        {
+            attempts--;
 
-        List<RouteNode> availablePaths = SetupPaths(rng);
+            for (int i = 0; i < width; i++)
+                for (int j = 1; j < height; j++)
+                    mapGrid[i, j] = new RouteNode(i, j);
+
+            int goodOnes = 0;
+            availablePaths = SetupPaths(rng);
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 1; j < height; j++)
+                {
+                    var node = mapGrid[i, j];
+                    if (node == null) Log.Error("this should happern");
+                    int childCount = node.GetPaths().Count;
+                    if (childCount > 1) goodOnes++;
+                }
+            }
+
+            Log.Info($"Good oens count:{goodOnes}");
+            flag = goodOnes > 2;
+
+
+            if (!flag) Log.Info("Trying to create map with more choices");
+        }
+
+
+
         availablePaths.Sort((a, b) => a.x.CompareTo(b.x));
 
         if (availablePaths.Count >= 1) root.left = availablePaths[0];
@@ -94,6 +122,20 @@ public class RouteMap
         {
             CheckNodeCorrect(path, rng, memory);
         }
+    }
+
+    public RouteNode GetRandomNodeOnFloor(int floor, Xoroshiro128Plus rng)
+    {
+        var choices = new List<RouteNode>();
+
+        int y = floor;
+        for (int i = 0; i < width; i++)
+        {
+            var node = mapGrid[i, y];
+            if (node != null && node.portalType != RoutePortalType.None) choices.Add(node);
+        }
+
+        return rng.NextElementUniform(choices);
     }
 
     private void CheckNodeCorrect(RouteNode node, Xoroshiro128Plus rng, HashSet<Vector2> memory)
@@ -425,7 +467,7 @@ public class RouteMap
 
         public List<RouteNode> GetPaths(bool usePortalNode = false)
         {
-            List<RouteMap.RouteNode> res = new List<RouteMap.RouteNode>();
+            List<RouteNode> res = new List<RouteNode>();
             if (left != null) res.Add(left);
             if (front != null) res.Add(front);
             if (right != null) res.Add(right);

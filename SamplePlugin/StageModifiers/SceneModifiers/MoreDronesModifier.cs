@@ -30,10 +30,10 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             int count = 0;
             var credits = ClassicStageInfo.instance.sceneDirectorInteractibleCredits;
             float percent = (RiskOfRoutes.RiskOfRoutes.droneStackPercent.Value) / 100f;
-            Log.Info($"Drone stack percent is {percent}");
             int droneCredits = (int)(credits * stack * percent);
 
-            Log.Info("Spawning more drones");
+            Log.Info($"{nameof(PopulateDrones)}: Drone stack percent is {percent}");
+            Log.Info($"{nameof(PopulateDrones)}: Spawning more drones");
 
             var stageInfo = ClassicStageInfo.instance;
             WeightedSelection<DirectorCard> availableDrones = new WeightedSelection<DirectorCard>();
@@ -41,7 +41,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
 
             if (droneCategory.cards.Length == 0)
             {
-                Log.Error("No drones available on stage");
+                Log.Error($"{nameof(PopulateDrones)}: No drones available on stage");
                 return;
             }
 
@@ -49,7 +49,6 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             {
                 if (card.IsAvailable())
                     availableDrones.AddChoice(card, card.selectionWeight);
-                //Log.Info($"Added {card.spawnCard.name}");
             }
 
             int num = 100;
@@ -77,7 +76,7 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
                 }
                 num--;
             }
-            Log.Info($"Spawned {count} more drones");
+            Log.Info($"{nameof(PopulateDrones)}: Spawned {count} more drones");
 
 
         }
@@ -89,14 +88,11 @@ namespace SamplePlugin.StageModifiers.SceneModifiers
             for (int count = deck.Count; i < count; i++)
             {
                 WeightedSelection<DirectorCard>.ChoiceInfo choice = deck.GetChoice(i);
-                //Log.Info($"Ratio:{choice.value.cost} {maxCost}");
                 if (choice.value.cost <= maxCost)
                 {
                     cardSelector.AddChoice(choice);
-                    //Log.Info("ADDED CHOICE");
                 }
             }
-            //Log.Info("SEELCTOR " + cardSelector.Count);
             if (cardSelector.Count == 0)
             {
                 return null;

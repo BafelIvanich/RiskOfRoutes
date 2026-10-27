@@ -1,4 +1,5 @@
-﻿using RoR2;
+﻿using RiskOfRoutes.Helpers;
+using RoR2;
 using RoR2.ExpansionManagement;
 using SamplePlugin;
 using System.Collections.Generic;
@@ -28,15 +29,17 @@ namespace RiskOfRoutes
             On.RoR2.TeleporterInteraction.OnInteractionBegin += TeleporterGetRoutePortal;
             On.RoR2.DirectorCore.TrySpawnObject += OnVanillaPortalSpawn;
             On.RoR2.BazaarController.Start += ReplaceBazaarExits;
-            On.RoR2.ArenaMissionController.OnStartServer += ArenaMissionController_OnStartServer;
-            On.RoR2.SeerStationController.SetRunNextStageToTarget += SeerStationController_SetRunNextStageToTarget;
+            On.RoR2.ArenaMissionController.OnStartServer += ReplaceArenaExitPortal;
+            On.RoR2.SeerStationController.SetRunNextStageToTarget += UpdateShopExitDestination;
+            //RoR2.TeleporterInteraction.onTeleporterChargedGlobal += TeleporterInteraction_onTeleporterChargedGlobal;
 
             AddRouteManagersToPortalPrefabs();
             AddHologramControllerToTeleporter();
-
         }
 
-        private static void ArenaMissionController_OnStartServer(On.RoR2.ArenaMissionController.orig_OnStartServer orig, ArenaMissionController self)
+
+
+        private static void ReplaceArenaExitPortal(On.RoR2.ArenaMissionController.orig_OnStartServer orig, ArenaMissionController self)
         {
             orig(self);
 
@@ -48,7 +51,7 @@ namespace RiskOfRoutes
                 if (exit.gameObject.name.Contains("Arena"))
                 {
                     arenaPortalObject = exit.gameObject;
-                    Log.Info($"{nameof(ReplaceBazaarExits)}:Found arena portal with name {exit.gameObject.name}");
+                    Log.Info($"{nameof(ReplaceBazaarExits)}: Found arena portal with name {exit.gameObject.name}");
                 }
                 if (arenaPortalObject != null) break;
             }
@@ -66,17 +69,28 @@ namespace RiskOfRoutes
             var hardwareProgHauntPortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/HardwareProgPortal_Haunt.prefab").WaitForCompletion();
             var destinationPortalPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC2/PM DestinationPortal.prefab").WaitForCompletion();
             var seerPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/bazaar/SeerStation.prefab").WaitForCompletion();
+            var teleporterPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Teleporters/Teleporter1.prefab").WaitForCompletion();
+            var lunarTeleporterPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Teleporters/LunarTeleporter Variant.prefab").WaitForCompletion();
 
-            List<GameObject> vanillaPortals = new List<GameObject>() { shopPortalPrefab, colossusPortalPrefab, goldshoresPortalPrefab, arenaPortalPrefab, hardwareProgPortalPrefab, hardwareProgHauntPortalPrefab, destinationPortalPrefab, seerPrefab };
+            List<GameObject> vanillaPortals = new List<GameObject>()
+            {
+                shopPortalPrefab,
+                colossusPortalPrefab,
+                goldshoresPortalPrefab,
+                arenaPortalPrefab,
+                hardwareProgPortalPrefab,
+                hardwareProgHauntPortalPrefab,
+                destinationPortalPrefab,
+                seerPrefab,
+                teleporterPrefab,
+                lunarTeleporterPrefab
+            };
             foreach (var portal in vanillaPortals)
             {
                 Log.Info($"{nameof(AddRouteManagersToPortalPrefabs)}: Adding route portal manager to portal {portal.name}");
 
                 var mg = portal.GetComponent<RoutePortalManager>();
-                if (mg == null)
-                {
-                    portal.AddComponent<RoutePortalManager>();
-                }
+                if (mg == null) portal.AddComponent<RoutePortalManager>();
 
                 Log.Info($"{nameof(AddRouteManagersToPortalPrefabs)}: Added route portal manager to {portal.name} prefab");
             }
@@ -85,10 +99,30 @@ namespace RiskOfRoutes
         private static void AddHologramControllerToTeleporter()
         {
             var teleporterPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Teleporters/Teleporter1.prefab").WaitForCompletion();
+            var lunarTeleporterPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/Base/Teleporters/LunarTeleporter Variant.prefab").WaitForCompletion();
+            var conduitCanyonPrefab = Addressables.LoadAssetAsync<GameObject>("RoR2/DLC3/conduitcanyon/Teleporter_ConduitCanyon_Variant.prefab").WaitForCompletion();
 
             if (teleporterPrefab != null)
             {
                 var hologramController = teleporterPrefab.AddComponent<ModifierHologramController>();
+
+                hologramController.droneTex = AssetManager.droneSymbolTexture;
+                hologramController.rewardTex = AssetManager.rewardSymbolTexture;
+                hologramController.aurelioniteTex = AssetManager.aurelioniteSymbolTexture;
+            }
+
+            if (lunarTeleporterPrefab != null)
+            {
+                var hologramController = lunarTeleporterPrefab.AddComponent<ModifierHologramController>();
+
+                hologramController.droneTex = AssetManager.droneSymbolTexture;
+                hologramController.rewardTex = AssetManager.rewardSymbolTexture;
+                hologramController.aurelioniteTex = AssetManager.aurelioniteSymbolTexture;
+            }
+
+            if (conduitCanyonPrefab != null)
+            {
+                var hologramController = conduitCanyonPrefab.AddComponent<ModifierHologramController>();
 
                 hologramController.droneTex = AssetManager.droneSymbolTexture;
                 hologramController.rewardTex = AssetManager.rewardSymbolTexture;
@@ -110,7 +144,6 @@ namespace RiskOfRoutes
 
                 var hardwareNode = StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
                 StageModifierDirector.instance.currentNode = hardwareNode;
-                StageModifierDirector.instance.currentNodeSync = new Vector2(hardwareNode.x, hardwareNode.y);
             }
             else
             {
@@ -120,24 +153,26 @@ namespace RiskOfRoutes
                 if (RiskOfRoutes.teleporterUseRandomMods.Value)
                     StageModifierDirector.instance.GetModifiersFromRandomPortal(); //todo пересмотреть
             }
+
+            var rpm = self.gameObject.GetComponent<RoutePortalManager>();
+            if (rpm == null) return;
+
+            rpm.OnPortalActivation(activator);
         }
 
-        private static void SeerStationController_SetRunNextStageToTarget(On.RoR2.SeerStationController.orig_SetRunNextStageToTarget orig, SeerStationController self)
+        private static void UpdateShopExitDestination(On.RoR2.SeerStationController.orig_SetRunNextStageToTarget orig, SeerStationController self)
         {
             orig(self);
 
             if (!Run.instance.IsExpansionEnabled(routesExpansion)) return;
 
-            if (!NetworkServer.active || SceneManager.GetActiveScene().name != "bazaar")
-            {
-                return;
-            }
+            if (!NetworkServer.active || SceneManager.GetActiveScene().name != "bazaar") return;
 
             SceneIndex seerTargetScene = (SceneIndex)self.targetSceneDefIndex;
 
             GameObject shopPortalObj = null;
             SceneExitController shopExitController = null;
-            RoR2.SceneExitController[] exits = UnityEngine.Object.FindObjectsOfType<RoR2.SceneExitController>(true);
+            RoR2.SceneExitController[] exits = Object.FindObjectsOfType<RoR2.SceneExitController>(true);
             foreach (var exit in exits)
             {
                 if (exit.gameObject.name.Contains("Shop"))
@@ -145,20 +180,20 @@ namespace RiskOfRoutes
                     shopPortalObj = exit.gameObject;
                     shopExitController = exit;
                     shopExitController.useRunNextStageScene = true;
-                    Log.Info($"{nameof(SeerStationController_SetRunNextStageToTarget)}: Found shop portal with name {exit.gameObject.name}");
+                    Log.Info($"{nameof(UpdateShopExitDestination)}: Found shop portal with name {exit.gameObject.name}");
                     break;
                 }
             }
 
             if (!shopPortalObj)
             {
-                Log.Error($"{nameof(SeerStationController_SetRunNextStageToTarget)}: Could not find shopportal on bazaar scene");
+                Log.Error($"{nameof(UpdateShopExitDestination)}: Could not find shopportal on bazaar scene");
                 return;
             }
 
             if (!shopPortalObj.GetComponent<RoutePortalManager>())
             {
-                Log.Error($"{nameof(SeerStationController_SetRunNextStageToTarget)}: Shop portal doesn't have manager");
+                Log.Error($"{nameof(UpdateShopExitDestination)}: Shop portal doesn't have manager");
                 return;
             }
 
@@ -174,7 +209,7 @@ namespace RiskOfRoutes
             }
             else
             {
-                Log.Warning($"{nameof(SeerStationController_SetRunNextStageToTarget)}: Seer doensn't have route portal manager, getting random mods for shop portal");
+                Log.Warning($"{nameof(UpdateShopExitDestination)}: Seer doensn't have route portal manager, getting random mods for shop portal");
                 StageModifierDirector.instance.GetNextStageModifiers(shopPortalObj);
             }
 
@@ -183,15 +218,14 @@ namespace RiskOfRoutes
             if (SceneHelper.IsSceneColossus(targetSceneDef.sceneDefIndex))
             {
                 mg.routeNode = seerRouteManager.routeNode;
-                mg.nodeSync = new Vector2(mg.routeNode.x, mg.routeNode.y);
             }
             else if (targetSceneDef.sceneType == SceneType.Intermission)
             {
-                Log.Info($"{nameof(SeerStationController_SetRunNextStageToTarget)}:Seer scene is intermission, disabling portal mods");
+                Log.Info($"{nameof(UpdateShopExitDestination)}:Seer scene is intermission, disabling portal mods");
                 mg.isUsingModifiers = false;
             }
 
-            Log.Info($"{nameof(SeerStationController_SetRunNextStageToTarget)}: Updated exit destination:{originalSceneIndex}->{mg.destinationSceneIndex}");
+            Log.Info($"{nameof(UpdateShopExitDestination)}: Updated exit destination:{originalSceneIndex}->{mg.destinationSceneIndex}");
         }
 
 
@@ -276,7 +310,6 @@ namespace RiskOfRoutes
                 else
                     seerRouteManager.routeNode = StageModifierDirector.instance.currentNode;
 
-                seerRouteManager.nodeSync = new Vector2(seerRouteManager.routeNode.x, seerRouteManager.routeNode.y);
 
                 if (!SceneHelper.IsSceneIntermission((SceneIndex)oldTargetSceneIndex))
                 {
@@ -329,7 +362,6 @@ namespace RiskOfRoutes
             shopRouteManager.isUsingModifiers = true;
             shopRouteManager.isUsingSceneExit = true;
             shopRouteManager.routeNode = StageModifierDirector.instance.currentNode;
-            shopRouteManager.nodeSync = new Vector2(shopRouteManager.routeNode.x, shopRouteManager.routeNode.y);
             shopRouteManager.enabled = true;
             StageModifierDirector.instance.GetNextStageModifiers(shopRoutePortal);
             Log.Info($"{nameof(ReplaceShopPortal)}: Shop portal was replaced");
@@ -375,7 +407,6 @@ namespace RiskOfRoutes
 
             arenaRouteManager.isUsingSceneExit = !isExitFromArena;
             arenaRouteManager.routeNode = StageModifierDirector.instance.currentNode;
-            arenaRouteManager.nodeSync = new Vector2(arenaRouteManager.routeNode.x, arenaRouteManager.routeNode.y);
             arenaRouteManager.isUsingModifiers = isExitFromArena;
             if (arenaRouteManager.isUsingModifiers)
                 StageModifierDirector.instance.GetNextStageModifiers(arenaRoutePortal);
@@ -442,7 +473,6 @@ namespace RiskOfRoutes
                 if (colossusNode != null)
                 {
                     mgr.routeNode = colossusNode;
-                    mgr.nodeSync = new Vector2(colossusNode.x, colossusNode.y);
                 }
 
                 Log.Info($"{nameof(OnVanillaPortalSpawn)}: Succesfuly set node to colossus");
@@ -456,7 +486,6 @@ namespace RiskOfRoutes
                     Log.Info($"{nameof(OnVanillaPortalSpawn)}: Spawned portal leading to goldshores");
                     mgr.isUsingModifiers = false;
                     mgr.routeNode = StageModifierDirector.instance.GetAvailableNodes()[0];
-                    mgr.nodeSync = new Vector2(mgr.routeNode.x, mgr.routeNode.y);
                 }
                 else
                 {
@@ -465,7 +494,6 @@ namespace RiskOfRoutes
                     mgr.isUsingModifiers = true;
                     mgr.isUsingSceneExit = false;
                     mgr.routeNode = StageModifierDirector.instance.currentNode;
-                    mgr.nodeSync = new Vector2(mgr.routeNode.x, mgr.routeNode.y);
                 }
 
             }
@@ -483,12 +511,10 @@ namespace RiskOfRoutes
                     {
                         Log.Info("node zero");
                         mgr.routeNode = StageModifierDirector.instance.routeMap.root;
-                        mgr.nodeSync = new Vector2(0, 0);
                     }
                     else
                     {
                         mgr.routeNode = StageModifierDirector.instance.GetAvailableNodes()[0];
-                        mgr.nodeSync = new Vector2(mgr.routeNode.x, mgr.routeNode.y);
                     }
                     mgr.isUsingSceneExit = false;
                 }
@@ -516,7 +542,6 @@ namespace RiskOfRoutes
                 }
                 var hardwareNode = StageModifierDirector.instance.routeMap.CreateHardwareNode(StageModifierDirector.instance.currentNode);
                 mgr.routeNode = hardwareNode;
-                mgr.nodeSync = new Vector2(hardwareNode.x, hardwareNode.y);
             }
             else if (spawnCardName == "iscDestinationPortal")
             {
@@ -525,16 +550,55 @@ namespace RiskOfRoutes
                 mgr.routeNode = StageModifierDirector.instance.GetAvailableNodes()[0];
                 mgr.destinationSceneIndex = (int)Run.instance.nextStageScene.sceneDefIndex;
             }
+            else
+            {
+                //todo add null check
+                mgr.enabled = false;
+                Log.Info($"Else for {spawnCardName}");
+                mgr.isOval = false;
+                mgr.isUsingModifiers = false;
+                mgr.routeNode = StageModifierDirector.instance.currentNode;
+                mgr.destinationSceneIndex = (int)Run.instance.nextStageScene.sceneDefIndex;
+
+            }
 
             if (mgr.isUsingModifiers)
                 StageModifierDirector.instance.GetNextStageModifiers(obj);
 
             //Log.Info($"{nameof(OnVanillaPortalSpawn)}: Enabled manager for portal - {spawnCardName}");
             mgr.enabled = true;
-            mgr.nodeSync = new Vector2(mgr.routeNode.x, mgr.routeNode.y); //todo rewrite to not specify it manually
 
             return obj;
         }
+
+        //todo for later when boss modfiers will be added
+        //private static void TeleporterInteraction_onTeleporterChargedGlobal(TeleporterInteraction obj)
+        //{
+        //    var teleporterObject = obj.gameObject;
+
+        //    Log.Info($"for teleporter Director placed obj {teleporterObject}");
+
+        //    if (teleporterObject == null) return;
+
+        //    if (!teleporterObject.name.Contains("LunarTeleporter")) return;
+
+        //    var mgr = teleporterObject.GetComponent<RoutePortalManager>();
+        //    if (mgr == null)
+        //    {
+        //        Log.Error($"Teleporter {teleporterObject} has no route portal manager");
+        //        return;
+        //    }
+
+        //    mgr.isOval = false;
+        //    mgr.isObjectiveNode = true;
+        //    mgr.isUsingModifiers = Run.instance.loopClearCount >= 0; //todo
+        //    mgr.routeNode = StageModifierDirector.instance.currentNode;
+        //    mgr.destinationSceneIndex = (int)SceneCatalog.nameToIndex["moon2"];
+        //    mgr.isUsingSceneExit = false;
+
+        //    StageModifierDirector.instance.GetNextStageModifiers(teleporterObject);
+        //}
+
 
 
         public static void SpawnRoutePortals(Vector3 position)
@@ -545,34 +609,47 @@ namespace RiskOfRoutes
                 return;
             }
 
-            List<SceneDef> scenes = SceneHelper.GetNextStagesScenesList();
+            WeightedSelection<SceneDef> scenesFull = SceneHelper.GetNextStagesScenesList();
 
-            if (scenes.Count == 0)
+            if (scenesFull.Count == 0)
             {
                 Log.Error($"{nameof(SpawnRoutePortals)}: No stages available next");
                 return;
             }
 
-            Util.ShuffleList(scenes, Run.instance.stageRng);
-
             var nodes = StageModifierDirector.instance.GetAvailableNodes();
+
+            var scenes = new WeightedSelection<SceneDef>();
+
+            for (int i = 0; i < scenesFull.Count; i++)
+            {
+                var choice = scenesFull.GetChoice(i);
+                scenes.AddChoice(choice.value, choice.weight);
+            }
 
             for (int i = 0; i < nodes.Count; i++)
             {
                 Log.Info($"{nameof(SpawnRoutePortals)}: Nodes count - {nodes.Count}:{i}");
+
+                if (scenes.Count == 0)
+                {
+                    Log.Error($"{nameof(SpawnRoutePortals)}: No stages available next");
+                    break;
+                }
 
                 var node = nodes[i];
 
                 SceneDef destination = new SceneDef();
                 if (RiskOfRoutes.useUniqueDestinations.Value) //todo case if more nodes than unique scenes
                 {
-                    int index = scenes.Count - 1;
-                    destination = scenes[index];
-                    scenes.RemoveAt(index);
+                    int index = scenes.EvaluateToChoiceIndex(Run.instance.stageRng.nextNormalizedFloat);
+                    destination = scenes.GetChoice(index).value;
+                    scenes.RemoveChoice(index);
                 }
                 else
                 {
-                    destination = Run.instance.runRNG.NextElementUniform(scenes);
+                    int index = scenes.EvaluateToChoiceIndex(Run.instance.stageRng.nextNormalizedFloat);
+                    destination = scenes.GetChoice(index).value;
                 }
 
                 SpawnCard routePortal = AssetManager.CreateRoutePortalSpawnCard(destination);
@@ -607,7 +684,6 @@ namespace RiskOfRoutes
 
                 mg.routeNode = node;
                 mg.portalType = (int)node.portalType;
-                mg.nodeSync = new Vector2(node.x, node.y);
                 Log.Info($"MG route node:{mg.routeNode.portalType}:{mg.routeNode.x},{mg.routeNode.y}");
 
                 mg.isUsingModifiers = true;

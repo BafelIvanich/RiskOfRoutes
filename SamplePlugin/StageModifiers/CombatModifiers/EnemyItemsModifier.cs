@@ -5,7 +5,6 @@ using SamplePlugin.StageModifiers.SceneModifiers;
 
 namespace SamplePlugin.StageModifiers.CombatModifiers
 {
-    //todo needs to be made separate 'EnemyItems modifier' so it wont overweight others in catalog
     public class EnemyItemsModifier : StageModifier
     {
         ItemDef selectedItem;

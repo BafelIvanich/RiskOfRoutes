@@ -1,4 +1,5 @@
 ﻿using RiskOfRoutes.StageModifiers;
+using RiskOfRoutes.UI;
 using RoR2;
 using SamplePlugin;
 using UnityEngine;
@@ -10,30 +11,49 @@ namespace RiskOfRoutes
     public class RoutePortalManager : NetworkBehaviour
     {
         public GenericInteraction genericInteraction;
-        public SceneExitController sceneExitController;
         public PurchaseInteraction purchaseInteraction; //for seer
+
+        public SceneExitController sceneExitController;
+
+        public bool isObjectiveNode = false;
 
         [SyncVar]
         public bool isUsingModifiers = false;
+
         [SyncVar(hook = nameof(OnOvalChanged))]
         public bool isOval = false;
+
+        [SyncVar(hook = nameof(OnTypeChanged))]
+        public int portalType;
+
         [SyncVar]
         public bool isSeerStation = false;
+
         [SyncVar]
         public bool isUsingSceneExit = false;
-
-        public RouteMap.RouteNode routeNode;
 
         public SyncListString stageModifiers = new SyncListString();
 
         [SyncVar]
         public Vector2 nodeSync = new Vector2(-1, -1);
 
+        private RouteMap.RouteNode _routeNode;
+
+        public RouteMap.RouteNode routeNode
+        {
+            get { return _routeNode; }
+            set
+            {
+                _routeNode = value;
+                if (routeNode != null)
+                    nodeSync = new Vector2(_routeNode.x, _routeNode.y);
+                else
+                    nodeSync = new Vector2(-1, -1);
+            }
+        }
+
         [SyncVar]
         public int destinationSceneIndex;
-
-        [SyncVar(hook = nameof(OnTypeChanged))]
-        public int portalType;
 
         public bool isDirty = true;
 
@@ -72,21 +92,26 @@ namespace RiskOfRoutes
                     return;
                 }
             }
-            genericInteraction.onActivation.AddListener(OnPortalActivation);
+
+            if (genericInteraction != null)
+                genericInteraction.onActivation.AddListener(OnPortalActivation);
+
+
+            //case for teleporter interaction is in TeleporterGetRoutePortal()
+
 
             if (isUsingSceneExit)
             {
-                sceneExitController.useRunNextStageScene = true;
+                if (sceneExitController != null)
+                    sceneExitController.useRunNextStageScene = true;
+                else
+                    Log.Error($"Something went wrong for sceneExitController for: {gameObject.name}");
             }
         }
 
 
         public void OnDestroy()
         {
-            //if (stageModifiers != null)
-            //{
-            //    stageModifiers.Callback -= OnModifiersChanged;
-            //}
             RiskOfRoutes.usePortalTypeColors.SettingChanged -= OnConfigChanged;
             RiskOfRoutes.usePositiveNegativeColors.SettingChanged -= OnConfigChanged;
             RiskOfRoutes.usePortalMaterial.SettingChanged -= OnConfigChanged;
@@ -259,7 +284,7 @@ namespace RiskOfRoutes
                         }
                         if (RiskOfRoutes.usePortalTypeColors.Value)
                         {
-                            renderer.material.SetColor("_TintColor", GetPortalTypeColor((RoutePortalType)portalType));
+                            renderer.material.SetColor("_TintColor", GetPortalTypeColor((RoutePortalType)portalType) * new Color(1.0f, 1.0f, 1.0f, 1.2f));
                         }
                         else
                         {
@@ -354,7 +379,7 @@ namespace RiskOfRoutes
                     Log.Warning($"{nameof(AttachBubblesToPortal)}: Bubble prefab is missing");
                     AssetManager.iconBubblePrefab = AssetManager.CreateIconBubblePrefab();
                 }
-                var bubble = Object.Instantiate(AssetManager.iconBubblePrefab);
+                var bubble = Object.Instantiate(AssetManager.CreateIconBubblePrefab()); //TODO не сотавсть
                 bubble.SetActive(true);
 
                 bubble.transform.SetParent(transform.Find("PortalCenter").transform, false);
@@ -378,6 +403,8 @@ namespace RiskOfRoutes
                 var portalEdges = portalActiveDisplay.Find("PortalEdges");
                 if (portal != null)
                 {
+                    portal.localScale = new Vector3(5.0f, 5.0f, 5.0f);
+
                     var rend = portal.GetComponent<Renderer>();
                     var mat = rend.material;
 
@@ -388,8 +415,8 @@ namespace RiskOfRoutes
                     mat.SetFloat("_AlphaBoost", 1.0f);
                     mat.SetFloat("_DistortionStrength", 0f);
 
-                    mat.SetTextureScale("_MainTex", new Vector2(2.0f, 2.0f));
-                    mat.SetTextureOffset("_MainTex", new Vector2(-0.5f, -0.5f));
+                    mat.SetTextureScale("_MainTex", new Vector2(1.0f, 1.0f));
+                    mat.SetTextureOffset("_MainTex", new Vector2(0.0f, 0.0f));
 
                     Texture2D tex = null;
                     if (stageModifiers[i] != "")
@@ -399,11 +426,11 @@ namespace RiskOfRoutes
 
                         //Log.Info($"StageModfieir:{name}");
                         var modDef = StageModifierCatalog.FindModifier(name);
-                        if (modDef != null && modDef.icon != null)
+                        if (modDef != null && modDef.spriteIcon != null)
                         {
                             if (modDef.name != "Doppelganger")
                             {
-                                tex = modDef.icon.texture;
+                                tex = modDef.spriteIcon.texture;
                             }
                             else
                             {
@@ -432,7 +459,7 @@ namespace RiskOfRoutes
                 {
                     //Log.Info("Changing colors");
                     Color positive = new Color(36f / 255f, 191f / 255f, 0f, 1f);
-                    Color negative = new Color(255f / 255f, 0f / 255f, 0f / 255f, 1f) * 1.8f;
+                    Color negative = new Color(255f / 255f, 0f / 255f, 0f / 255f, 1f) * 2.8f;
 
                     var donutRend = donut.GetComponent<Renderer>();
                     var edgesRend = portalEdges.GetComponent<Renderer>();
@@ -453,8 +480,6 @@ namespace RiskOfRoutes
                             //Log.Info("Succesfully changed colors");
                         }
                     }
-
-
                 }
             }
         }
@@ -469,8 +494,10 @@ namespace RiskOfRoutes
         public void OnPortalActivation(Interactor interactor)
         {
             if (!Run.instance.IsExpansionEnabled(RoutesExpansion.routesExpansion)) return;
-            genericInteraction.interactability = Interactability.Disabled;
             if (!NetworkServer.active) return;
+
+            if (genericInteraction != null)
+                genericInteraction.interactability = Interactability.Disabled;
 
             if (stageModifiers != null && stageModifiers.Count > 0)
             {
@@ -484,7 +511,8 @@ namespace RiskOfRoutes
                 }
             }
 
-            genericInteraction.enabled = false;
+            if (genericInteraction != null)
+                genericInteraction.enabled = false;
 
             if (routeNode != null)
             {
@@ -526,6 +554,7 @@ namespace RiskOfRoutes
 
             if (sceneExitController != null && routeNode != null)
             {
+                //todo might be moved to onStageStart and not interacting with portal
                 Log.Info($"{SceneCatalog.GetSceneDef(sceneExitController.destinationScene.sceneDefIndex).cachedName}");
                 if (SceneCatalog.GetSceneDef(sceneExitController.destinationScene.sceneDefIndex).cachedName == "bazaar") routeNode.shopVisited = true;
                 if (SceneCatalog.GetSceneDef(sceneExitController.destinationScene.sceneDefIndex).cachedName == "goldshores") routeNode.goldshoresVisited = true;
@@ -560,5 +589,5 @@ namespace RiskOfRoutes
 
 public enum RoutePortalType
 {
-    None, Rare, ItemType, DroneType, ChefType, Colossus, Hardware, SolusWing, Goldshores, Shop, Arena, FalseSon, Starting, Combat, Heal, Utility
+    None, Rare, ItemType, DroneType, ChefType, Colossus, Hardware, SolusWing, Goldshores, Shop, Arena, FalseSon, Starting, Combat, Heal, Utility, MoonTeleporter
 }

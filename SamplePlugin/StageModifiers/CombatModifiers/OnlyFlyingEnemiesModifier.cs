@@ -31,7 +31,12 @@ namespace SamplePlugin.StageModifiers.CombatModifiers
             ClassicStageInfo.instance.monsterSelection.Clear();
             ClassicStageInfo.instance.monsterSelection = GetSelectionFromCategories(categories);
 
-            Log.Info("Available");
+            if (ClassicStageInfo.instance.monsterSelection.Count == 0)
+            {
+                Log.Warning("");
+            }
+
+            Log.Info("Available flying:");
             for (int i = 0; i < ClassicStageInfo.instance.monsterSelection.Count; i++)
             {
                 var c = ClassicStageInfo.instance.monsterSelection.GetChoice(i);

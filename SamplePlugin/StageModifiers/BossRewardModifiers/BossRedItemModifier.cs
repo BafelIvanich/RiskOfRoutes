@@ -15,6 +15,7 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
         public override void OnEnd()
         {
             Log.Info("BossRedItem on end");
+
             IL.RoR2.BossGroup.DropRewards -= BossGroup_DropRewards;
         }
 
@@ -38,8 +39,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
                 c.EmitDelegate<Action<UniquePickup, Vector3, Vector3>>((origPickup, position, vector) =>
                 {
-
-
                     var pickupIndex = Run.instance.stageRng.NextElementUniform(Run.instance.availableTier3DropList);
                     var uniquePickup = new UniquePickup { pickupIndex = pickupIndex };
                     var pickup = new GenericPickupController.CreatePickupInfo
@@ -52,8 +51,6 @@ namespace SamplePlugin.StageModifiers.BossRewardModifiers
 
                     PickupDropletController.CreatePickupDroplet(pickup, position, vector);
                     Log.Info("Created pickup");
-
-
                 });
             }
         }
